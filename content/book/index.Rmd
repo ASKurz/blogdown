@@ -20,32 +20,32 @@ I make periodic updates to these books, which are reflected in their version num
 
 Here's the list:
 
-### *Applied Longitudinal Data Analysis in brms and the tidyverse*, version 0.0.2
+## *Applied Longitudinal Data Analysis in brms and the tidyverse*, version 0.0.2
 
 This is a translation of the examples and figures from Singer and Willett's classic *Applied longitudinal data analysis: Modeling change and event occurrence*. 
 * You can find my ebook at https://bookdown.org/content/4253/
 * You can find information about the original book by Singer and Willett [here](https://www.oxfordscholarship.com/view/10.1093/acprof:oso/9780195152968.001.0001/acprof-9780195152968).
 * :warning: This project is in the very early stages. Beware of typos, mistakes, and other unsightly blemishes.
 
-### *Doing Bayesian data analysis in brms and the tidyverse*, version 1.0.0
+## *Doing Bayesian data analysis in brms and the tidyverse*, version 1.0.0
 
 This is a translation of the code from the second edition of John K. Kruschke's *Doing Bayesian Data Analysis*.
 * You can find my ebook at https://bookdown.org/content/3686
 * You can find information about the original book by Kruschke [here](https://sites.google.com/site/doingbayesiandataanalysis/).
 
-### *Recoding Introduction to Mediation, Moderation, and Conditional Process Analysis*, version 1.2.0
+## *Recoding Introduction to Mediation, Moderation, and Conditional Process Analysis*, version 1.2.0
 
 This is a translation of the code from the second edition of Andrew F. Hayes's *Introduction to Mediation, Moderation, and Conditional Process Analysis*.
 * You can find my ebook at https://bookdown.org/content/b472c7b3-ede5-40f0-9677-75c3704c7e5c/
 *  You can find the original book by Hayes [here](http://afhayes.com/introduction-to-mediation-moderation-and-conditional-process-analysis.html).
   
-### *Statistical rethinking with brms, ggplot2, and the tidyverse*, version 1.2.0
+## *Statistical rethinking with brms, ggplot2, and the tidyverse*, version 1.2.0
 
 This is a translation of the code from the first edition of Richard McElreath's *Statistical rethinking*.
 * You can find my ebook at https://bookdown.org/content/3890
 * You can find information about the original book by McElreath [here](http://xcelab.net/rm/statistical-rethinking/).
 
-### *Statistical rethinking with brms, ggplot2, and the tidyverse: Second edition*, version 0.3.0
+## *Statistical rethinking with brms, ggplot2, and the tidyverse: Second edition*, version 0.3.0
 
 This is a translation of the code from the second edition of Richard McElreath's *Statistical rethinking*.
 * You can find my ebook at https://bookdown.org/content/4857
