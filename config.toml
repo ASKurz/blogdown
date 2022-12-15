@@ -3,7 +3,7 @@ theme = "hugo-apero"
 languageCode = "en"
 title = "A. Solomon Kurz" # Website name, which lives as meta data
 author = "A. Solomon Kurz"
-copyright: "© A. Solomon Kurz (2022)"" 
+copyright: "© A. Solomon Kurz (2022)"
 googleAnalytics = ""
 disqusShortname = "" # see params.utterances to use utterances instead of Disqus
 metaDataFormat = "yaml"
