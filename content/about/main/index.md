@@ -1,17 +1,15 @@
 ---
 ## Configure page content in wide column
-title: "Why apéro?" # leave blank to exclude
+title: "Lately" # leave blank to exclude # default was: "Why apéro?"
 number_featured: 1 # pulling from mainSections in config.toml
 use_featured: false # if false, use most recent by date
-number_categories: 3 # set to zero to exclude
+number_categories: 0 # set to zero to exclude # default was 3
 show_intro: true
 intro: |
-  Apéro is a unique kind of casual get-together in French culture, when you gather with friends and get to know each other better over some apéritifs, snacks, and anything in between. A good apéro is one where you'd happily spend a few hours just hanging out.
-  
-  I hope this theme helps you create your own virtual apéro. A place where you and your site's visitors enjoy spending time, and one that helps folks get to know you better. 
-show_outro: true
-outro: |
-  <i class="fas fa-glass-cheers pr2"></i>Sincere thanks to [Maëlle Salmon](https://masalmon.eu/) for her help naming this Hugo theme!
+  Over the past year, I've been thinking a lot about how to analyze data from various research paradigms within the overall Bayesian generalized linear mixed model. It may seem disjointed, but you can find echos of that topic reverberating through many of my recent blog posts. I'm also starting to write a book on the topic, about which you can learn more [here](https://github.com/ASKurz/Experimental-design-and-the-GLMM).
+
+show_outro: false
+outro: 
 ---
 
 ** index doesn't contain a body, just front matter above.
