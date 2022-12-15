@@ -1,7 +1,7 @@
 ---
 ## Configure page content in wide column
 title: "Lately" # leave blank to exclude # default was: "Why apéro?"
-number_featured: 1 # pulling from mainSections in config.toml
+number_featured: 2 # pulling from mainSections in config.toml # default was 1
 use_featured: false # if false, use most recent by date
 number_categories: 0 # set to zero to exclude # default was 3
 show_intro: true
