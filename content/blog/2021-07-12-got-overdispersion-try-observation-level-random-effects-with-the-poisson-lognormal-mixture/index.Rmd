@@ -1,0 +1,523 @@
+---
+title: Got overdispersion? Try observation-level random effects with the Poisson-lognormal
+  mixture
+author: A. Solomon Kurz
+date: '2021-07-12'
+draft: false
+excerpt: "It turns out that you can use random effects on cross-sectional count data. Yes, that's right. Each count gets its own random effect. Some people call this observation-level random effects and it can be a tricky way to handle overdispersion. The purpose of this post is to show how to do this and to try to make sense of what it even means."
+layout: single
+tags:
+- brms
+- counts
+- multilevel
+- R
+- tidyverse
+- tutorial
+lastmod: '2021-07-12T09:50:50-05:00'
+featured: no
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+biblio-style: apalike
+csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+link-citations: yes
+---
+
+```{r, echo = F}
+# save(fit1, file = "fits/fit1.rda")
+# save(fit2, file = "fits/fit2.rda")
+# save(fit3, file = "fits/fit3.rda")
+
+load("fits/fit1.rda")
+load("fits/fit2.rda")
+load("fits/fit3.rda")
+```
+
+## Version 1.1.0
+
+Edited on December 12, 2022, to use the new `as_draws_df()` workflow.
+
+## What?
+
+One of [Tristan Mahr](https://twitter.com/tjmahr)'s recent Twitter threads almost broke my brain.
+
+```{r echo = FALSE}
+blogdown::shortcode('tweet', user = "SolomonKurz", id = '1413186646783242242')
+```
+
+It turns out that you can use random effects on cross-sectional count data. Yes, that's right. Each count gets its own random effect. Some people call this observation-level random effects and it can be a tricky way to handle overdispersion. The purpose of this post is to show how to do this and to try to make sense of what it even means.
+
+## Background
+
+First, I should clarify a bit. Mahr's initial post and much of the thread to follow primarily focused on counts within the context of binomial data. If you've ever read a book on the generalized linear model (GLM), you know that the two broad frameworks for modeling counts are as binomial or Poisson. The basic difference is if your counts are out of a known number of trials (e.g., I got 3 out of 5 questions correct in my pop quiz, last week[^1]), the binomial is generally the way to go. However, if your counts aren't out of a well-defined total (e.g., I drank 1497 cups of coffee[^2], last year), the Poisson distribution offers a great way to think about your data. In this post, we'll be focusing on Poisson-like counts.
+
+The Poisson distribution is named after the French mathematician [Siméon Denis Poisson](https://upload.wikimedia.org/wikipedia/commons/e/e8/E._Marcellot_Siméon-Denis_Poisson_1804.jpg), who lived and died about 200 years ago. Poisson's distribution is valid for non-negative integers, which is basically what counts are. The distribution has just one parameter, $\lambda$, which controls both its mean and variance and imposes the assumption that the mean of your counts is the same as the variance. On the one hand, this is great because it keeps things simple--parsimony and all. On the other hand, holding the mean and variance the same is a really restrictive assumption and it just doesn't match up well with a lot of real-world data.
+
+This Poisson assumption that the mean equals the variance is sometimes called *equidispersion*. Count data violate the equidispersion assumption when their variance is smaller than their mean (*underdispersion*) or when their variance is larger than their mean (*overdispersion*). In practice, overdispersion tends to crop up most often. Real-world count data are overdispersed so often that statisticians have had to come up with a mess of strategies to handle the problem. In the applied statistics that I'm familiar with, the two most common ways to handle overdispersed count data are with the negative-binomial model, or with random effects. We'll briefly cover both.
+
+### Negative-binomial counts.
+
+As its name implies, the negative-binomial model has a deep relationship with the binomial model. I'm not going to go into those details, but Hilbe covered them in his well-named [-@hilbeNegativeBinomialRegression2011] textbook, if you're curious. Basically, the negative-binomial model adds a dispersion parameter to the Poisson. Different authors refer to it with different names. Hilbe, for example, called it both $r$ and $\nu$. @Bürkner2021Parameterization and the @standevelopmentteamStanFunctionsReference2021 both call it $\phi$. By which ever name, the negative-binomial overdispersion parameter helps disentangle the mean from the variance in a set of counts. The way it does it is by re-expressing the count data as coming from a mixture where each count is from its own Poisson distribution with its own $\lambda$ parameter. Importantly, the $\lambda$'s in this mixture of Poissons follow a gamma distribution, which is why the negative binomial is also sometimes referred to as a gamma-Poisson model. @mcelreathStatisticalRethinkingBayesian2020, for example, generally prefers to speak in terms of the gamma-Poisson.
+
+### Poission counts with random intercepts.
+
+Another way to handle overdispersion is to ask whether the data are grouped. In my field, this naturally occurs when you collect longitudinal data. My counts, over time, will differ form your counts, over time, and we accommodate that by adding a multilevel structure to the model. This, then, takes us to the generalized linear *mixed* model (GLMM), which is covered in text books like @cameron2013regression; @gelmanDataAnalysisUsing2006; and @mcelreathStatisticalRethinkingBayesian2020. Say your data have $J$ groups. With a simple random-intercept Poisson model, each group of counts gets its own $\lambda_j$ parameter and the population of those $\lambda_j$'s is described in terms of  a grand mean (an overall $\lambda$ intercept) and variation around that grand mean (typically a standard deviation or variance parameter). Thus, if your $y$ data are counts from $I$ cases clustered within $J$ groups, the random-intercept Poisson model can be expressed as
+
+$$
+\begin{align*}
+y_{ij} & \sim \operatorname{Poisson}(\lambda_{ij}) \\
+\log(\lambda_{ij}) & = \beta_0 + \zeta_{0j} \\
+\zeta_{0j} & \sim \operatorname{Normal}(0, \sigma_0)
+\end{align*}
+$$
+
+where the grand mean is $\beta_0$, the group-specific deviations around the grand mean are the $\zeta_{0j}$'s, and the variation across those $\zeta_{0j}$'s is expressed by a standard-deviation parameter $\sigma_0$. Thus following the typical GLMM convention, we model the group-level deviations with the normal distribution. Also notice that whether we're talking about single-level GLMs or multilevel GLMMs, we typically model $\log \lambda$, instead of $\lambda$. This prevents the model from predicting negative counts. Keep this in mind.
+
+Anyway, the random-intercept Poisson model can go a long way for handling overdispersion when your data are grouped. It's also possible to combine this approach with the last one and fit a negative-binomial model with a random intercept, too. Though I haven't seen this used much in practice, you can even take a distributional model approach [@Bürkner2021Distributional] and set the negative-binomial dispersion parameter to random, too. That, for example, could look like
+
+$$
+\begin{align*}
+y_{ij} & \sim \operatorname{Gamma-Poisson}(\lambda_{ij}, \phi_{ij}) \\
+\log(\lambda_{ij}) & = \beta_0 + \zeta_{0j} \\
+\log(\phi_{ij}) & = \gamma_0 + \zeta_{1j} \\
+\zeta_{0j} & \sim \operatorname{Normal}(0, \sigma_0) \\
+\zeta_{1j} & \sim \operatorname{Normal}(0, \sigma_1).
+\end{align*}
+$$
+
+### There's a third option: The Poisson-lognormal.
+
+Now a typical condition for a random-intercept model (whether using the Poison, the negative-binomial, or any other likelihood function) is that at least some of the $J$ groups, if not most or all, contain two or more cases. For example, in a randomized controlled trial you might measure the outcome variable 3 or 5 or 10 times over the course of the trial. In a typical non-experimental experience-sampling study, you might get 10 or 50 or a few hundred measurements from each participant over the course of a few days, weeks, or months. Either way, we tend to have multiple $I$'s within each level of $J$. As it turns out, you don't have to restrict yourself that way. With the observation-level random effects (OLRE) approach, each case (each level of $I$) gets its own random effect [see @harrison2014using].
+
+*But why would you do that?*
+
+Think back to the conventional regression model where some variable $x$ is predicting some continuous variable $y$. We can express the model as
+
+$$
+\begin{align*}
+y_i & \sim \operatorname{Normal}(\mu_i, \sigma) \\
+\mu_i & = \beta_0 + \beta_1 x_i,
+\end{align*}
+$$
+
+where the residual variance not accounted for by $x$ is captured in $\sigma$[^3]. Thus $\sigma$ can be seen as a residual-variance term. The conventional Poisson model,
+
+$$
+\begin{align*}
+y_i & \sim \operatorname{Poisson}(\lambda_i) \\
+\log(\lambda_i) & = \beta_0 + \beta_1 x_i,
+\end{align*}
+$$
+
+doesn't have a residual-variance term. Rather, the variance in the data is deterministically controlled by the linear model on $\log(\lambda_i)$, which works great in the case of equidispersion, but fails when the data are overdispersed. Hence the negative-binomial and the random-intercept models. But what if we *could* tack on a residual variance term? It might take on a form like
+
+$$
+\begin{align*}
+y_i & \sim \operatorname{Poisson}(\lambda_i) \\
+\log(\lambda_i) & = \beta_0 + \beta_1 x_i + \epsilon_i,
+\end{align*}
+$$
+
+where $\epsilon_i$ is the residual variation in $y_i$ not captured by the deterministic part of the linear model for $\log(\lambda_i)$. Following the conventional regression model, we might make our lives simple and further presume $\epsilon_i \sim \operatorname{Normal}(0, \sigma_\epsilon)$. Though he didn't use this style of notation, that's basically the insight from @bulmer1974OnFitting. But rather than speak in terms of $\epsilon_i$ and residual variance, Bulmer proposed an alternative to the gamma-Poisson mixture and asked his audience to imagine each count in the data was from its own Poisson distribution with its own $\lambda$ parameter, but that those $\lambda$ parameters were distributed according to the lognormal distribution. Now Bulmer had a substantive motivation for proposing the lognormal based on the species-abundance data and I'm not going to get into any of that. But the basic point was, if we can have a gamma-distributed mixture of $\lambda$'s, why not a lognormal mixture, instead?
+
+The trouble with Bulmer's lognormal-mixture approach is it's not readily available in most software packages. However, notice what happens when you specify an OLRE model with the Poisson likelihood:
+
+$$
+\begin{align*}
+y_i & \sim \operatorname{Poisson}(\lambda_i) \\
+\log(\lambda_i) & = \beta_0 + \zeta_{0i} \\
+\zeta_{0i} & \sim \operatorname{Normal}(0, \sigma_0).
+\end{align*}
+$$
+
+In this case, $\zeta_{0i}$ now looks a lot like the $\epsilon_i$ term in a standard intercepts-only regression model. Further, since the linear model is defined for $\log(\lambda_i)$, that means the $\zeta_{0i}$ terms will be log-normally distributed in the exponentiated $\log(\lambda_i)$ space. In essence, the OLRE-Poisson model is a way to hack your multilevel regression software to fit a Poisson-lognormal model for overdispersed counts.
+
+Now we have a sense of the theory, it's time to fit some models.
+
+## Empirical example: Salamander data
+
+### We need data.
+
+As per usual, we'll be working within **R** [@R-base]. We'll be fitting our models with **brms** [@R-brms; @burknerBrmsPackageBayesian2017; @burknerAdvancedBayesianMultilevel2018] and most of our data wrangling and plotting work will be done with aid from the **tidyverse** [@R-tidyverse; @wickhamWelcomeTidyverse2019] and friends--**patchwork** [@R-patchwork] and **tidybayes** [@R-tidybayes]. We'll take our data set from McElreath's [-@R-rethinking] **rethinking** package.
+
+```{r, warning = F, message = F}
+library(brms)
+library(tidyverse)
+library(tidybayes)
+library(patchwork)
+
+data(salamanders, package = "rethinking")
+
+glimpse(salamanders)
+```
+
+The data are in the `salamanders` data frame, which contains counts of salamanders from 47 locations in northern California [@welsh1995habitat]. Our count variable is `SALAMAN`. The location for each count is indexed by the `SITE` column. You could use the other two variables as covariates, but we won't be focusing on those in this post. Here's what `SALAMAN` looks like.
+
+```{r}
+# adjust the global plotting theme
+theme_set(theme_classic())
+
+salamanders %>% 
+  ggplot(aes(x = SALAMAN)) +
+  geom_bar()
+```
+
+Those data look overdispersed. We can get a quick sense of the overdispersion with sample statistics.
+
+```{r}
+salamanders %>% 
+  summarise(mean = mean(SALAMAN),
+            variance = var(SALAMAN)) 
+```
+
+For small-$N$ data, we shouldn't expect the mean to be exactly the same as the variance in Poisson data. This big of a difference, though, suggests[^4] overdispersion even with a modest $N = 47$.
+
+### Fit the models.
+
+We'll fit three intercepts-only models. The first will be a conventional Poisson model and the second will be the negative binomial (a.k.a. the gamma-Poisson mixture). We'll finish off with our Poisson-lognormal mixture via the OLRE technique. Since we're working with Bayesian software, we'll need priors. Though I'm not going to explain them in any detail, we'll be using the weakly-regularizing approach advocated for in @mcelreathStatisticalRethinkingBayesian2020.
+
+Here's how to fit the models with **brms**.
+
+```{r, eval = F}
+# conventional Poisson
+fit1 <-
+  brm(data = salamanders, 
+      family = poisson,
+      SALAMAN ~ 1,
+      prior(normal(log(3), 0.5), class = Intercept),
+      cores = 4, seed = 1)
+
+# gamma-Poisson mixture
+fit2 <-
+  brm(data = salamanders, 
+      family = negbinomial,
+      SALAMAN ~ 1,
+      prior = c(prior(normal(log(3), 0.5), class = Intercept),
+                prior(gamma(0.01, 0.01), class = shape)),
+      cores = 4, seed = 1)
+
+# Poisson-lognormal mixture
+fit3 <-
+  brm(data = salamanders, 
+      family = poisson,
+      SALAMAN ~ 1 + (1 | SITE),
+      prior = c(prior(normal(log(3), 0.5), class = Intercept),
+                prior(exponential(1), class = sd)),
+      cores = 4, seed = 1)
+```
+
+### Evaluate the models.
+
+Here's a quick parameter summary for each of the models.
+
+```{r}
+print(fit1)
+print(fit2)
+print(fit3)
+```
+
+We might use the `pp_check()` function to get a graphic sense of how well each model fit the data.
+
+```{r, fig.width = 8, fig.height = 3, warning = F, message = F}
+p1 <-
+  pp_check(fit1, type = "bars", nsample = 150, fatten = 1, size = 1/2) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  coord_cartesian(xlim = c(0, 15),
+                  ylim = c(0, 26)) +
+  labs(title = "fit1",
+       subtitle = "Conventional Poisson")
+
+p2 <-
+  pp_check(fit2, type = "bars", nsample = 150, fatten = 1, size = 1/2) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  coord_cartesian(xlim = c(0, 15),
+                  ylim = c(0, 26)) +
+  labs(title = "fit2",
+       subtitle = "Gamma-Poisson mixture")
+
+p3 <-
+  pp_check(fit3, type = "bars", nsample = 150, fatten = 1, size = 1/2) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  coord_cartesian(xlim = c(0, 15),
+                  ylim = c(0, 26)) +
+  labs(title = "fit3",
+       subtitle = "Poisson-lognormal mixture")
+
+p1 + p2 + p3 + plot_layout(guides = "collect")
+```
+
+The conventional Poisson model seems like a disaster. Both the gamma-Poisson and the Poisson-lognormal models seemed to capture the data much better. We also might want to compare the models with information criteria. Here we'll use the LOO.
+
+```{r, eval = F}
+fit1 <- add_criterion(fit1, criterion = "loo")
+fit2 <- add_criterion(fit2, criterion = "loo")
+fit3 <- add_criterion(fit3, criterion = "loo")
+```
+
+When I first executed that code, I got the following warning message:
+
+> Found 29 observations with a pareto_k > 0.7 in model 'fit3'. It is recommended to set 'moment_match = TRUE' in order to perform moment matching for problematic observations.
+
+To use the `moment_match = TRUE` option within the `add_criterion()` function, you have to specify `save_pars = save_pars(all = TRUE)` within `brm()` when fitting the model. Here's how to do that.
+
+```{r, eval = F}
+# fit the Poisson-lognormal mixture, again
+fit3 <-
+  brm(data = salamanders, 
+      family = poisson,
+      SALAMAN ~ 1 + (1 | SITE),
+      prior = c(prior(normal(log(3), 0.5), class = Intercept),
+                prior(exponential(1), class = sd)),
+      cores = 4, seed = 1,
+      # here's the new part
+      save_pars = save_pars(all = TRUE))
+
+# add the LOO
+fit3 <- add_criterion(
+  fit3, criterion = "loo", 
+  # this part is new, too
+  moment_match = TRUE
+)
+```
+
+Now we're ready to compare the models with the LOO.
+
+```{r}
+loo_compare(fit1, fit2, fit3, criterion = "loo") %>% 
+  print(simplify = F)
+```
+
+Even after accounting for model complexity, the Poisson-lognormal model appears to be the best fit for the data. Next we consider how, exactly, does one interprets the parameters of the Poisson-lognormal model.
+
+### How does one interpret the Poisson-lognormal model?
+
+A nice quality of both the conventional Poisson model and the gamma-Poisson model is the intercept for each corresponds directly with the mean of the original data, after exponentiation. The mean of the `SALAMAN` variable, recall, was `r round(mean(salamanders$SALAMAN), 1)`. Here are the summaries for their exponentiated intercepts.
+
+```{r}
+# conventional Poisson
+fixef(fit1)[, -2] %>% exp() %>% round(digits = 2)
+# gamma-Poisson
+fixef(fit2)[, -2] %>% exp() %>% round(digits = 2)
+```
+
+Both are really close to the sample mean. Here's the exponentiated intercept for the Poisson-lognormal model.
+
+```{r}
+fixef(fit3)[, -2] %>% exp() %>% round(digits = 2)
+```
+
+Wow, that's not even close! What gives? Well, keep in mind that with the OLRE Poisson-lognormal model, the intercept is the $\mu$ parameter for the lognormal distribution of $\lambda$ parameters. In a similar way, the level-2 standard deviation (execute `posterior_summary(fit3)["sd_SITE__Intercept", ]`) is the $\sigma$ parameter for that lognormal distribution. Keeping things simple, for the moment, here's what that lognormal distribution looks like if we take the posterior means for those parameters and insert them into the parameter arguments of the `dlnorm()` function.
+
+```{r}
+p1 <-
+  tibble(lambda = seq(from = 0, to = 13, length.out = 500)) %>% 
+  mutate(d = dlnorm(lambda, 
+                    meanlog = posterior_summary(fit3)[1, 1], 
+                    sdlog = posterior_summary(fit3)[2, 1])) %>% 
+  
+  ggplot(aes(x = lambda, y = d)) +
+  geom_area(fill = "grey50") +
+  scale_x_continuous(expression(lambda), breaks = 0:6 * 2, 
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_y_continuous("density", breaks = NULL, 
+                     expand = expansion(mult = c(0, 0.05))) +
+  coord_cartesian(xlim = c(0, 12),
+                  ylim = c(0, 0.8)) +
+  labs(title = "Population lognormal distribution",
+       subtitle = "The parameters are summarized by their posterior means.")
+
+p1
+```
+
+Using just the posterior means for the parameters ignores the uncertainty in the distribution. To bring that into the plot, we'll want to work with the posterior samples, themselves.
+
+```{r, warning = F}
+# how many posterior draws would you like?
+n_draw <- 100
+
+set.seed(1)
+
+p2 <-
+  as_draws_df(fit3) %>% 
+  slice_sample(n = n_draw) %>% 
+  transmute(iter  = 1:n(),
+            mu    = b_Intercept,
+            sigma = sd_SITE__Intercept) %>% 
+  expand(nesting(iter, mu, sigma),
+         lambda = seq(from = 0, to = 13, length.out = 500)) %>% 
+  mutate(d = dlnorm(lambda, meanlog = mu, sdlog = sigma)) %>% 
+  
+  ggplot(aes(x = lambda, y = d, group = iter)) +
+  geom_line(linewidth = 1/6, alpha = 1/2) +
+  scale_x_continuous(expression(lambda), breaks = 0:6 * 2, 
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_y_continuous("density", breaks = NULL, 
+                     expand = expansion(mult = c(0, 0.05))) +
+  coord_cartesian(xlim = c(0, 12),
+                  ylim = c(0, 0.8)) +
+  labs(title = "Population lognormal distribution",
+       subtitle = "The parameters are summarized by 100 posterior draws.")
+
+p2
+```
+
+These, recall, are 100 credible lognormal distributions for the case-level $\lambda_i$ parameters, not for the data themselves. We'll get to the data in a moment. Since we're working with a multilevel model, we have posteriors for each of the case-level $\lambda_i$ parameters, too. Here they are in a dot plot.
+
+```{r}
+p3 <-
+  coef(fit3)$SITE[, "Estimate", "Intercept"] %>% 
+  exp() %>% 
+  data.frame() %>% 
+  set_names("lambda_i") %>% 
+  
+  ggplot(aes(x = lambda_i)) +
+  geom_dots(fill = "grey50", color = "grey50") +
+  scale_x_continuous(expression(lambda[italic(i)]), breaks = 0:6 * 2, 
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_y_continuous("normalized density", breaks = NULL, 
+                     expand = expansion(mult = c(0, 0.05))) +
+  coord_cartesian(xlim = c(0, 12)) +
+  labs(title = expression("Dotplot of individual "*lambda[italic(i)]*" parameters"),
+       subtitle = "The parameters are summarized by their posterior means.")
+
+p3
+```
+
+To reduce visual complexity, we just plotted the $\lambda_i$ parameters by their posterior means. But that might be frustrating the way it ignores uncertainty. A different way to look at them might be a rank-ordered coefficient plot.
+
+```{r}
+p4 <-
+  coef(fit3)$SITE[, -2, "Intercept"] %>% 
+  exp() %>% 
+  data.frame() %>% 
+  arrange(Estimate) %>% 
+  mutate(rank = 1:n()) %>% 
+  
+  ggplot(aes(x = Estimate, xmin = Q2.5, xmax = Q97.5, y = rank)) +
+  geom_pointrange(fatten = 1, linewidth = 1/2) +
+  scale_x_continuous(expression(lambda[italic(i)]), breaks = 0:6 * 2, 
+                     expand = expansion(mult = c(0, 0.05))) +
+  scale_y_continuous(breaks = NULL, expand = c(0.02, 0.02)) +
+  coord_cartesian(xlim = c(0, 12)) +
+  labs(title = expression("Ranked coefficient plot of individual "*lambda[italic(i)]*" parameters"),
+       subtitle = "The parameters are summarized by their posterior means and 95% CIs.")
+
+p4
+```
+
+Since each $\lambda_i$ parameter is based in the data from a single case, it's no surprise that their 95% intervals are all on the wide side. Just for kicks, here are the last four subplots all shown together.
+
+```{r, fig.width = 8, fig.height = 6.5}
+p1 + p2 + p3 + p4 & 
+  theme_classic(base_size = 8.25)
+```
+
+At this point, though, you may be wondering how this model, with all its lognormal $\lambda_i$ glory, can inform us about actual counts. You know, the kind of counts that allowed us to fit such a wacky model. We'll want to work with the posterior draws for that, too. First we extract all of the posterior draws for the population parameters.
+
+```{r, warning = F}
+draws <-
+  as_draws_df(fit3) %>% 
+  transmute(mu    = b_Intercept,
+            sigma = sd_SITE__Intercept)
+
+# what is this?
+glimpse(draws)
+```
+
+The next code block is a little chunky, so I'll try to explain what we're doing before we dive in. Our goal is to use the posterior draws to make a posterior predictive check, by hand. My reasoning is doing this kind of check by hand, rather than relying on `pp_check()`, requires you to understand the guts of the model. In our check, we are going to compare the histogram of the original `SALAMAN` counts with the histograms of a few data sets simulated from the model. So first, we need to decide how many simulations we want. Since I want a faceted plot of 12 histograms, that means we'll need 11 simulations. We set that number with the opening `n_facet <- 12` line. Next, we set our seed for reproducibility and took 11 random draws from the `post` data frame. In the first `mutate()` line, we added an iteration index. Then with the `purrr::map2()` function, we drew 47 $\lambda$ values (47 was the original $N$ in the `salamanders` data) based on the lognormal distribution defined by the $\mu$ and $\sigma$ values from each iteration. After `unnest()`-ing those results, we used `rpois()` within the next `mutate()` line to use those simulated $\lambda$ values to simulate actual counts. The remaining lines clean up the data format a bit and tack on the original `salamanders` data. Then we plot.
+
+Okay, here it is:
+
+```{r}
+# how many facets would you like?
+n_facet <- 12
+
+set.seed(1)
+
+draws %>% 
+  # take 11 samples from the posterior iterations
+  slice_sample(n = n_facet - 1) %>% 
+  # take 47 random draws from each iteration
+  mutate(iter   = 1:n(),
+         lambda = map2(mu, sigma, ~ rlnorm(n = 47, meanlog = mu, sdlog = sigma))) %>% 
+  unnest(lambda) %>% 
+  # use the lambdas to generate the counts
+  mutate(count = rpois(n(), lambda = lambda)) %>% 
+  transmute(sample = str_c("sample #", iter),
+            SALAMAN = count) %>% 
+  # combine the original data
+  bind_rows(
+    salamanders %>% 
+      select(SALAMAN) %>% 
+      mutate(sample = "original data")
+  ) %>% 
+  
+  # plot!
+  ggplot(aes(x = SALAMAN, fill = sample == "original data")) +
+  geom_bar() +
+  scale_fill_viridis_d(option = "A", begin = .15, end = .55, breaks = NULL) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  coord_cartesian(xlim = c(0, 30)) +
+  labs(title = "Handmade posterior predictive check") +
+  facet_wrap(~sample) +
+  theme(strip.background = element_rect(linewidth = 0, fill = "grey92"))
+```
+
+This, friends, is how you can use our intercepts-only Poisson-lognormal mixture model to simulate count data resembling the original count data. Data simulation is cool, but you might wonder how to compute the mean of the model-implied lognormal distribution. Recall that we can't just exponentiate the model's intercept. As it turns out, $\exp \mu$ returns the **median** for the lognormal distribution. The formula for the mean of the lognormal distribution is
+
+$$\text{mean} = \exp \left ( \mu + \frac{\sigma^2}{2}\right).$$
+
+So here's how to work with the posterior draws to compute that value.
+
+```{r, warning = F}
+draws %>% 
+  mutate(mean = exp(mu + sigma^2 / 2)) %>% 
+  
+  ggplot(aes(x = mean, y = 0)) +
+  stat_halfeye(.width = c(.5, .95)) +
+  geom_vline(xintercept = mean(salamanders$SALAMAN), 
+             color = "purple4", linetype = 2) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  coord_cartesian(xlim = c(0, 10)) +
+  xlab(expression("mean of the lognormal "*lambda*" distribution"))
+```
+
+For reference, we superimposed the mean of the `SALAMAN` data with a dashed line.
+
+## Wrap-up
+
+Okay, this is about as far as I'd like to go with this one. To be honest, the Poisson-lognormal mixture is a weird model and I'm not sure if it's a good fit for the kind of data I tend to work with. But exposure to new options seems valuable and I'm content to low-key chew on this one for a while.
+
+If you'd like to learn more, do check out Bulmer's original [-@bulmer1974OnFitting] paper and the more recent OLRE paper by @harrison2014using. The great [Ben Bolker](https://twitter.com/bolkerb) wrote up a vignette ([here](https://glmm.wdfiles.com/local--files/examples/overdispersion.pdf)) on how to fit the OLRE Poisson-lognormal with **lme4** [@R-lme4] and Michael Clark wrote up a very quick example of the model with **brms** [here](https://m-clark.github.io/easy-bayes/posterior-predictive-checks.html).
+
+Happy modeling.
+
+## Session info
+
+```{r}
+sessionInfo()
+```
+
+## References
+
+[^1]: That's a lie. There was no pop quiz, last week.
+
+[^2]: I'm making this number up, too, but it's probably not far off. `r emo::ji("coffee")` `r emo::ji("coffee")` `r emo::ji("coffee")`
+
+[^3]: One could also, of course, express that model as $y_i = \beta_0 + \beta_1 x_i + \epsilon_i$, where $\epsilon_i \sim \operatorname{Normal}(0, \sigma)$. But come on. That's weak sauce. For more on why, see page 84 in @mcelreathStatisticalRethinkingBayesian2020.
+
+[^4]: I say "suggests" because a simple Poisson model can be good enough IF you have a set of high-quality predictors which can "explain" all that extra-looking variability. We, however, will be fitting intercept-only models.
+
+```{r, eval = F, echo = F}
+draws %>% 
+  mutate(mean = exp(mu + sigma^2 / 2)) %>% 
+  
+  ggplot(aes(x = mean, y = 0)) +
+  stat_halfeye(.width = c(.5, .95)) +
+  geom_vline(xintercept = mean(salamanders$SALAMAN), 
+             color = "purple4", linetype = 2) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  coord_cartesian(xlim = c(0, 10)) +
+  xlab(expression("mean of the lognormal "*lambda*" distribution"))
+
+ggsave("featured.jpg", width = 3.6, height = 3.5, units = "in")
+```
+

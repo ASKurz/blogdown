@@ -1,0 +1,388 @@
+---
+title: If you fit a model with multiply imputed data, you can still plot the line.
+author: A. Solomon Kurz
+date: '2021-10-21'
+draft: false
+excerpt: "If you're an **R** user and like multiple imputation for missing data, you probably know all about the **mice** package. The bummer is there are no built-in ways to plot the fitted lines from models fit from multiply-imputed data using van Buuren's **mice**-oriented workflow. However, there is a way to plot your fitted lines by hand and in this blog post I'll show you how."
+layout: single
+tags:
+- mice
+- missing data
+- multiple imputation
+- plot
+- R
+- tidyverse
+- tutorial
+lastmod: '2021-10-21T16:12:29-05:00'
+featured: no
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+biblio-style: apalike
+csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+link-citations: yes
+---
+
+## Version 1.1.0
+
+Edited on October 9, 2022. Doctoral candidate [Reinier van Linschoten](https://www.linkedin.com/in/reiniervlinschoten/) kindly pointed out a mistake in my **R** code for $V_B$, the between imputation variance. The blog post now includes the corrected workflow.
+
+## What?
+
+If you're in the know, you know there are three major ways to handle missing data:
+
+* full-information maximum likelihood,
+* multiple imputation, and
+* one-step full-luxury[^1] Bayesian imputation.
+
+If you're a frequentist, you only have the first two options. If you're an **R** [@R-base] user and like multiple imputation, you probably know all about the **mice** package [@R-mice; @mice2011], which generally works great. The bummer is there are no built-in ways to plot the fitted lines from models fit from multiply-imputed data using van Buuren's **mice**-oriented workflow (see [GitHub issue #82](https://github.com/amices/mice/issues/82)). However, there is a way to plot your fitted lines by hand and in this blog post I'll show you how.
+
+### I make assumptions.
+
+For this post, I'm presuming some background knowledge:
+
+* You should be familiar with regression. For frequentist introductions, I recommend Roback and Legler's [-@roback2021beyond] online text or James, Witten, Hastie, and Tibshirani's [-@james2021AnIntroduction] online text. For Bayesian introductions, I recommend either edition of McElreath's text [-@mcelreathStatisticalRethinkingBayesian2015; -@mcelreathStatisticalRethinkingBayesian2020]; Kruschke's [-@kruschkeDoingBayesianData2015] text; or Gelman, Hill, and Vehtari's [-@gelmanRegressionOtherStories2020] text.
+
+* You should be familiar with contemporary missing data theory. You can find brief overviews in the texts by McElreath and Gelman et al, above. For a deeper dive, I recommend @enders2022applied, @little2019statistical, or @vanbuurenFlexibleImputationMissing2018.
+
+* All code is in **R**. Data wrangling and plotting were done with help from the **tidyverse** [@R-tidyverse; @wickhamWelcomeTidyverse2019] and **GGally** [@R-GGally]. The data and multiple-imputation workflow are from the [**mice** package](https://CRAN.R-project.org/package=mice).
+
+Here we load our primary **R** packages.
+
+```{r, warning = F, message = F}
+library(tidyverse)
+library(GGally)
+library(mice)
+```
+
+### We need data.
+
+In this post we'll focus on a subset of the `brandsma` data set [@brandsma1989effects]. The goal, here, is to take a small enough subset that there will be noticeable differences across the imputed data sets.
+
+```{r}
+set.seed(201)
+
+b_small <-
+  brandsma %>% 
+  filter(!complete.cases(.)) %>% 
+  slice_sample(n = 50) %>% 
+  select(ses, iqv, iqp)
+
+glimpse(b_small)
+```
+
+Here are our three variables.
+
+```{r, warning = F, message = F}
+ggpairs(b_small,
+        diag = list(continuous = wrap("barDiag", bins = 10)),
+        upper = list(continuous = wrap("cor", stars = FALSE)))
+```
+
+We'll be focusing on the relation between socioeconomic status (`ses`) and verbal IQ (`iqv`) and performance IQ (`iqp`) will be a missing data covariate. 
+
+Here's what the missing data patterns look like.
+
+```{r}
+b_small %>% 
+  mutate_all(.funs = ~ ifelse(is.na(.), 0, 1)) %>% 
+  count(ses, iqv, iqp, sort = TRUE) %>% 
+  mutate(percent = 100 * n / sum(n))
+```
+
+Here `1` means the value was observed and `0` means the value was missing. Twenty-eight percent of the cases have missingness on one of the two focal variables. The bulk of the missingness is in `ses`.
+
+## Impute
+
+We'll use the `mice()` function to impute. By setting `m = 10`, we'll get back 10 multiply-imputed data sets. By setting `method = "norm"`, we will be using Bayesian linear regression with the Gaussian likelihood to compute the imputed values.
+
+```{r}
+imp <- mice(b_small, seed = 540, m = 10, method = "norm", print = FALSE)
+```
+
+## Model
+
+Our statistical model will be
+
+$$
+\begin{align*}
+\text{iqv}_i & \sim \mathcal N(\mu_i, \sigma) \\
+\mu_i & = \beta_0 + \beta_1 \text{ses}_i.
+\end{align*}
+$$
+
+With the `mice::with()` function, we fit that model once to each of the 10 imputed data sets.
+
+```{r}
+fit <- with(imp, lm(iqv ~ 1 + ses))
+```
+
+There's a lot of information packed into our `fit` object. Within the `analyses` section we can find the results of all 10 models.
+
+```{r}
+fit$analyses %>% str(max.level = 1)
+```
+
+This insight will come in handy in just a bit.
+
+## We want lines!
+
+### Start naïve.
+
+If you wanted to plot the fitted line for a simple linear model, you'd probably use the `fitted()` or `predict()` function. But when you have fit that model to your multiply-imputed data sets, that just won't work. For example:
+
+```{r, eval = F}
+predict(fit)
+```
+
+If you try executing that line, you'll get a nasty error message reading:
+
+> Error in UseMethod("predict") : no applicable method for 'predict' applied to an object of class "c('mira', 'matrix')"
+
+Our `fit` object is not a regular fit object. It's an object of class `"mira"` and `"matrix"`, which means it's fancy and temperamental.
+
+```{r}
+class(fit)
+```
+
+At the time of this writing, the **mice** package does not have a built-in solution to this problem. If you're willing to put in a little work, you can do the job yourself.
+
+### Off label.
+
+Remember how we showed how our `fit$analyses` is a list of all 10 of our individual model fits? Turns out we can leverage that. For example, here's the model summary for the model fit to the seventh imputed data set.
+
+```{r}
+fit$analyses[[7]] %>% 
+  summary()
+```
+
+All we needed to do was use the double-bracket indexing. If you're not up on how to do that, Hadley Wickham has a [famous tweet](https://twitter.com/hadleywickham/status/643381054758363136) on the subject and Jenny Bryan has a [great talk](https://www.youtube.com/watch?v=4MfUCX_KpdE&t=615s&frags=pl%2Cwn) discussing the role of lists within data wrangling. With the double-bracket indexing trick, you can use `fitted()` or `predict()` one model iteration at a time. E.g.,
+
+```{r}
+fit$analyses[[1]] %>% 
+  fitted() %>% 
+  str()
+```
+
+Building, here's what that can look like if we use `predict()` for all 10 of our models, bind the individual results, and plot them all at once.
+
+```{r, warning = F}
+# define the sequence of predictor values
+ses_min <- min(b_small$ses, na.rm = T)
+ses_max <- max(b_small$ses, na.rm = T)
+
+ses_length <- 30
+
+nd <- tibble(ses = seq(from = ses_min, to = ses_max, length.out = ses_length))
+
+# use `predict()` for each separate model
+rbind(
+  predict(fit$analyses[[1]], newdata = nd, interval = "confidence"),
+  predict(fit$analyses[[2]], newdata = nd, interval = "confidence"),
+  predict(fit$analyses[[3]], newdata = nd, interval = "confidence"),
+  predict(fit$analyses[[4]], newdata = nd, interval = "confidence"),
+  predict(fit$analyses[[5]], newdata = nd, interval = "confidence"),
+  predict(fit$analyses[[6]], newdata = nd, interval = "confidence"),
+  predict(fit$analyses[[7]], newdata = nd, interval = "confidence"),
+  predict(fit$analyses[[8]], newdata = nd, interval = "confidence"),
+  predict(fit$analyses[[9]], newdata = nd, interval = "confidence"),
+  predict(fit$analyses[[10]], newdata = nd, interval = "confidence")
+) %>%
+  # wrangle a bit
+  data.frame() %>% 
+  bind_cols(
+    bind_rows(replicate(10, nd, simplify = FALSE))
+    ) %>% 
+  mutate(.imp = rep(1:10, each = ses_length)) %>% 
+  
+  # plot!
+  ggplot(aes(x = ses)) +
+  geom_ribbon(aes(ymin = lwr, ymax = upr, group = .imp),
+              alpha = 1/10) +
+  geom_line(aes(y = fit, group = .imp), 
+            size = 1/4) +
+  # add the observed data for good measure
+  geom_point(data = b_small,
+             aes(y = iqv)) +
+  ylab("iqv")
+```
+
+I kinda like this visualization approach. It has a certain Bayesian flair and it does an okay job displaying the stochasticity built in to the multiple imputation framework. However, this approach is totally off label and will probably get shot down by any self-respecting Reviewer #2. 
+
+Fortunately for us, we have a principled and peer-reviewed solution, instead.
+
+### Level up with Miles.
+
+In his [-@miles2016obtaining] paper, *Obtaining predictions from models fit to multiply imputed data*, [Andrew Miles](https://www.andrewamiles.com/) presented two methods for, well, doing what his title said he'd do. Miles called these two methods *Predict Then Combine* (PC) and *Combine Then Predict* (CP). The CP approach invokes first derivatives in a way I'm not prepared to implement on my own. Fortunately for us, the PC approach just requires a little iteration, a few lines within a grouped `summarise()`, and a tiny bit of wrangling. In my world, that's cake. `r emo::ji("cake")`
+
+#### First: iteration.
+
+For our first step, we'll use `predict()` again for each of our individual versions of the model. This time, however, we'll use thriftier code and iterate with help from `purrr::map()`.
+
+```{r}
+fitted_lines <-
+  tibble(.imp = 1:10) %>% 
+  mutate(p = map(.imp, ~ predict(fit$analyses[[.]], 
+                                 newdata = nd, 
+                                 se.fit = TRUE) %>% 
+                   data.frame())
+         )
+
+# what have we done?
+fitted_lines
+```
+
+We have a nested tibble where the results of all 10 `predict()` operations are waiting for us in the `p` column and each is conveniently indexed by `.imp`. Note also how we did not request confidence intervals in the output, but we did set `se.fit = TRUE`. We'll be all about those standard errors in just a bit.
+
+Here's how we unnest the results and then augment a little.
+
+```{r}
+fitted_lines <- fitted_lines %>% 
+  unnest(p) %>% 
+  # add in the nd predictor data
+  bind_cols(
+    bind_rows(replicate(10, nd, simplify = FALSE))
+    ) %>% 
+  # drop two unneeded columns
+  select(-df, -residual.scale)
+
+# now what did we do?
+glimpse(fitted_lines)
+```
+
+#### Second: equations and the implied code.
+
+In his paper (p. 176), Miles's used *predictions*
+
+> as a blanket term for any value $\hat p$ that can
+be calculated by applying some type of transformation $t()$ to the vector of coefficients from a fitted model $(\hat \beta)$.
+>
+> $$\hat p = t(\hat \beta)$$
+
+In our case, $\hat p$ covers the values in our `fit` column and the $t(\hat \beta)$ part is what we did with `predict()`. Well, technically we should refer to those `fit` values as $\hat p_j$, where $j$ is the index for a given imputed data set, $j = 1, \dots, m$, and $m$ is the total number of imputations. In our `fitted_lines` tibble, we have called Miles's $m$ index `.imp`[^2].
+
+Anyway, Miles showed we can compute the conditional pooled point estimate $\bar p$ by
+
+$$\bar p = \frac{1}{m} \sum_{j=1}^m \hat p_j,$$
+
+which is a formal way of saying we simply average across the $m$ imputed solutions. Here's that in code.
+
+```{r}
+fitted_lines %>% 
+  group_by(ses) %>% 
+  summarise(fit_bar = mean(fit))
+```
+
+Though the expected values are pretty easy to compute, it'll take a little more effort to express the uncertainty around those expectations because we have to account for both within- and between-imputation variance. We can define the within-imputation variance $V_W$ as
+
+$$V_W = \frac{1}{m} \sum_{j=1}^m \widehat{SE}_j^2,$$
+
+which is a formal way of saying we simply average the squared standard errors across the $m$ imputed solutions, for each fitted value. Here's that in code.
+
+```{r}
+fitted_lines %>% 
+  group_by(ses) %>% 
+  summarise(fit_bar = mean(fit),
+            v_w     = mean(se.fit^2))
+```
+
+We can define the between imputation variance $V_B$ as 
+
+$$V_B = \frac{1}{m - 1} \sum_{j=1}^m (\hat p_j - \bar p_j)^2,$$
+
+where we're no longer quite averaging across the $m$ imputations because our denominator is now the corrected value $(m - 1)$. What can I say? Variances are tricky. Here's the code.
+
+```{r}
+# define the total number of imputations
+m <- 10
+
+fitted_lines %>% 
+  group_by(ses) %>% 
+  summarise(fit_bar = mean(fit),
+            v_w     = mean(se.fit^2),
+            v_b     = sum((fit - fit_bar)^2) / (m - 1))
+```
+
+We can define the total variance of the prediction $V_{\bar p}$ as 
+
+$$V_{\bar p} = V_W + V_B \left ( 1 + \frac{1}{m} \right ),$$
+
+where the pooled standard error is just $\sqrt{V_{\bar p}}$. Here are those in code.
+
+```{r}
+fitted_lines %>% 
+  group_by(ses) %>% 
+  summarise(fit_bar = mean(fit),
+            v_w     = mean(se.fit^2),
+            v_b     = sum((fit - fit_bar)^2) / (m - 1),
+            v_p     = v_w + v_b * (1 + (1 / m)),
+            se_p    = sqrt(v_p))
+```
+
+Now we finally have both $\bar p$ and $V_{\bar p}$ for each desired level of `ses`, we can use the conventional normal-theory approach to compute the pooled 95% confidence intervals.
+
+```{r}
+# this time we'll save the results
+fitted_lines <- fitted_lines %>% 
+  group_by(ses) %>% 
+  summarise(fit_bar = mean(fit),
+            v_w     = mean(se.fit^2),
+            v_b     = sum((fit - fit_bar)^2) / (m - 1),
+            v_p     = v_w + v_b * (1 + (1 / m)),
+            se_p    = sqrt(v_p)) %>% 
+  # use the _p suffix to indicate these are pooled
+  mutate(lwr_p = fit_bar - se_p * 1.96,
+         upr_p = fit_bar + se_p * 1.96) 
+
+# what do we have?
+glimpse(fitted_lines)
+```
+
+#### Third: plot.
+
+Now the hard part is over, we're finally ready to plot.
+
+```{r, warning = F}
+fitted_lines %>% 
+  ggplot(aes(x = ses)) +
+  geom_ribbon(aes(ymin = lwr_p, ymax = upr_p),
+              alpha = 1/2) +
+  geom_line(aes(y = fit_bar), 
+            size = 1/2) +
+  # add the observed data for good measure
+  geom_point(data = b_small,
+             aes(y = iqv)) +
+  labs(title = "Pooled fitted line from a model fit to multiply-imputed data",
+       subtitle = expression("The pooled conditional mean line "*(bar(italic(p)))*" sits atop the pooled confidence interval "*(95*'%'*~CI[bar(italic(p))])*' band.'),
+       y = "iqv")
+```
+
+There it is, friends. We have the pooled fitted line and its pooled 95% confidence interval band from our model fit to multiply-imputed data. Until the day that Stef van Buuren and friends get around to building this functionality into **mice**, our realization in **R** code of Andrew Miles's *Predict Then Combine* (PC) approach has you covered.
+
+## Session info
+
+```{r}
+sessionInfo()
+```
+
+## References
+
+[^1]: Be warned that "full-luxury Bayesian ..." isn't a real term. Rather, it's a playful descriptor coined by the great Richard McElreath. To hear him use it in action, check out his [nifty talk](https://www.youtube.com/watch?v=KNPYUVmY3NM) on causal inference. One-step Bayesian imputation is a real thing, though. McElreath covered it in both editions of his text and I've even blogged about it [here](https://solomonkurz.netlify.app/post/2021-07-27-one-step-bayesian-imputation-when-you-have-dropout-in-your-rct/).
+
+[^2]: When you do this on your own, you might instead name the `.imp` column as `m`, which goes nicely with Miles's notation. In this post and in some of my personal work, I used `.imp` because it lines up nicely with the output from some of the **mice** functions.
+
+```{r, eval = F, echo = F}
+fitted_lines %>% 
+  ggplot(aes(x = ses)) +
+  geom_ribbon(aes(ymin = lwr_p, ymax = upr_p),
+              alpha = 1/2) +
+  geom_line(aes(y = fit_bar), 
+            size = 1/2) +
+  # add the observed data for good measure
+  geom_point(data = b_small,
+             aes(y = iqv)) +
+  labs(title = "Pooled fitted line from a model fit to multiply-imputed data",
+       subtitle = expression("The pooled conditional mean line "*(bar(italic(p)))*" sits atop the pooled confidence interval "*(95*'%'*~CI[bar(italic(p))])*' band.'),
+       y = "iqv") +
+  theme_gray(base_size = 5.7)
+
+ggsave("featured.jpg", width = 3.6, height = 3.5, units = "in")
+```

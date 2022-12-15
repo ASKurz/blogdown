@@ -1,0 +1,312 @@
+---
+title: Yes, you can fit an exploratory factor analysis with lavaan
+author: A. Solomon Kurz
+date: '2021-05-11'
+draft: false
+excerpt: "Just this past week, I learned that, *Yes*, you can fit an exploratory factor analysis (EFA) with **lavaan**. The purpose of this blog post is to make EFAs with **lavaan** even more accessible and web searchable by walking through a quick example."
+layout: single
+tags:
+- EFA
+- lavaan
+- R
+- tutorial
+lastmod: '2021-05-11T09:35:30-05:00'
+featured: no
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+biblio-style: apalike
+csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+link-citations: yes
+---
+
+```{r, echo = F, cache = F}
+# knitr::opts_chunk$set(fig.retina = 2.5)
+options(width = 120)
+```
+
+## Purpose
+
+Just this past week, I learned that, *Yes*, you can fit an exploratory factor analysis (EFA) with **lavaan** [@R-lavaan; @rosseellavaan2012]. At the moment, this functionality is only unofficially supported, which is likely why many don't know about it, yet. You can get the [un]official details at [issue #112](https://github.com/yrosseel/lavaan/issues/112) on the **lavaan** GitHub repository ([https://github.com/yrosseel/lavaan](https://github.com/yrosseel/lavaan)). The purpose of this blog post is to make EFAs with **lavaan** even more accessible and web searchable by walking through a quick example.
+
+## Set up
+
+First, load our focal package, **lavaan**, along with the **tidyverse** [@R-tidyverse; @wickhamWelcomeTidyverse2019].
+
+```{r, warning = F, message = F}
+library(tidyverse)
+library(lavaan)
+```
+
+The data are a subset of the data from @arrudaPsychometricProperties2020. You can find various supporting materials for their paper on the [OSF](https://osf.io) at [https://osf.io/kx2ym/](https://osf.io/kx2ym/). We will load[^1] a subset of the data saved in their `Base R - EFICA (manuscript and book chapter).RData` file (available at [https://osf.io/p3fs6/](https://osf.io/p3fs6/)) called `ds`.
+
+```{r, echo = F, eval = F}
+# save(ds, file = "data/ds.rda")
+```
+
+```{r}
+load("data/ds.rda")
+
+# what is this?
+dim(ds)
+```
+
+Here we extract a subset of the columns, rename them, and save the reduced data frame as `d`.
+
+```{r}
+d <-
+  ds %>% 
+  select(ife_1:ife_65) %>% 
+  set_names(str_c("y", 1:65))
+```
+
+Participants were $N = 3{,}284$ parents of children or adolescents, in Brazil. The columns in our `d` data are responses to 65 items from the parent version of an "assessment tool developed to comprehensively assess dysfunctional behaviors related to" executive functioning, called the Executive function inventory for children and adolescents (EFICA; p. 5). On each item, the parents rated their kids on a 3-point Likert-type scale ranging from 0 (*never*) to 2 (*always/almost always*). To give a better sense of the items:
+
+> The Parents' version (EFICA-P) encompassed behaviors especially performed at home, such as "Leaves the light on, door open or wet towels on top of the bed, even after being told several times", "Explodes or gets angry when he/she is contradicted" and/or "Interrupts others, doesn't know how to wait for his/her turn to talk." (p. 5)
+
+We won't be diving into the substance of the paper, here. For that, see @arrudaPsychometricProperties2020. But for data validation purposes, the items should only take on integers 0 through 2. Turns out that the data did contain a few coding errors, which we will convert to missing data, here.
+
+```{r}
+d <-
+  d %>% 
+  mutate_at(vars(y1:y65), ~ifelse(. %in% c(0:2), ., NA))
+```
+
+Here are the overall distributions, collapsing across items.
+
+```{r}
+d %>% 
+  pivot_longer(everything()) %>% 
+  count(value) %>% 
+  mutate(percent = (100 * n / sum(n)) %>% round(digits = 1))
+```
+
+We might make a tile plot to get a sense high-level sense of the distributions across the items.
+
+```{r, fig.width = 3.5, fig.height = 7.25, warning = F}
+d %>% 
+  pivot_longer(everything()) %>% 
+  mutate(item = factor(name, 
+                       levels = str_c("y", 1:65),
+                       labels = 1:65)) %>% 
+  count(item, value) %>% 
+  
+  ggplot(aes(x = value, y = item, fill = n)) +
+  geom_tile() +
+  scale_fill_viridis_c(expression(italic(n)), limits = c(0, NA)) +
+  scale_x_continuous("Likert rating", expand = c(0, 0), breaks = 0:2) +
+  ggtitle("EFICA-P items") +
+  theme(axis.text.x = element_text(size = 6))
+```
+
+## EFA in **lavaan**
+
+### Consider your estimation method.
+
+An important preliminary step before fitting an EFA is getting a good sense of the data. In the last section, we learned the data are composed of three ordinal categories, which means that conventional estimators, such as maximum likelihood, won't be the best of choices. Happily, **lavaan** offers several good options for ordinal data, which you can learn more about at [https://lavaan.ugent.be/tutorial/cat.html](https://lavaan.ugent.be/tutorial/cat.html) and [https://lavaan.ugent.be/tutorial/est.html](https://lavaan.ugent.be/tutorial/est.html). The default is the WLSMV estimator (i.e., `estimator = "WLSMV"`), which our friends in quantitative methodology have shown is generally a good choice [e.g., @flora2004empirical; @liCFAWithOrdinalData2016].
+
+### How many factors should we consider?
+
+In the paper, Arruda and colleagues considered models with up to five factors. Here we're going to keep things simple and consider between one and three. However, I'd be remiss not to mention that for real-world analyses, this step is important and possibly underappreciated. Decades of methodological work suggest that some of the widely-used heuristics for deciding on the number of factors (e.g., scree plots and the Kaiser criterion) aren't as good as the lesser-used parallel analysis approach. For a gentle introduction to the topic, check out @schmittCurrentMethodologicalConsiderations2011. Though we won't make use of it, here, the **psych** package [@R-psych] offers some nice options for parallel analysis by way of the `fa.parallel()` function.
+
+### Finally, we fit a few EFAs.
+
+It's time to fit our three EFAs. When defining the EFA models within **lavaan**, the critical features are how one defines the factors on the left-hand side of the equations. Here we define the models for all 65 items.
+
+```{r define}
+# 1-factor model
+f1 <- '
+efa("efa")*f1 =~ y1 + y2 + y3 + y4 + y5 + y6 + y7 + y8 + y9 + y10 +
+                   y11 + y12 + y13 + y14 + y15 + y16 + y17 + y18 + y19 + y20 + 
+                   y21 + y22 + y23 + y24 + y25 + y26 + y27 + y28 + y29 + y30 +
+                   y31 + y32 + y33 + y34 + y35 + y36 + y37 + y38 + y39 + y40 +
+                   y41 + y42 + y43 + y44 + y45 + y46 + y47 + y48 + y49 + y50 +
+                   y51 + y52 + y53 + y54 + y55 + y56 + y57 + y58 + y59 + y60 +
+                   y61 + y62 + y63 + y64 + y65
+'
+
+# 2-factor model
+f2 <- '
+efa("efa")*f1 +
+efa("efa")*f2 =~ y1 + y2 + y3 + y4 + y5 + y6 + y7 + y8 + y9 + y10 +
+                   y11 + y12 + y13 + y14 + y15 + y16 + y17 + y18 + y19 + y20 + 
+                   y21 + y22 + y23 + y24 + y25 + y26 + y27 + y28 + y29 + y30 +
+                   y31 + y32 + y33 + y34 + y35 + y36 + y37 + y38 + y39 + y40 +
+                   y41 + y42 + y43 + y44 + y45 + y46 + y47 + y48 + y49 + y50 +
+                   y51 + y52 + y53 + y54 + y55 + y56 + y57 + y58 + y59 + y60 +
+                   y61 + y62 + y63 + y64 + y65
+'
+
+# 3-factor model
+f3 <- '
+efa("efa")*f1 +
+efa("efa")*f2 +
+efa("efa")*f3 =~ y1 + y2 + y3 + y4 + y5 + y6 + y7 + y8 + y9 + y10 +
+                   y11 + y12 + y13 + y14 + y15 + y16 + y17 + y18 + y19 + y20 + 
+                   y21 + y22 + y23 + y24 + y25 + y26 + y27 + y28 + y29 + y30 +
+                   y31 + y32 + y33 + y34 + y35 + y36 + y37 + y38 + y39 + y40 +
+                   y41 + y42 + y43 + y44 + y45 + y46 + y47 + y48 + y49 + y50 +
+                   y51 + y52 + y53 + y54 + y55 + y56 + y57 + y58 + y59 + y60 +
+                   y61 + y62 + y63 + y64 + y65
+'
+```
+
+Now we've defined the three EFA models, we can fit the actual EFAs. One can currently do so with either the `cfa()` or `sem()` functions. The default rotation method is oblique Geomin. If you're not up on rotation methods, you might check out @sass2010comparative. Here we'll give a nod to tradition and use oblique Oblimin by setting `rotation = "oblimin"`. Also, note our use of `ordered = TRUE`, which explicitly tells `lavaan::cfa()` to treat all 65 of our items as ordinal.
+
+```{r, echo = F}
+# this saves a few minutes, particularly for the third model
+
+# save(efa_f1, file = "efas/efa_f1.rda")
+# save(efa_f2, file = "efas/efa_f2.rda")
+# save(efa_f3, file = "efas/efa_f3.rda")
+
+load("efas/efa_f1.rda")
+load("efas/efa_f2.rda")
+load("efas/efa_f3.rda")
+```
+
+```{r fit, eval = F}
+efa_f1 <- 
+  cfa(model = f1,
+      data = d,
+      rotation = "oblimin",
+      estimator = "WLSMV",
+      ordered = TRUE)
+
+efa_f2 <- 
+  cfa(model = f2,
+      data = d,
+      rotation = "oblimin",
+      estimator = "WLSMV",
+      ordered = TRUE)
+
+efa_f3 <- 
+  cfa(model = f3,
+      data = d,
+      rotation = "oblimin",
+      estimator = "WLSMV",
+      ordered = TRUE)
+```
+
+For the sake of space, I'm not going to show the output, here. But if you want the verbose **lavaan**-style model summary for your EFA, you can use `summary()` function just the same way you would for a CFA.
+
+```{r, eval = F}
+summary(efa_f1, fit.measures = TRUE)
+summary(efa_f2, fit.measures = TRUE)
+summary(efa_f3, fit.measures = TRUE)
+```
+
+What we will focus on, though, is how one might compare the EFAs by some of their fit statistics.
+
+```{r}
+# define the fit measures
+fit_measures_robust <- c("chisq.scaled", "df", "pvalue.scaled", 
+                         "cfi.scaled", "rmsea.scaled", "srmr")
+
+# collect them for each model
+rbind(
+  fitmeasures(efa_f1, fit_measures_robust),
+  fitmeasures(efa_f2, fit_measures_robust),
+  fitmeasures(efa_f3, fit_measures_robust)) %>% 
+  # wrangle
+  data.frame() %>% 
+  mutate(chisq.scaled  = round(chisq.scaled, digits = 0),
+         df            = as.integer(df),
+         pvalue.scaled = ifelse(pvalue.scaled == 0, "< .001", pvalue.scaled)) %>% 
+  mutate_at(vars(cfi.scaled:srmr), ~round(., digits =  3))
+```
+
+As is often the case, the fit got steadily better with each added factor. Here's how one might work with the output from the `standardizedsolution()` function to plot the $\lambda$'s for the 3-factor solution.
+
+```{r, fig.width = 6.5, fig.height = 8.25}
+# wrangle
+standardizedsolution(efa_f3) %>% 
+  filter(op == "=~") %>% 
+  mutate(item  = str_remove(rhs, "y") %>% as.double(),
+         factor = str_remove(lhs, "f")) %>% 
+  
+  # plot
+  ggplot(aes(x = est.std, xmin = ci.lower, xmax = ci.upper, y = item)) +
+  annotate(geom = "rect",
+           xmin = -1, xmax = 1,
+           ymin = -Inf, ymax = Inf,
+           fill = "grey90") +
+  annotate(geom = "rect",
+           xmin = -0.7, xmax = 0.7,
+           ymin = -Inf, ymax = Inf,
+           fill = "grey93") +
+  annotate(geom = "rect",
+           xmin = -0.4, xmax = 0.4,
+           ymin = -Inf, ymax = Inf,
+           fill = "grey96") +
+  geom_vline(xintercept = 0, color = "white") +
+  geom_pointrange(aes(alpha = abs(est.std) < 0.4),
+                  fatten = 5) +
+  geom_text(aes(label = item, color = abs(est.std) < 0.4),
+            size = 2) +
+  scale_color_manual(values = c("white", "transparent")) +
+  scale_alpha_manual(values = c(1, 1/3)) +
+  scale_x_continuous(expression(lambda[standardized]), 
+                     expand = c(0, 0), limits = c(-1, 1),
+                     breaks = c(-1, -0.7, -0.4, 0, 0.4, 0.7, 1),
+                     labels = c("-1", "-.7", "-.4", "0", ".4", ".7", "1")) +
+  scale_y_continuous(breaks = 1:65, sec.axis = sec_axis(~ . * 1, breaks = 1:65)) +
+  ggtitle("EFICA-P loadings for the 3-factor model") +
+  theme(legend.position = "none") +
+  facet_wrap(~ factor, labeller = label_both)
+```
+
+To reduce visual complexity, $\lambda$'s less than the conventional 0.4 threshold are semitransparent. Those above the threshold have the item number in the dot. I'm not going to offer an interpretation, here, since that's not really the point of this post. But hopefully this will get you started fitting all the **lavaan**-based EFAs your heart desires.
+
+## How about ESEM?
+
+If one can fit EFAs in **lavaan**, how about exploratory structural equation models [ESEM, @asparouhovESEM2009]? Yes, I believe one can. To get a sense, check out my search results at [https://github.com/yrosseel/lavaan/search?q=esem](https://github.com/yrosseel/lavaan/search?q=esem). I haven't had a reason to explore this for any of my projects, but it looks promising. If you master the **lavaan** ESEM method, maybe you could write a blog post of your own. Also, check out the blog post by [Mateus Silvestrin](https://twitter.com/MateusPsi), [*Exploratory Structural Equation Modeling in R*](https://msilvestrin.me/post/esem/#ref-asparouhov_exploratory_2009).
+
+## Session information
+
+```{r}
+sessionInfo()
+```
+
+## References
+
+[^1]: You can download the `ds.rda` file from my GitHub, [here](https://github.com/ASKurz/blogdown/blob/main/content/post/2021-05-11-yes-you-can-fit-an-exploratory-factor-analysis-with-lavaan/data/ds.rda).
+
+```{r, echo = F, eval = F}
+# wrangle
+standardizedsolution(efa_f3) %>% 
+  filter(op == "=~") %>% 
+  mutate(item  = str_remove(rhs, "y") %>% as.double(),
+         factor = str_remove(lhs, "f")) %>% 
+  
+  # plot
+  ggplot(aes(x = est.std, xmin = ci.lower, xmax = ci.upper, y = item)) +
+  annotate(geom = "rect",
+           xmin = -1, xmax = 1,
+           ymin = -Inf, ymax = Inf,
+           fill = "grey90") +
+  annotate(geom = "rect",
+           xmin = -0.7, xmax = 0.7,
+           ymin = -Inf, ymax = Inf,
+           fill = "grey93") +
+  annotate(geom = "rect",
+           xmin = -0.4, xmax = 0.4,
+           ymin = -Inf, ymax = Inf,
+           fill = "grey96") +
+  geom_vline(xintercept = 0, color = "white") +
+  geom_pointrange(aes(alpha = abs(est.std) < 0.4),
+                  fatten = 5) +
+  geom_text(aes(label = item, color = abs(est.std) < 0.4),
+            size = 2) +
+  scale_color_manual(values = c("white", "transparent")) +
+  scale_alpha_manual(values = c(1, 1/3)) +
+  scale_x_continuous(expression(lambda[standardized]), 
+                     expand = c(0, 0), limits = c(-1, 1),
+                     breaks = c(-1, -0.7, -0.4, 0, 0.4, 0.7, 1),
+                     labels = c("-1", "-.7", "-.4", "0", ".4", ".7", "1")) +
+  scale_y_continuous(breaks = 1:65, sec.axis = sec_axis(~ . * 1, breaks = 1:65)) +
+  ggtitle("EFICA-P loadings for the 3-factor model") +
+  theme(legend.position = "none") +
+  facet_wrap(~ factor, labeller = label_both)
+
+ggsave("featured.jpg", width = 6.5, height = 8.25, units = "in")
+```
+

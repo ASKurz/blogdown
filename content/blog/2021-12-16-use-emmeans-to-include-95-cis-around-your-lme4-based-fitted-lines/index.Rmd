@@ -1,0 +1,444 @@
+---
+title: Use emmeans() to include 95% CIs around your lme4-based fitted lines
+author: A. Solomon Kurz
+date: '2021-12-16'
+draft: false
+excerpt: "You're an **R** user and just fit a nice multilevel model to some grouped data and you'd like to showcase the results in a plot. In your plots, it would be ideal to express the model uncertainty with 95% interval bands. If you're a frequentist and like using the popular **lme4** package, you might be surprised how difficult it is to get those 95% intervals. I recently stumbled upon a solution with the **emmeans** package, and the purpose of this blog post is to show you how it works."
+layout: single
+tags:
+- Bayesian
+- brms
+- confidence interval
+- emmeans
+- frequentist
+- lme4
+- multilevel
+- R
+- tidyverse
+- tutorial
+lastmod: '2021-12-16T14:12:58-06:00'
+featured: no
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+biblio-style: apalike
+csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+link-citations: yes
+---
+
+```{r, echo = F, cache = F}
+# knitr::opts_chunk$set(fig.retina = 2.5)
+options(width = 110)
+```
+
+```{r, echo = F}
+# save(fit3, file = "fits/fit3.rda")
+
+load("fits/fit3.rda")
+```
+
+## Scenario
+
+You're an **R** [@R-base] user and just fit a nice multilevel model to some grouped data and you'd like to showcase the results in a plot. In your plots, it would be ideal to express the model uncertainty with 95% interval bands. If you're a Bayesian working with [Stan](https://mc-stan.org/)-based software, such as [**brms**](https://github.com/paul-buerkner/brms) [@R-brms; @burknerBrmsPackageBayesian2017; @burknerAdvancedBayesianMultilevel2018], this is pretty trivial. But if you're a frequentist and like using the popular [**lme4**](https://CRAN.R-project.org/package=lme4) package [@R-lme4; @batesFittingLinearMixedeffects2015], you might be surprised how difficult it is to get those 95% intervals. I recently stumbled upon a solution with the [**emmeans**](https://github.com/rvlenth/emmeans) package [@R-emmeans], and the purpose of this blog post is to show you how it works.
+
+### I make assumptions.
+
+You'll want to be familiar with multilevel regression. For frequentist resources, I recommend the texts by @roback2021beyond, @hoffmanLongitudinalAnalysisModeling2015, or @singerAppliedLongitudinalData2003. For the Bayesians in the room, I recommend the texts by McElreath [-@mcelreathStatisticalRethinkingBayesian2015; -@mcelreathStatisticalRethinkingBayesian2020] or Kruschke [-@kruschkeDoingBayesianData2015].
+ 
+All code is in **R** [@R-base], with healthy doses of the **tidyverse** [@R-tidyverse; @wickhamWelcomeTidyverse2019]. Probably the best place to learn about the **tidyverse**-style of coding, as well as an introduction to **R**, is Grolemund and Wickham's [-@grolemundDataScience2017] freely-available online text, [*R for data science*](https://r4ds.had.co.nz). We will also make good use of the **patchwork** package [@R-patchwork]. Our two modeling packages will be the aforementioned **lme4** and **brms**.
+
+Load the primary **R** packages and adjust the plotting theme.
+
+```{r, warning = F, message = F}
+# load
+library(tidyverse)
+library(lme4)
+library(brms)
+library(patchwork)
+library(emmeans)
+
+# adjust the plotting theme
+theme_set(
+  theme_linedraw() +
+  theme(panel.grid = element_blank(),
+        strip.background = element_rect(fill = "grey92", color = "grey92"),
+        strip.text = element_text(color = "black", size = 10))
+)
+```
+
+### We need data.
+
+In this post we'll use the base-**R** `ChickWeight` data.
+
+```{r}
+data(ChickWeight)
+
+glimpse(ChickWeight)
+```
+
+The `ChickWeight` data set contains the `weight` measurements in grams for 50 chicks, each of which was randomized into one of four experimental diets. To get a sense of the data, here are their `weight` values plotted across `Time`, separated by the levels of `Diet`.
+
+```{r}
+ChickWeight %>%
+  ggplot(aes(x = Time, y = weight, group = Chick)) +
+  geom_line(alpha = 3/4, linewidth = 1/4) +
+  ylim(0, NA) +
+  facet_wrap(~ Diet, labeller = label_both)
+```
+
+Our goal will be to fit a couple models to these data and practice plotting the model-based trajectories at both the population- and chick-levels.
+
+## Models
+
+Our first model with be the unconditional linear growth model
+
+$$
+\begin{align*}
+\text{weight}_{ij} & \sim \operatorname{Normal}(\mu_{ij}, \sigma_\epsilon^2) \\
+\mu_{ij} & = a_i + b_i \text{Time}_{ij} \\
+a_i & = \alpha_0 + u_i \\
+b_i & = \beta_0 + v_i \\
+\begin{bmatrix} u_i \\ v_i \end{bmatrix} & \sim \operatorname{Normal} \left (
+  \begin{bmatrix} 0 \\ 0 \end{bmatrix}, 
+  \begin{bmatrix} \sigma_u^2 & \\ \sigma_{uv} & \sigma_v^2 \end{bmatrix} 
+\right ),
+\end{align*}
+$$
+
+where $i$ indexes the different levels of `Chick` and $j$ indexes the various measurements taken across `Time`. The $a_i$ intercepts and $b_i$ slopes are both random with a level-2 covariance $\sigma_{uv}$. The second model will be the conditional quadratic growth model
+
+$$
+\begin{align*}
+\text{weight}_{ij} & \sim \operatorname{Normal}(\mu_{ij}, \sigma_\epsilon^2) \\
+\mu_{ij} & = a_i + b_i \text{Time}_{ij} + c_i \text{Time}_{ij}^2 \\
+a_i & = \alpha_0 + \alpha_1 \text{Diet}_i + u_i \\
+b_i & = \beta_0 + \beta_1 \text{Diet}_i + v_i \\
+c_i & = \gamma_0 + \gamma_1 \text{Diet}_i + w_i \\
+\begin{bmatrix} u_i \\ v_i \\ w_i \end{bmatrix} & \sim \operatorname{Normal} \left (
+  \begin{bmatrix} 0 \\ 0 \\ 0 \end{bmatrix}, 
+  \begin{bmatrix} \sigma_u^2 & & \\ \sigma_{uv} & \sigma_v^2 & \\ \sigma_{uw} & \sigma_{vw} & \sigma_w^2 \end{bmatrix} 
+\right ),
+\end{align*}
+$$
+
+which adds a new quadratic growth parameter $c_i$, which varies across chicks. The random intercepts, linear slopes, and quadratic slopes all covary in a $3 \times 3$ level-2 variance/covariance matrix and all three parameters are conditioned on the experimental variable `Diet`.
+
+Here's how to fit the two models with `lme4::lmer()`.
+
+```{r}
+# unconditional linear growth model
+fit1 <- lmer(
+  data = ChickWeight,
+  weight ~ 1 + Time + (1 + Time | Chick)
+)
+
+# conditional quadratic growth model
+fit2 <- lmer(
+  data = ChickWeight,
+  weight ~ 1 + Time + I(Time^2) + Diet + Time:Diet + I(Time^2):Diet + (1 + Time + I(Time^2) | Chick)
+)
+```
+
+If you fit the second model, you probably got the warning message reading `boundary (singular) fit: see ?isSingular`. That often pops up when one or more of your level-2 variance parameters are zero or close to zero, which isn't necessarily a problem but it's just something to take note of. Unless there are other problems with the model, I wouldn't worry about it.
+
+As this post isn't a full multilevel growth model tutorial, I'm not going to go through the model `summary()` output. If you're new to models like this, it's worth your time to inspect the model parameters with care.
+
+## Plot
+
+There are many ways to plot the results from models like these. If you do a quick web search, you'll find a variety of other blog posts exploring how to model and visualize the `ChickWeight` data. In this post, I'm going to recommend a two-panel approach where you (a) plot the chick-level trajectories, (b) plot the population average trajectory, and (c) combine the two plots with **patchwork** syntax. You can then generalize from there to suit your own needs.
+
+### Chick-level trajectories w/o uncertainty with `predict()`.
+
+If you're tricky, there are many post-processing methods you can use to compute and plot the chick-level trajectories. In this post, we'll focus on the `predict()` method. For simple models fit with the `lmer()` function, I recommend the following steps.
+
+1. Insert your model fit object into `predict()`.
+2. Covert the results into a data frame.
+3. Rename the vector of predicted values something generic like `y_hat`.
+4. Append the original data set with `bind_cols()`.
+5. Save the results with a descriptive name.
+
+Here's what those steps look like in action with `fit1`.
+
+```{r}
+fit1.predict.chicks <- predict(fit1) %>% 
+  data.frame() %>% 
+  set_names("y_hat") %>% 
+  bind_cols(ChickWeight)
+
+# what have we done?
+glimpse(fit1.predict.chicks)
+```
+
+We can plot the results like so.
+
+```{r}
+p1 <- fit1.predict.chicks %>% 
+  ggplot(aes(x = Time, y = y_hat, group = Chick)) +
+  geom_line(alpha = 2/4, linewidth = 1/4) +
+  labs(title = "Chick-level trajectories",
+       subtitle = "predict() method",
+       y = expression(widehat(weight)[italic(i)])) +
+  ylim(0, 400)
+
+p1
+```
+
+Now here's how to follow the same steps to get the chick-level trajectories for the conditional quadratic growth model, `fit2`.
+
+```{r}
+# compute
+fit2.predict.chicks <- predict(fit2) %>% 
+  data.frame() %>% 
+  set_names("y_hat") %>% 
+  bind_cols(ChickWeight)
+
+# plot
+p2 <- fit2.predict.chicks %>% 
+  ggplot(aes(x = Time, y = y_hat, group = Chick)) +
+  geom_line(alpha = 2/4, linewidth = 1/4) +
+  labs(title = "Chick-level trajectories",
+       subtitle = "predict() method",
+       y = expression(widehat(weight)[italic(i)])) +
+  ylim(0, 400) +
+  facet_wrap(~ Diet, labeller = label_both)
+
+p2
+```
+
+I should point out that this variant of the `predict()` method will break down if you have markedly non-linear trajectories and relatively few points the are defined over on the $x$-axis. In those cases, you'll have to generalize with skillful use of the `newdata` argument within `predict()`. But that's an issue for another tutorial.
+
+A limitation with both these plots is there is no expression of uncertainty for our chick-level trajectories. My go-to approach would be to depict that with 95% interval bands. However, to my knowledge there is no good way to get the frequentist 95% confidence intervals for the chick-level trajectories with a model fit with **lme4**. You're just SOL on that one, friends. If you really need those, switch to a Bayesian paradigm.
+
+### Population-level trajectories w/o uncertainty with `predict()`.
+
+The click-level trajectories are great and IMO not enough researchers make plots like that when they fit multilevel models. *Show us the group-level differences implied by your level-2 variance parameters!* But the motivation for this blog post is to show how you can use **emmeans** to improve your population-level plots. Before we get to the good stuff, let's first explore the limitations in the `predict()` method.
+
+When using `predict()` to compute population-level trajectories, we'll need to adjust our approach in two important ways. Instead of simply computing the fitted values for each case in the original data set, we're going to want to define the predictor values beforehand, save those values in a data frame, and then plug that data frame into `predict()` via the `newdata` argument. Our second adjustment will be to explicitly tell `predict()` we only want the population-level values by setting `re.form = NA`.
+
+Here's what that adjusted workflow looks like for our unconditional model `fit1`.
+
+```{r}
+# define and save the predictor values beforehand
+nd <- tibble(Time = 0:21)
+
+fit1.predict.population <- 
+  predict(fit1,
+          # notice the two new lines
+          newdata = nd, 
+          re.form = NA) %>% 
+  data.frame() %>% 
+  set_names("y_hat") %>% 
+  bind_cols(nd)
+
+# what have we done?
+glimpse(fit1.predict.population)
+```
+
+When you compare this output to the corresponding output from our `fit1.predict.chicks` data frame, you'll notice the results have fewer rows and columns. If it's not clear to you why that would be, spend some time pondering the difference between group-level and population-level effects. This can be easy to lose track of when you're new to multilevel models.
+
+Now we're all ready to make the `predict()`-based population-level plot, save it as `p3`, and use **patchwork** syntax to display those results along with the chick-level trajectories from before.
+
+```{r}
+p3 <- fit1.predict.population %>% 
+  ggplot(aes(x = Time, y = y_hat)) +
+  geom_line(linewidth = 1) +
+  labs(title = "Population-level trajectory",
+       subtitle = "predict() method",
+       y = expression(widehat(weight))) +
+  ylim(0, 400)
+
+# combine the two ggplots
+p1 + p3 & 
+  # add an overall title
+  plot_annotation(title = "Unconditional linear growth model")
+```
+
+Our population-level plot on the right is okay at showing the expected values, but it's terrible at expressing the uncertainty we have around those expectations. Before we learn how to solve that problem, let's first practice this method a once more with our conditional model `fit2`.
+
+```{r}
+# define and save the predictor values beforehand
+nd <- ChickWeight %>% distinct(Diet, Time)
+
+# compute the expected values
+fit2.predict.population <- 
+  predict(fit2,
+          newdata = nd, 
+          re.form = NA) %>% 
+  data.frame() %>% 
+  set_names("y_hat") %>% 
+  bind_cols(nd)
+
+# make and save the plot
+p4 <- fit2.predict.population %>% 
+  ggplot(aes(x = Time, y = y_hat)) +
+  geom_line(linewidth = 1) +
+  labs(title = "Population-level trajectories",
+       subtitle = "predict() method",
+       y = expression(widehat(weight))) +
+  ylim(0, 400) +
+  facet_wrap(~ Diet, labeller = label_both)
+
+# combine the two ggplots
+p2 + p4 & 
+  # add an overall title
+  plot_annotation(title = "Conditional quadratic growth model")
+```
+
+This plot's okay if you're starting out, but careful scientists can do better. In the next section, we'll finally learn how.
+
+### Population-level trajectories *with* uncertainty with `emmeans()`.
+
+Our goal is to use the `emmeans::emmeans()` function to compute 95% confidence intervals around our fitted values. Here are the fine points:
+
+* The first argument, `object`, takes our model object. Here we start with unconditional growth model `fit1`.
+* The `specs` argument allows us to specify which variable(s) we'd like to condition our expected values on. For the unconditional growth model, we just want to condition on `Time`.
+* The `at` argument allows to specify exactly which values of `Time` we'd like to condition on. In this context, the `at` argument functions much the same way the `newdata` argument functioned within `predict()`. Here, though, we define our `Time` values within a list.
+* The `lmer.df` argument is not necessary, but I recommend giving it some thought. The default approach to computing the 95% confidence intervals uses the Kenward-Roger method. My understanding is this method is generally excellent and is probably a sensible choice for the default. However, the Kenward-Roger method can be a little slow for some models and you should know about your options. Another fine option is the Satterthwaite method, which is often very close to the Kenward-Roger method, but faster. For the sake of practice, here we'll set `lmer.df = "satterthwaite"`. To learn more about the issue, I recommend reading through @kuznetsova2017lmertest and @luke2017EvaluatingSignificance.
+* Finally, we convert the output to a data frame and save it with a descriptive name.
+
+```{r}
+fit1.emmeans.population <- emmeans(
+  object = fit1, 
+  specs = ~ Time, 
+  at = list(Time = seq(from = 0, to = 21, length.out = 30)), 
+  lmer.df = "satterthwaite") %>% 
+  data.frame()
+
+# what is this?
+glimpse(fit1.emmeans.population)
+```
+
+The expected values are in the `emmean` column. See those values in the `SE`, `df`, and `.CL` columns? Those are what we've been building up to. In particular, the values in the `lower.CL` and `upper.CL` columns mark off our 95% confidence-interval bounds. Let's show those off in a plot.
+
+```{r}
+p5 <- fit1.emmeans.population %>% 
+  ggplot(aes(x = Time, y = emmean, ymin = lower.CL, ymax = upper.CL)) +
+  geom_ribbon(alpha = 1/2, fill = "red3") +
+  geom_line(linewidth = 1) +
+  labs(title = "Population-level trajectory",
+       subtitle = "emmeans() method",
+       y = expression(widehat(weight))) +
+  ylim(0, 400) +
+  theme(plot.subtitle = element_text(color = "red4"))
+
+# combine the two ggplots
+p1 + p5 & 
+  # add an overall title
+  plot_annotation(title = "Unconditional linear growth model")
+```
+
+Now our population-level plot explicitly expresses the uncertainty in our trajectory with a 95% confidence-interval band. The red shading is a little silly, but I wanted to make sure it was easy to see the change in the plot. Here's how to extend our `emmeans()` method to the more complicated conditional quadratic growth model. Note the changes in the `specs` argument.
+
+```{r}
+fit2.emmeans.population <- emmeans(
+  object = fit2, 
+  # this line has changed
+  specs = ~ Time : Diet, 
+  at = list(Time = seq(from = 0, to = 21, length.out = 30)), 
+  lmer.df = "satterthwaite") %>% 
+  data.frame()
+
+# what is this?
+glimpse(fit2.emmeans.population)
+```
+
+Note how our output now has a `Diet` column and that there are four times as many rows as before. That's all because of our changes to the `specs` argument. Here's the plot.
+
+```{r}
+p6 <- fit2.emmeans.population %>% 
+  ggplot(aes(x = Time, y = emmean, ymin = lower.CL, ymax = upper.CL)) +
+  geom_ribbon(alpha = 1/2, fill = "red3") +
+  geom_line(linewidth = 1) +
+  labs(title = "Population-level trajectories",
+       subtitle = "emmeans() method",
+       y = expression(widehat(weight))) +
+  ylim(0, 400) +
+  facet_wrap(~ Diet, labeller = label_both) +
+  theme(plot.subtitle = element_text(color = "red4"))
+
+# combine the two ggplots
+p2 + p6 & 
+  # add an overall title
+  plot_annotation(title = "Conditional quadratic growth model")
+```
+
+Glorious.
+
+## But that Bayes, though
+
+The Bayesians in the room have been able to compute 95% intervals of this kind all along. They just set their priors, sample from the posterior, and summarize the posterior samples as needed. It's no big deal. Which brings us to an important caveat:
+
+Whether you use `emmeans()` to compute 95% confidence intervals by the Kenward-Roger method or the Satterthwaite method, both approaches are approximate and will occasionally return questionable results. Again, see @kuznetsova2017lmertest and @luke2017EvaluatingSignificance for introductions to the issue. So if you're going to use the `emmeans()` method, you should heed this warning from the great [Ben Bolker](https://math.mcmaster.ca/~bolker/):
+
+```{r echo = FALSE}
+blogdown::shortcode('tweet', user = "SolomonKurz", id = '1465826587060940806')
+```
+
+It's wise to inspect the quality of your `emmeans()`-based Kenward-Roger or Satterthwaite intervals against intervals computed using the parametric bootstrap, or with Bayesian software. Though it's my understanding that `emmeans()` is capable of bootstrapping, I have not explored that functionality and will have to leave that guidance up to others. I can, however, give you an example of how to compare our Satterthwaite intervals to those from a Bayesian model computed with the **brms** package. Here we'll use `brms::brm()` to fit the Bayesian version of our unconditional growth model. For simplicity, we'll use the default minimally-informative priors[^1].
+
+```{r, eval = F}
+fit3 <- brm(
+  data = ChickWeight,
+  family = gaussian,
+  weight ~ 1 + Time + (1 + Time | Chick),
+  cores = 4, seed = 1
+)
+```
+
+When working with a **brms** model, it's the `fitted()` function that will most readily take the place of what we were doing with `emmeans()`.
+
+```{r}
+nd <- tibble(Time = 0:21)
+
+fit3.fitted.population <- fitted(
+  fit3,
+  newdata = nd,
+  re_formula = NA) %>% 
+  data.frame() %>% 
+  bind_cols(nd)
+
+# what is this?
+glimpse(fit3.fitted.population)
+```
+
+The `Estimate` column is our posterior mean, which roughly corresponds to the expectations from our frequentist models. The percentile-based 95% Bayesian interval bounds are listed in the `Q2.5` and `Q97.5` columns. Here's how you can compare these results with the Satterthwaite-based intervals, from above.
+
+```{r}
+fit3.fitted.population %>% 
+  ggplot(aes(x = Time)) +
+  geom_ribbon(aes(ymin = Q2.5, ymax = Q97.5),
+              alpha = 1/2, fill = "blue3") +
+  geom_ribbon(data = fit1.emmeans.population,
+              aes(ymin = lower.CL, ymax = upper.CL),
+              alpha = 1/2, fill = "red3") +
+  labs(title = "The Satterthwaite intervals versus the Bayesian intervals",
+       subtitle = "The Bayesian percentile-based intervals are in semitransparent blue.\nThe frequentist Satterthwaite-based intervals are in semitransparent red.\nIt appears as if there's just a purple band because the two interval types largely overlap.")
+```
+
+In this case, the two sets of 95% intervals are in near perfect agreement. On the one hand, this is great and it suggests that we're on good footing to move ahead with our `emmeans()` approach. On the other hand, be cautioned: Though Bayesian and frequentist intervals often times overlap, this won't always be the case and it's not necessarily a problem when they don't. Remember that Bayesian models are combinations of the likelihood AND the prior and if you fit your Bayesian models with informative priors, the resulting posterior might well be different from the frequentist solution.
+
+Another thing to consider is that if we're using Bayesian intervals as the benchmark for quality, then why not just switch to a Bayesian modeling paradigm altogether? Indeed, friends. Indeed.
+
+## Afterward
+
+Since I released this blog post, the great Vincent Arel-Bundock has responded by building these capabilities into the **marginaleffects** package [@R-marginaleffects]. Arel-Bundock specifically referenced this blog post in [one of his vignettes](https://vincentarelbundock.github.io/marginaleffects/articles/lme4.html). Now I've had some time to work with **marginaleffects**, I really like the syntax and I fully recommend you check it out as an alternative to `emmeans()` approach, above.
+
+## Session info
+
+```{r}
+sessionInfo()
+```
+
+## References
+
+[^1]: Often times, default priors will return posterior distributions that closely resemble the solutions from their frequentist counterparts. But this won't always be the case, so do keep your wits about you when comparing Bayesian and frequentist models.
+
+```{r, eval = F, echo = F}
+p6 & 
+  theme_linedraw(base_size = 9) &
+  theme(panel.grid = element_blank(),
+        plot.subtitle = element_text(color = "red4"),
+        strip.background = element_rect(fill = "grey92", color = "grey92"),
+        strip.text = element_text(color = "black"))
+
+ggsave("emmeans-featured.jpg", width = 3.6, height = 3.5, units = "in")
+```
+

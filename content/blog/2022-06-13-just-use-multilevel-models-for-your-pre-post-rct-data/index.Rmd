@@ -1,0 +1,533 @@
+---
+title: "Just use multilevel models for your pre/post RCT data"
+author: "A. Solomon Kurz"
+date: '2022-06-13'
+draft: false
+excerpt: "I've been thinking a lot about how to analyze pre/post control group designs, lately. Happily, others have thought a lot about this topic, too. The goal of this post is to introduce the change-score and ANCOVA models, introduce their multilevel-model counterparts, and compare their behavior in a couple quick simulation studies. Spoiler alert: The multilevel variant of the ANCOVA model is the winner."
+layout: single
+tags:
+- effect size
+- longitudinal
+- multilevel
+- lme4
+- R
+- RCT
+- tidyverse
+- tutorial
+lastmod: '2022-06-13T09:49:06-05:00'
+featured: no
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+biblio-style: apalike
+csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl
+link-citations: yes
+---
+
+```{r, echo = F}
+# save(sim.4, file = "sims/sim.4.rda")
+# save(sim.8, file = "sims/sim.8.rda")
+
+load("sims/sim.4.rda")
+load("sims/sim.8.rda")
+```
+
+## What?
+
+If you'd like to study the effectiveness of a clinical treatment, one of the simplest and most widely used approaches it to
+
+a) recruit participants from the target population,
+b) measure the outcome variable during a pre-treatment assessment,
+c) randomly assign participants into
+    - a control condition or
+    - an experimental treatment condition,
+d) treat the participants in the treatment condition, and
+e) measure the outcome variable again at the conclusion of treatment.
+
+You can describe this as a pre/post control group design, which in many settings we also call this a randomized controlled trial (RCT[^1]). Although this design cannot return valid causal estimates of the treatment effect at the participant level, it can return a valid causal estimate of the average treatment effect, in the population[^2]. In the methodological literature, the two most popular ways for estimating the average treatment effect are 
+
+* the simple change-score model and
+* the so-called ANCOVA model.
+
+Much of the discussion around these models has centered around nicely-behaved Gaussian-type data of the kind you'd analyze with OLS. For simplicity, we'll stay close to that paradigm in this post. However, we've also benefited from the rise of multilevel models over the past few decades and it turns out both the change-score and ANCOVA models can be largely reproduced within a multilevel model framework.
+
+The goal of this post is to introduce the change-score and ANCOVA models, introduce their multilevel-model counterparts, and compare their behavior in a couple quick simulation studies.
+
+Spoiler alert: The multilevel variant of the ANCOVA model is the winner.
+
+### There may be disappointment.
+
+I'm not going to dive deeply into the pre/post RCT methods literature, here. This post is an outgrowth of the many helpful exchanges in this twitter thread:
+
+```{r echo = FALSE}
+blogdown::shortcode('tweet', user = "SolomonKurz", id = '1533905226519937024')
+```
+
+For your own deep dive into the topic, you could spiderweb out from any of the great resources listed in the thread. For me, the most influential papers on my thinking, and thus on this post, were by @vanBreukelen2013ancova and @bodner2018Detecting.
+
+### I make assumptions.
+
+You'll want to be familiar with single-level and multilevel regression. For frequentist resources, I recommend the texts by @ismay2022StatisticalInference, @roback2021beyond, @hoffmanLongitudinalAnalysisModeling2015, or @singerAppliedLongitudinalData2003. For the Bayesians in the room, I recommend the texts by Gelman and colleagues [-@gelmanRegressionOtherStories2020], McElreath [-@mcelreathStatisticalRethinkingBayesian2015; -@mcelreathStatisticalRethinkingBayesian2020], or Kruschke [-@kruschkeDoingBayesianData2015].
+
+You should have a basic grounding in group-based experimental design. Given my background in clinical psychology, I recommend Shadish and colleagues' [-@shadish2002Experimental] *Experimental and quasi-experimental designs for generalized causal inference* or Kazdin's [-@kazdin2017ResearchDesign] *Research design in clinical psychology*. You might also check out Taback's [-@taback2022DesignAndAnalysis] *Design and analysis of experiments and observational studies using R* and its free companion website at [https://designexptr.org/index.html](https://designexptr.org/index.html).
+
+All code is in **R** [@R-base]. The data were simulated with help from the **faux** package [@R-faux], and the data wrangling and plotting relied heavily on the **tidyverse** [@R-tidyverse; @wickhamWelcomeTidyverse2019] and **ggdist** [@R-ggdist]. The multilevel models were fit with **lme4** [@R-lme4; @batesFittingLinearMixedeffects2015], and we post-processed those models with help from the **marginaleffects** package [@R-marginaleffects]. The guts of our simulation study also pull some functionality from the **broom** [@R-broom] and **broom.mixed** [@R-broom.mixed] packages.
+
+Load the primary **R** packages and adjust the global plotting theme.
+
+```{r, warning = F, message = F}
+# load
+library(faux)
+library(lme4)
+library(ggplot2)
+library(tibble)
+library(dplyr)
+library(tidyr)
+library(stringr)
+library(purrr)
+library(ggdist)
+library(marginaleffects)
+
+# adjust the plotting theme
+theme_set(
+  theme_linedraw() +
+  theme(panel.grid = element_blank(),
+        strip.background = element_rect(fill = "grey92", color = "grey92"),
+        strip.text = element_text(color = "black", size = 10))
+)
+```
+
+### We need data.
+
+We're going to be simulating a lot of data in this post, so we may as well start off with a custom data-simulating function. The `sim_data()` function will simulate `pre`/`post` outcome data for two equal-sized groups. Cases for which `tx == 0` are like those in a static no-treatment control group and those for which `tx == 1` are like those in an active treatment group. The `pre` and `post` outcome data follow a bivariate standard normal distribution for which the correlation is determined by the `rho` argument. The average causal effect in the treatment group is governed by the `tau` argument. 
+
+```{r}
+sim_data <- function(seed = 1, n = 100, tau = 1, rho = .5) {
+  
+  # population values
+  m <- 0
+  s <- 1
+  
+  # simulate and save
+  set.seed(seed)
+  
+  rnorm_multi(
+    n = n,
+    mu = c(m, m),
+    sd = c(s, s), 
+    r = rho, 
+    varnames = list("pre", "post")
+  ) %>% 
+    mutate(tx = rep(0:1, each = n / 2)) %>% 
+    mutate(post = ifelse(tx == 1, post + tau, post))
+  
+}
+
+# how does it work?
+dw <- sim_data(seed = 1, n = 100, tau = 1, rho = .5)
+
+# what is this?
+head(dw)
+```
+
+By using the default `tau = 1`, we have simulated sample data from which the population-level average treatment effect is in the metric of a Cohen's $d = 1$. The `sim_data()` function returns the data in the wide format, which will work fine for conventional single-level regression. Here we'll convert the `dw` data to the long format, to accommodate the multilevel models.
+
+```{r}
+dl <- dw %>% 
+  mutate(id = 1:n()) %>% 
+  pivot_longer(pre:post,
+               names_to = "wave",
+               values_to = "y") %>% 
+  mutate(time = ifelse(wave == "pre", 0, 1))
+
+# what is this?
+head(dl)
+```
+
+Now the outcome variable `y` is measured on the two levels of `time` and the synthetic participants are indexed in the `id` column. With the data in the long format, here are what the participant-level data and their group means look like, over `time`.
+
+```{r}
+dl %>% 
+  ggplot(aes(x = time, y = y)) +
+  geom_line(aes(group = id),
+            linewidth = 1/4, alpha = 3/4) +
+  stat_smooth(method = "lm", se = F, linewidth = 3, formula = y ~ x) +
+  scale_x_continuous(breaks = 0:1, labels = c("0 (pre)", "1 (post)"), expand = c(0.1, 0.1)) +
+  scale_y_continuous(sec.axis = dup_axis(name = NULL)) +
+  ggtitle(expression("100 draws from the population for which "*tau==1)) +
+  facet_wrap(~ tx, labeller = label_both)
+```
+
+The thin semi-transparent black lines in the background are the synthetic participant-level data. The bold blue lines in the foreground are the group averages.
+
+## Models
+
+First we'll fit the two conventional single-level models. Then we'll fit their multilevel analogues. For simplicity, we'll be using a frequentist paradigm throughout this post.
+
+### Single level models.
+
+The simple change-score model follows the formula
+
+$$
+\begin{align*}
+\text{post}_i - \text{pre}_i & \sim \mathcal N(\mu_i, \sigma_\epsilon) \\
+\mu_i & = \beta_0 + {\color{red}{\beta_1}} \text{tx}_i,
+\end{align*}
+$$
+
+where the outcome variable is the difference in the `pre` and `post` variables. In software, you can compute and save this as a change-score variable in the data frame, or you can specify `pre - post` directly in the `glm()` function. The $\beta_0$ parameter is the population mean for the change in the control group. The $\beta_1$ parameter is the population level difference in pre/post change in the treatment group, compared to the control group. From a causal inference perspective, the $\beta_1$ parameter is also the average treatment effect in the population, which we've been calling $\tau$.
+
+The terribly-named ANCOVA model follows the formula
+
+$$
+\begin{align*}
+\text{post}_i  & \sim \mathcal N(\mu_i, \sigma_\epsilon) \\
+\mu_i & = \beta_0 + {\color{red}{\beta_1}} \text{tx}_i + \beta_2 \text{pre}_i,
+\end{align*}
+$$
+
+where the outcome variable is now just `post`. As a consequence, $\beta_0$ is now the population mean for the outcome variable in the control group and $\beta_1$ is the population level difference in `post` in the treatment group, compared to the control group. But because we've added `pre` as a covariate, both $\beta_0$ and $\beta_1$ are conditional on the outcome variable, as collected at baseline before random assignment. But just like with the simple change-score model, the $\beta_1$ parameter is still an estimate for the average treatment effect in the population, $\tau$. As is typically the case with regression, the model intercept $\beta_0$ will be easier to interpret if the covariate `pre` is mean centered. Since we simulated our data to be in the standardized metric, we won't have to worry about that, here.
+
+Here's how use the `glm()` function to fit both models with maximum likelihood estimation.
+
+```{r}
+w1 <- glm(
+  data = dw,
+  family = gaussian,
+  (post - pre) ~ 1 + tx)
+
+w2 <- glm(
+  data = dw,
+  family = gaussian,
+  post ~ 1 + tx + pre)
+```
+
+We might review their summaries.
+
+```{r}
+summary(w1)
+summary(w2)
+```
+
+In both models, the $\beta_1$ estimates (the `tx` lines in the output) are just a little above the data-generating population value `tau = 1`. More importantly, notice how they have different point estimates and standard errors. Which is better? Methodologists have spilled a lot of ink on that topic...
+
+### Multilevel models.
+
+The multilevel variant of the simple change-score model follows the formula
+
+$$
+\begin{align*}
+y_{it} & \sim \mathcal N(\mu_{it}, \sigma_\epsilon) \\
+\mu_{it} & = \beta_0 + \beta_1 \text{tx}_{it} + \beta_2 \text{time}_{it} + {\color{red}{\beta_3}} \text{tx}_{it}\text{time}_{it} + u_{0i} \\
+u_{0i} & \sim \mathcal N(0, \sigma_0),
+\end{align*}
+$$
+
+where now the outcome variable `y` varies across $i$ participants and $t$ time points. $\beta_0$ is the population mean at baseline for the control group and $\beta_1$ is the difference in the treatment group at baseline, compared to the control. The $\beta_2$ coefficient is the change over time for the control group and $\beta_3$ is the time-by-treatment interaction, which is also the same as the average treatment effect in the population, $\tau$. Because there are only two time points, we cannot have both random intercepts and time-slopes. However, the model does account for participant-level deviations around the baseline grand mean via the $u_{0i}$ term, which is modeled as normally distributed with a mean of zero and a standard deviation $\sigma_0$, which we estimate as part of the model.
+
+The multilevel variant of the ANCOVA model follows the formula
+
+$$
+\begin{align*}
+y_{it} & \sim \mathcal N(\mu_{it}, \sigma_\epsilon) \\
+\mu_{it} & = \beta_0 + \beta_1 \text{time}_{it} + {\color{red}{\beta_2}} \text{tx}_{it}\text{time}_{it} + u_{0i} \\
+u_{0i} & \sim \mathcal N(0, \sigma_0),
+\end{align*}
+$$
+
+where most of the model is the same as the previous one, but with the omission of a lower-level $\beta$ coefficient for the `tx` variable. By only including `tx` in an interaction with `time`, the $\beta_0$ coefficient now becomes a common mean for both experimental conditions at baseline. This is methodologically justified because the baseline measurements were taken *before* groups were randomized into experimental conditions, which effectively means all participants were drawn from the same population at that point. As a consequence, $\beta_1$ is now the population-average change in the outcome for those in the control condition, relative to the grand mean at baseline, and $\beta_2$ is the average treatment effect in the population, $\tau$.
+
+Here's how use the `lmer()` function to fit both models with restricted maximum likelihood estimation.
+
+```{r}
+# fit
+l1 <- lmer(
+  data = dl,
+  y ~ 1 + tx + time + tx:time + (1 | id))
+
+l2 <- lmer(
+  data = dl,
+  y ~ 1 + time + tx:time + (1 | id))
+
+# summarize
+summary(l1)
+summary(l2)
+```
+
+Now our estimates for $\tau$ are listed in the `tx:time` rows of the `summary()` output.
+
+## But which one is the best? Simulation study
+
+We might run a little simulation study to compare these four methods across several simulated data sets. To run the sim, we'll need to extend our `sim_data()` function to a `sim_fit()` function. The first parts of the `sim_fit()` function are the same as with `sim_data()`. But this time, the function internally makes both wide and long versions of the data, fits all four models to the data, and extracts the summary results for the four versions of $\tau$. 
+
+
+```{r}
+sim_fit <- function(seed = 1, n = 100, tau = 1, rho = .5) {
+  
+  # population values
+  m <- 0
+  s <- 1
+  
+  # simulate wide
+  set.seed(seed)
+  
+  dw <- 
+    rnorm_multi(
+      n = n,
+      mu = c(m, m),
+      sd = c(s, s), 
+      r = rho, 
+      varnames = list("pre", "post")
+    ) %>% 
+    mutate(tx = rep(0:1, each = n / 2)) %>% 
+    mutate(post = ifelse(tx == 1, post + tau, post))
+  
+  # make long
+  dl <- dw %>% 
+    mutate(id = 1:n()) %>% 
+    pivot_longer(pre:post,
+                 names_to = "wave",
+                 values_to = "y") %>% 
+    mutate(time = ifelse(wave == "pre", 0, 1))
+  
+  # fit the models
+  w1 <- glm(
+    data = dw,
+    family = gaussian,
+    (post - pre) ~ 1 + tx)
+  
+  w2 <- glm(
+    data = dw,
+    family = gaussian,
+    post ~ 1 + pre + tx)
+  
+  l1 <- lmer(
+    data = dl,
+    y ~ 1 + tx + time + tx:time + (1 | id))
+  
+  l2 <- lmer(
+    data = dl,
+    y ~ 1 + time + tx:time + (1 | id))
+  
+  # summarize
+  bind_rows(
+    broom::tidy(w1)[2, 2:4],
+    broom::tidy(w2)[3, 2:4],
+    broom.mixed::tidy(l1)[4, 4:6],
+    broom.mixed::tidy(l2)[3, 4:6]) %>% 
+    mutate(method = rep(c("glm()", "lmer()"), each = 2),
+           model = rep(c("change", "ANCOVA"), times = 2))
+  
+}
+```
+
+Here's how it works out of the box.
+
+```{r}
+sim_fit()
+```
+
+Each estimate of $\tau$ is indexed by the function we used to fit the model (single-level with `glm()` or multilevel with `lmer()`) and by which conceptual model was used (the change-score model or the ANCOVA model).
+
+I'm going to keep the default settings at `n = 100` and `tau = 1`. We will run many iterations with different values for `seed`. To help shake out a subtle point, we'll use two levels of `rho`. We'll make 1,000 iterations with `rho = .4` and another 1,000 iterations with `rho = .8`.
+
+```{r, eval = F}
+# rho = .4
+sim.4 <- tibble(seed = 1:1000) %>% 
+  mutate(tidy = map(seed, sim_fit, rho = .4)) %>% 
+  unnest(tidy)
+
+# rho = .8
+sim.8 <- tibble(seed = 1:1000) %>% 
+  mutate(tidy = map(seed, sim_fit, rho = .8)) %>% 
+  unnest(tidy)
+```
+
+On my 2-year-old laptop, each simulation took about a minute and a half. Your mileage may vary.
+
+The first question we might ask is: *How well did the different model types do with respect to parameter bias?* That is, how close are the point estimates to the data generating value $\tau = 1$ and do they, on average, converge to the data generating value? Here are the results in a dot plot.
+
+```{r, warning = F}
+bind_rows(
+  sim.4 %>% mutate(rho = .4), 
+  sim.8 %>% mutate(rho = .8)) %>% 
+  mutate(type = str_c(model, ", ", method),
+         rho = str_c("rho==", rho)) %>%
+  
+  ggplot(aes(x = estimate, y = type, slab_color = after_stat(x), slab_fill = after_stat(x))) +
+  geom_vline(xintercept = 1, color = "grey67") +
+  stat_dotsinterval(.width = .5, slab_shape = 22) +
+  labs(title = expression("Parameter bias by model, algorithm, and pre/post correlation "*(rho)),
+       x = expression(hat(tau)*" (causal effect point estimate)"),
+       y = NULL) +
+  scale_slab_fill_continuous(limits = c(0, NA)) +
+  scale_slab_color_continuous(limits = c(0, NA)) +
+  coord_cartesian(ylim = c(1.4, NA)) +
+  theme(axis.text.y = element_text(hjust = 0),
+        legend.position = "none") +
+  facet_wrap(~ rho, labeller = label_parsed)
+```
+
+With out dot-plot method, each little blue square is one of the simulation iterations. The black dots and horizontal lines at the base of the distributions are the medians and interquartile ranges. Unbiased models will tend toward 1 and happily, all of our models appear unbiased, even regardless of $\rho$. This is great! It means that no matter which of our four models you go with, it will be an unbiased estimator of the population average treatment effect. However, two important trends emerged. First, both variants of the ANCOVA model tended to have less spread around the true data-generating value--their estimates are less noisy. Second, on the whole, the models have less spread for higher values of $\rho$.
+
+Now let's look at the results from the perspective of estimation efficiency.
+
+```{r, warning = F}
+bind_rows(
+  sim.4 %>% mutate(rho = .4), 
+  sim.8 %>% mutate(rho = .8)) %>% 
+  mutate(type = str_c(model, ", ", method),
+         rho = str_c("rho==", rho)) %>% 
+  
+  ggplot(aes(x = std.error, y = type, slab_color = after_stat(x), slab_fill = after_stat(x))) +
+  stat_dotsinterval(.width = .5, slab_shape = 22) +
+  labs(title = expression("Parameter efficiency by model, algorithm, and pre/post correlation "*(rho)),
+       x = expression(tau[s.e.]*" (causal effect standard error)"),
+       y = NULL) +
+  scale_slab_fill_continuous(limits = c(0, NA)) +
+  scale_slab_color_continuous(limits = c(0, NA)) +
+  coord_cartesian(ylim = c(1.4, NA)) +
+  theme(axis.text.y = element_text(hjust = 0),
+        legend.position = "none") +
+  facet_wrap(~ rho, labeller = label_parsed)
+```
+
+To my eye, three patterns emerged. First, the ANCOVA models were more efficient (i.e., had lower standard errors) than the change-score models AND the multilevel version of the ANCOVA model is slightly more efficient than the conventional single-level ANCOVA. Second, the models were more efficient, on the whole, for larger values of $\rho$. Third, the differences in efficiency among the models were less apparent for larger values of $\rho$, which is not surprising because the methodological literature has shown that the change-score and ANCOVA models converge as $\rho \rightarrow 1$. That's a big part of the whole Lord's-paradox discourse I've completely sidelined because, frankly, I find it uninteresting.
+
+If you look very closely at both plots, there's one more pattern to see. For each level of $\rho$, the results from the single-level and multilevel versions of the change-score model are identical. Though not as obvious, the results from the the single-level and multilevel versions of the ANCOVA model model are generally different, but very close. To help clarify, let's look at a few Pearson's correlation coefficients.
+
+```{r, warning = F, message = F}
+bind_rows(
+  sim.4 %>% mutate(rho = .4), 
+  sim.8 %>% mutate(rho = .8)) %>% 
+  select(-statistic) %>% 
+  pivot_longer(estimate:std.error, names_to = "result") %>% 
+  pivot_wider(names_from = "method", values_from = value) %>% 
+  group_by(model, result, rho) %>% 
+  summarise(correlation = cor(`glm()`, `lmer()`))
+```
+
+For each level of $\rho$, the correlations between the point estimates and the standard errors are 1 for the change-score models (single-level compared with multilevel). Even though their statistical formulas and **R**-function syntax look different, the single-level and multilevel versions of the change-score model are equivalent. For the ANCOVA models, the correlations are $\gt .99$ between the point estimates in the single-level and multilevel versions, for each level of $\rho$, but they are a bit lower for the standard errors. So the conventional single-level ANCOVA model is not completely reproduced by its multilevel counterpart. But the two are very close and the results of this mini simulation study suggest the multilevel version is slightly better with respect to parameter bias and efficiency.
+
+## I prefer the multilevel change-score and ANCOVA models
+
+Parameter bias and efficiency with respect to the causal estimate $\tau$ are cool and all, but they're not the only things to consider when choosing your analytic strategy. One of the things I love about the multilevel strategies is they both return estimates and 95% intervals for the population means at both time points for both conditions. For example, here's how to compute those estimates from the multilevel ANCOVA model with the handy `marginaleffects::predictions()` function.
+
+```{r}
+nd <- crossing(time = 0:1,
+               tx   = 0:1) %>% 
+  mutate(id = "new")
+
+predictions(l2, 
+            include_random = FALSE,
+            newdata = nd,
+            # yes, this makes a difference
+            vcov = "kenward-roger") %>% 
+  select(time, tx, predicted, conf.low, conf.high)
+```
+
+Did you notice how we computed those 95% confidence intervals with the ultra sweet Kenward-Roger method [see @kuznetsova2017lmertest; @luke2017EvaluatingSignificance]? It's enough to make a boy giggle. *But what would I do with these estimates?*, you may wonder. You can display the results of your model in a plot [see @mccabe2018improving]! Here's what that could look like with the results from both the multilevel change-model and the multilevel ANCOVA.
+
+```{r}
+bind_rows(
+  # multilevel change-score
+  predictions(l1, 
+              include_random = FALSE,
+              newdata = nd,
+              vcov = "kenward-roger"),
+  # multilevel ANCOVA
+  predictions(l2, 
+              include_random = FALSE,
+              newdata = nd,
+              vcov = "kenward-roger")) %>% 
+  mutate(model = rep(c("change-score", "ANCOVA"), each = n() / 2)) %>% 
+  mutate(model = factor(model, 
+                        levels = c("change-score", "ANCOVA"),
+                        labels = c("change-score\ny ~ 1 + tx + time + tx:time + (1 | id)", 
+                                   "ANCOVA\ny ~ 1 + time + tx:time + (1 | id)")),
+         tx    = factor(tx, levels = 1:0)) %>% 
+  
+  ggplot(aes(x = time, y = predicted, ymin = conf.low, ymax = conf.high, fill = tx, color = tx)) +
+  geom_ribbon(alpha = 1/3, linewidth = 0) +
+  geom_line(linewidth = 1) +
+  scale_fill_viridis_d(end = .6) +
+  scale_color_viridis_d(end = .6) +
+  scale_x_continuous(breaks = 0:1, labels = c("0 (pre)", "1 (post)"), expand = c(0.1, 0.1)) +
+  scale_y_continuous("y", sec.axis = dup_axis(name = NULL)) +
+  ggtitle("Population-mean trajectories via the multilevel models",
+          subtitle = "The lines are the point estimates and the ribbons the Kenward-Roger-based 95% CIs.") +
+  facet_wrap(~ model)
+```
+
+The big difference between the two models is how they handled the first time point, the baseline assessment. The multilevel change-score model allowed the two conditions to have separate means. The multilevel ANCOVA, however, pooled the information from all participants to estimate a grand mean for the baseline assessment. This is methodologically justified, remember, because the baseline assessment occurs *before* random assignment to condition in a proper RCT. As a consequence, all participants are part of a common population at that point. Whether you like the change-score or ANCOVA approach, it's only the multilevel framework that will allow you to plot the inferences of the model, this way.
+
+Among clinicians (e.g., my friends in clinical psychology), a natural question to ask is: *How much did the participants change in each condition?* The multilevel models also give us a natural way to quantify the population average change in each condition, along with high-quality 95% intervals. Here's how to use `marginaleffects::comparisons()` to return those values.
+
+```{r, warning = F, message = F}
+# multilevel change-score
+comparisons(l1,
+            variables = list(time = 0:1),
+            by = "tx",
+            re.form = NA) %>% 
+  summary()
+
+# multilevel ANCOVA
+comparisons(l2,
+            variables = list(time = 0:1),
+            by = "tx",
+            re.form = NA) %>% 
+  summary()
+```
+
+If you divide these pre-post differences by the pooled standard deviation at baseline, you'll have the condition-specific Cohen's $d$ effect sizes [see @feingoldEffectSizeForGMA2009]. We already have that for the differences between conditions. That's what we've been calling $\tau$; that is, $\tau$ is the difference in differences. 
+
+There are other reasons to prefer the multilevel framework. With multilevel software, you can accommodate missing values with full-information estimation. It's also just one small step further to adopt a *generalized* linear mixed model framework for all your non-Gaussian data needs. But those are fine topics for another day. 
+
+## Wrap it up
+
+In this post, some of the high points we covered were:
+
+* The simple change-score and ANCOVA models are the two popular approaches for analyzing pre/post RCT data.
+* Though both approaches are typically used with a single-level OLS-type paradigm, they both have clear multilevel counterparts.
+* The single-level and multilevel versions of both change-score and ANCOVA models are all unbiased.
+* The ANCOVA models tend to be more efficient than the change-score models.
+* Only the multilevel versions of the models allow researchers to plot the results of the model.
+* The multilevel versions of the models allow researchers to express the results of the models in terms of change for both conditions.
+
+This post helped me clarify my thoughts on these models, and I hope you found some benefit, too. Happy modeling, friends.
+
+## Session info
+
+```{r}
+sessionInfo()
+```
+
+## References
+
+[^1]: The term **RCT** can apply to a broader class of designs, such as those including more than two conditions, more than two assessment periods, and so on. For the sake of this blog post, we'll ignore those complications.
+
+[^2]: That whole "in the population" bit is a big ol' can of worms. In short, recruit participants who are similar to those who you'd like to generalize to. Otherwise, chaos may ensue.
+
+```{r, eval = F, echo = F}
+bind_rows(
+  sim.4 %>% mutate(rho = .4), 
+  sim.8 %>% mutate(rho = .8)) %>% 
+  mutate(type = str_c(model, ", ", method),
+         rho = str_c("rho==", rho)) %>% 
+  
+  ggplot(aes(x = std.error, y = type, slab_color = after_stat(x), slab_fill = after_stat(x))) +
+  stat_dotsinterval(.width = .5, slab_shape = 22) +
+  labs(title = "Parameter efficiency",
+       x = expression(tau[s.e.]*" (causal effect standard error)"),
+       y = NULL) +
+  scale_slab_fill_continuous(limits = c(0, NA)) +
+  scale_slab_color_continuous(limits = c(0, NA)) +
+  coord_cartesian(ylim = c(1.4, NA)) +
+  facet_wrap(~ rho, labeller = label_parsed) +
+  theme_linedraw(base_size = 7) +
+  theme(axis.text.y = element_text(hjust = 0),
+        legend.position = "none",
+        panel.grid = element_blank(),
+        strip.background = element_rect(fill = "grey92", color = "grey92"),
+        strip.text = element_text(color = "black", size = 10))
+
+ggsave("mlm-ancova-featured.jpg", width = 3.55, height = 3.5, units = "in")
+```

@@ -1,0 +1,405 @@
+---
+title: One-step Bayesian imputation when you have dropout in your RCT
+author: A. Solomon Kurz
+date: '2021-07-27'
+draft: false
+excerpt: "Say you have 2-timepoint RCT, where participants received either treatment or control. Even in the best of scenarios, you'll probably have some dropout in those post-treatment data. To get the full benefit of your data, you can use one-step Bayesian imputation when you compute your effect sizes. In this post, I'll show you how."
+layout: single
+tags:
+- brms
+- effect size
+- longitudinal
+- missing data
+- R
+- RCT
+- tidyverse
+- tutorial
+lastmod: '2021-07-27T11:32:52-05:00'
+featured: no
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+biblio-style: apalike
+csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+link-citations: yes
+---
+
+```{r save_load, echo = F}
+# save(fit1, file = "fits/fit1.rda")
+# save(fit2, file = "fits/fit2.rda")
+
+load("fits/fit1.rda")
+load("fits/fit2.rda")
+```
+
+```{r, echo = F, cache = F}
+knitr::opts_chunk$set(fig.retina = 2.5)
+knitr::opts_chunk$set(fig.align = "center")
+options(width = 120)
+```
+
+## Version 1.1.0
+
+Edited on December 12, 2022, to use the new `as_draws_df()` workflow.
+
+## Preamble
+
+Suppose you've got data from a randomized controlled trial (RCT) where participants received either treatment or control. Further suppose you only collected data at two time points, pre- and post-treatment. Even in the best of scenarios, you'll probably have some dropout in those post-treatment data. To get the full benefit of your data, you can use one-step Bayesian imputation when you compute your effect sizes. In this post, I'll show you how.
+
+### I make assumptions.
+
+For this post, I'm presuming you have a passing familiarity with the following:
+
+* You should be familiar with effect sizes, particularly with standardized mean differences. If you need to brush up, consider Cohen's [-@cohenStatisticalPowerAnalysis1988a] authoritative text, or Cummings newer [-@cummingUnderstandingTheNewStatistics2012] text. For nice conceptual overview, I also recommend Kelley and Preacher's [-@kelley2012effect] paper, [*On effect size*](https://www3.nd.edu/~kkelley/publications/articles/Kelley_and_Preacher_Psychological_Methods_2012.pdf).
+
+* You should be familiar with Bayesian regression. For thorough introductions, I recommend either edition of McElreath's text [-@mcelreathStatisticalRethinkingBayesian2015; -@mcelreathStatisticalRethinkingBayesian2020]; Kruschke's [-@kruschkeDoingBayesianData2015] text; or Gelman, Hill, and Vehtari's [-@gelmanRegressionOtherStories2020] text. If you go with McElreath, he has a fine series of freely-available lectures [here](https://www.youtube.com/channel/UCNJK6_DZvcMqNSzQdEkzvzA/playlists).
+
+* Though we won't be diving deep into it, here, you'll want to have some familiarity with contemporary missing data theory. You can find brief overviews in the texts by McElreath and Gelman et al, above. For a deeper dive, I recommend @enders2010applied or @little2019statistical. Also, heads up: [word on the street](https://twitter.com/AmandaKMontoya/status/1341936335301406722) is Enders is working on a second edition of his book.
+ 
+* All code is in **R** [@R-base]. Data wrangling and plotting were done with help from the **tidyverse** [@R-tidyverse; @wickhamWelcomeTidyverse2019] and [**tidybayes**](https://mjskay.github.io/tidybayes/) [@R-tidybayes]. The data were simulated with help from the [**faux** package](https://github.com/debruine/faux) [@R-faux] and the Bayesian models were fit using [**brms**](https://github.com/paul-buerkner/brms) [@R-brms; @burknerBrmsPackageBayesian2017; @burknerAdvancedBayesianMultilevel2018].
+
+Here we load our primary **R** packages and adjust the global plotting theme defaults.
+
+```{r, warning = F, message = F}
+library(tidyverse)
+library(faux)
+library(tidybayes)
+library(brms)
+
+# adjust the global plotting theme
+theme_set(
+  theme_tidybayes() +
+    theme(axis.line.x = element_blank(),
+          axis.line.y = element_blank(),
+          panel.border = element_rect(color = "grey85", linewidth = 1, fill = NA))
+)
+```
+
+### We need data.
+
+For this post, we'll be simulating our data with help from the handy `faux::rnorm_multi()` function. To start out, we'll make two data sets, one for treatment (`d_treatment`) and one for control (`d_control`). Each will contain outcomes at `pre` and `post` treatment, with the population parameters for both conditions at `pre` being $\operatorname{Normal}(5, 1)$. Whereas those parameters stay the same at `post` for those in the control condition, the population parameters for those in the treatment condition will raise at `post` to $\operatorname{Normal}(5.7, 1)$. Notice that not only did their mean value increase, but their standard deviation increased a bit, too, which is not uncommon in treatment data. Importantly, the correlation between `pre` and `post` is $.75$ for both conditions.
+
+```{r rnorm_multi}
+# how many per group?
+n <- 100
+
+set.seed(1)
+
+d_treatment <- rnorm_multi(
+  n = n,
+  mu = c(5, 5.7),
+  sd = c(1, 1.1), 
+  r = .75, 
+  varnames = list("pre", "post")
+)
+
+d_control <- rnorm_multi(
+  n = n,
+  mu = c(5, 5),
+  sd = c(1, 1), 
+  r = .75, 
+  varnames = list("pre", "post")
+)
+```
+
+Next we combine the two data sets and make an explicit `tx` variable to distinguish the conditions. Then we simulate missingness in the `post` variable in two steps: We use the `rbinom()` function to simulate whether a case will be missing and then use a little `ifelse()` to make a `post_observed` variable that is the same as `post` except that the vales are missing in every row for which `missing == 1`.
+
+```{r}
+set.seed(1)
+
+d <- bind_rows(
+  d_control,
+  d_treatment
+) %>% 
+  mutate(tx = rep(c("control", "treatment"), each = n)) %>% 
+  mutate(tx = factor(tx, levels = c("treatment", "control"))) %>% 
+  mutate(missing = rbinom(n(), size = 1, prob = 0.3)) %>%
+  mutate(post_observed = ifelse(missing == 1, NA, post))
+
+head(d)
+```
+
+To get a sense for the data, here's a scatter plot of `pre` versus `post`, by `tx` and `missing`.
+
+```{r geom_point}
+d %>% 
+  mutate(missing = factor(missing,
+                          levels = 1:0,
+                          labels = c("yes", "no"))) %>% 
+  
+  ggplot(aes(x = pre, y = post, color = missing, shape = missing)) +
+  geom_point() +
+  scale_color_viridis_d(option = "D", begin = .35, end = .75, direction = -1) +
+  scale_shape_manual(values = 17:16) +
+  coord_equal(xlim = c(1.5, 8.5),
+              ylim = c(1.5, 8.5)) +
+  facet_wrap(~ tx)
+```
+
+You can see that high correlation between `pre` and `post` in the shapes of the data clouds. To look at the data in another way, here are a few summary statistics.
+
+```{r summarise, message = F}
+d %>% 
+  pivot_longer(starts_with("p"), names_to = "time") %>% 
+  mutate(time = factor(time, levels = c("pre", "post", "post_observed"))) %>% 
+  group_by(tx, time) %>% 
+  summarise(mean = mean(value, na.rm = T),
+            sd = sd(value, na.rm = T),
+            min = min(value, na.rm = T),
+            max = max(value, na.rm = T)) %>% 
+  mutate_if(is.double, round, digits = 2)
+```
+
+## Statistical models
+
+We'll be analyzing the RCT data in two ways. First, we'll fit a model on the version of the data with no missingness in `post`. That will be our benchmark. Then we'll practice fitting the model with one-step Bayesian imputation and the `post_observed` variable. Once we've fit and evaluated our models, we'll then walk out how to compute the effect sizes.
+
+### Fit the models.
+
+There are a lot of ways to analyze pre/post RCT data. To get a sense of the various strategies, see [this chapter](https://www.middleprofessor.com/files/applied-biostatistics_bookdown/_book/models-for-longitudinal-experiments-pre-post-designs.html) in Jeffrey Walker's free [-@walkerElementsOfStatisticalModeling2018] text and my [complimentary blog post](https://solomonkurz.netlify.app/post/2020-12-29-regression-models-for-2-timepoint-non-experimental-data/) on pre/post non-experimental data. In this post, we'll be taking the multivariate approach where we simultaneously model `pre` and `post` as bivariate normal, such that both the mean and standard deviation parameters for both vary depending on the experimental condition (`tx`). Importantly, the correlation between `pre` and `post` is captured in the correlation between the two residual standard deviation parameters.
+
+Here's how to fit the model to the full data with **brms**.
+
+```{r fit1, eval = F}
+fit1 <- brm(
+  data = d,
+  family = gaussian,
+  bf(pre ~ 0 + tx, sigma ~ 0 + tx) +
+    bf(post ~ 0 + tx, sigma ~ 0 + tx) +
+    set_rescor(rescor = TRUE),
+  prior = c(prior(normal(5, 1), class = b, resp = pre),
+            prior(normal(5, 1), class = b, resp = post),
+            prior(normal(log(1), 1), class = b, dpar = sigma, resp = pre),
+            prior(normal(log(1), 1), class = b, dpar = sigma, resp = post),
+            prior(lkj(2), class = rescor)),
+  cores = 4,
+  seed = 1
+)
+```
+
+The priors in this post follow the weakly-regularizing approach McElreath advocated for in the second edition of this text. Also note that because we are allowing the residual standard deviation parameter to vary by `tx`, the **brms** default is to use the log link, which will become important for interpretation and post processing. Here's the parameter summary.
+
+```{r}
+print(fit1)
+```
+
+After exponentiating the standard deviations, all the parameter summaries look close to the data generating values from our `faux::rnorm_multi()` code. This, however, is all just a warm-up. Our goal was to use one-step Bayesian imputation for when we have missing data at post-intervention time point. From a syntax perspective, that involves a few minor changes to our `fit1` code. First, we replace the `post` variable with `post_observed`, which had about $30\%$ of the values missing. In a similar way, we have to adjust a few of the `resp` arguments within the `prior()` statements. Finally and most crucially, we have to include the `| mi()` syntax when defining the linear model for `post_observed`. Otherwise, **brms** will simply drop all the cases with missingness on `post_observed`.
+
+Here's the code.
+
+```{r fit2, eval = F}
+fit2 <- brm(
+  data = d,
+  family = gaussian,
+  bf(pre ~ 0 + tx,
+     sigma ~ 0 + tx) +
+    # notice the changes in this line
+    bf(post_observed | mi() ~ 0 + tx,
+       sigma ~ 0 + tx) +
+    set_rescor(rescor = TRUE),
+  prior = c(prior(normal(5, 1), class = b, resp = pre),
+            # notice the changes in the `resp` argument
+            prior(normal(5, 1), class = b, resp = postobserved),
+            prior(normal(log(1), 1), class = b, dpar = sigma, resp = pre),
+            # notice the changes in the `resp` argument
+            prior(normal(log(1), 1), class = b, dpar = sigma, resp = postobserved),
+            prior(lkj(2), class = rescor)),
+  cores = 4,
+  seed = 1
+)
+```
+
+Instead of looking at the `print()` output, it might be more informative if we compare the results of our two models in a coefficient plot.
+
+```{r coefficient_plot, fig.width = 6, fig.height = 8}
+# define the parameter names
+parameters <- c(
+  "mu[treatment]^pre", "mu[control]^pre", "sigma[treatment]^pre", "sigma[control]^pre",
+  "mu[treatment]^post", "mu[control]^post", "sigma[treatment]^post", "sigma[control]^post", 
+  "rho"
+  )
+
+# define the deisred order for the parameter names
+levels <- c(
+  "mu[treatment]^pre", "mu[control]^pre", "mu[treatment]^post", "mu[control]^post", 
+  "sigma[treatment]^pre", "sigma[control]^pre", "sigma[treatment]^post", "sigma[control]^post", 
+  "rho"
+  )
+
+# combine the posterior summaries for the two models
+rbind(
+  posterior_summary(fit1)[1:9, -2],
+  posterior_summary(fit2)[1:9, -2]
+  ) %>% 
+  # wrangle
+  data.frame() %>% 
+  mutate(data = rep(c("complete data", "30% missing"), each = n() / 2),
+         par  = rep(parameters, times = 2)) %>% 
+  mutate(par      = factor(par, levels = levels),
+         Estimate = ifelse(str_detect(par, "sigma"), exp(Estimate), Estimate),
+         Q2.5     = ifelse(str_detect(par, "sigma"), exp(Q2.5), Q2.5),
+         Q97.5    = ifelse(str_detect(par, "sigma"), exp(Q97.5), Q97.5)) %>% 
+  
+  # plot!
+  ggplot(aes(x = Estimate, xmin = Q2.5, xmax = Q97.5, y = data)) +
+  geom_pointrange(fatten = 1.1) +
+  labs(x = "marginal posterior",
+       y = NULL) +
+  xlim(0, NA) +
+  facet_wrap(~ par, labeller = label_parsed, ncol = 1)
+```
+
+Since the `post_observed` data were missing completely at random (MCAR[^1]), it should be no surprise the coefficients are nearly the same between the two models. This, however, will not always (ever?) be the case with your real-world RCT data. Friends, don't let your friends drop cases or carry the last value forward. Use the **brms** `mi()` syntax, instead. 
+
+### Effect sizes.
+
+At this point, you may be wondering why I didn't use the familiar dummy-variable approach in either of the models and you might be further wondering why I bothered to allow the standard deviation parameters to vary. One of the sub-goals of this post is to show how to compute the model output into standardized effect sizes. My go-to standardized effect size is good old Cohen's $d$, of which there are many variations. In the case of our pre/post RCT with two conditions, we actually have three $d$'s of interest:
+
+* the standardized mean difference for the treatment condition (which we hope is large),
+* the standardized mean difference for the control condition (which we hope is near zero), and
+* the difference in those first two standardized mean differences (which we also hope is large).
+
+As with all standardized mean differences, it's a big deal to choose a good value to standardize with. With data like ours, a good default choice is the pooled standard deviation between the two conditions at baseline, which we might define as
+
+$$\sigma_p^\text{pre} = \sqrt{\frac{ \left (\sigma_\text{treatment}^\text{pre} \right )^2 + \left (\sigma_\text{control}^\text{pre} \right)^2}{2}},$$
+
+where the notation is admittedly a little verbose. My hope, however, is this notation will make it easier to map the terms onto the model parameters from above. Anyway, with our definition of $\sigma_p^\text{pre}$ in hand, we're in good shape to define our three effect sizes of interest as
+
+$$
+\begin{align*}
+d_\text{treatment} & = \frac{\mu_\text{treatment}^\text{post} - \mu_\text{treatment}^\text{pre}}{\sigma_p^\text{pre}}, \\
+d_\text{control}   & = \frac{\mu_\text{control}^\text{post} - \mu_\text{control}^\text{pre}}{\sigma_p^\text{pre}}, \; \text{and} \\
+d_\text{treatment - control} & = \frac{\left ( \mu_\text{treatment}^\text{post} - \mu_\text{treatment}^\text{pre} \right ) - \left ( \mu_\text{control}^\text{post} - \mu_\text{control}^\text{pre} \right )}{\sigma_p^\text{pre}} \\
+& = \left (\frac{\mu_\text{treatment}^\text{post} - \mu_\text{treatment}^\text{pre}}{\sigma_p^\text{pre}} \right ) - \left ( \frac{\mu_\text{control}^\text{post} - \mu_\text{control}^\text{pre}}{\sigma_p^\text{pre}} \right ) \\
+& = \left ( d_\text{treatment} \right ) - \left ( d_\text{control} \right ).
+\end{align*}
+$$
+
+The reason we analyzed the RCT data with a bivariate model with varying means and standard deviations was because the parameter values from that model correspond directly with the various $\mu$ and $\sigma$ terms in the equations for $\sigma_p^\text{pre}$ and our three $d$'s. This insight comes from @kruschkeDoingBayesianData2015, particularly Section 16.3. For a walk-through of that section with a **brms** + **tidyverse** workflow, see [this section](https://bookdown.org/content/3686/metric-predicted-variable-on-one-or-two-groups.html#two-groups) of my ebook translation of his text [@kurzDoingBayesianData2021]. The approach we're taking, here, is a direct bivariate generalization of the material in Kruschke's text.
+
+Okay, here's how to work with the posterior samples from our missing-data model, `fit2`, to compute those effects.
+
+```{r}
+draws <- as_draws_df(fit2) %>% 
+  # exponentiate the log sd parameters
+  mutate(`sigma[treatment]^pre` = exp(b_sigma_pre_txtreatment),
+         `sigma[control]^pre`   = exp(b_sigma_pre_txcontrol)) %>% 
+  # pooled standard deviation (at pre)
+  mutate(`sigma[italic(p)]^pre` = sqrt((`sigma[treatment]^pre`^2 + `sigma[control]^pre`^2) / 2)) %>% 
+  # within-condition pre/post effect sizes
+  mutate(`italic(d)[treatment]` = (b_postobserved_txtreatment - b_pre_txtreatment) / `sigma[italic(p)]^pre`,
+         `italic(d)[control]`   = (b_postobserved_txcontrol   - b_pre_txcontrol)   / `sigma[italic(p)]^pre`) %>%
+  # between-condition effect size (i.e., difference in differences)
+  mutate(`italic(d)['treatment - control']` = `italic(d)[treatment]` - `italic(d)[control]`) 
+```
+
+Now inspect the posteriors for our three $d$'s and the $\sigma_p^\text{pre}$ in a coefficient plot.
+
+```{r d_plot, fig.width = 6, fig.height = 1.75, warning = F}
+levels <- c(
+  "sigma[italic(p)]^pre", "italic(d)['treatment - control']", 
+  "italic(d)[control]", "italic(d)[treatment]"
+  )
+
+draws %>% 
+  # wrangle
+  pivot_longer(`sigma[italic(p)]^pre`:`italic(d)['treatment - control']`) %>% 
+  mutate(parameter = factor(name, levels = levels)) %>% 
+  
+  # plot
+ggplot(aes(x = value, y = parameter)) +
+  stat_pointinterval(.width = .95, linewidth = 1/2) +
+  scale_y_discrete(labels = ggplot2:::parse_safe) +
+  labs(x = "marginal posterior",
+       y = NULL) +
+  theme(axis.text.y = element_text(hjust = 0),
+        axis.ticks.y = element_blank())
+```
+
+If you look back at the data-generating values from above, our effect sizes are about where we'd hope them to be.
+
+### But what about that one-step imputation?
+
+From a practical standpoint, one-step Bayesian imputation is a lot like full-information maximum likelihood or multiple imputation--it's a way to use all of your data that allows you to avoid the biases that come with older methods such as mean imputation or last observation carried forward. In short, one-step Bayesian imputation fits a joint model that expresses both the uncertainty in the model parameters and the uncertainty in the missing data. When we use MCMC methods, the uncertainty in our model parameters is expressed in the samples from the posterior. We worked with those with our `as_draws_df()` code, above. In the same way, one-step Bayesian imputation with MCMC also gives us posterior samples for the missing data, too.
+
+```{r, eval = F}
+as_draws_df(fit2) %>% 
+  glimpse()
+```
+
+For the sake of space, I'm not going to show the results of the code block, above. If you were to execute it yourself, you'd see there were a bunch of `Ymi_postobserved[i]` columns. Those columns contain the posterior samples for the missing values. The `i` part of their names indexes the row number from the original data which had the missing `post_observed` value. Just like with the posterior samples of our parameters, we can examine the posterior samples for our missing data with plots, summaries, and so on. Here instead of using the `as_draws_df()` output, we'll use the `posterior_summary()` function, instead. This will summarize each parameter and imputed value by its mean, standard deviation, and percentile-based 95% interval. After a little wrangling, we'll display the results in a plot.
+
+```{r}
+posterior_summary(fit2) %>% 
+  data.frame() %>% 
+  rownames_to_column("par") %>% 
+  # isolate the imputed values
+  filter(str_detect(par, "Ymi")) %>% 
+  mutate(row = str_extract(par, "\\d+") %>% as.integer()) %>% 
+  # join the original data
+  left_join(
+    d %>% mutate(row = 1:n()),
+    by = "row"
+  ) %>% 
+
+  # plot!
+  ggplot(aes(x = pre, y = Estimate, ymin = Q2.5, ymax = Q97.5, color = tx)) +
+  geom_pointrange(fatten = 1, linewidth = 1/4) +
+  scale_color_viridis_d(NULL, option = "F", begin = .2, end = .6, direction = -1) +
+  ylab("post (imputed)") +
+  coord_equal(xlim = c(1.5, 8.5),
+              ylim = c(1.5, 8.5))
+```
+
+We ended up with something of a mash-up of a scatter plot and a coefficient plot. The $y$-axis shows the summaries for the imputed values, summarized by their posterior means (dots) and 95% intervals (vertical lines). In the $x$-axis, we've connected them with their original `pre` values. Notice the strong correlation between the two axes. That's the consequence of fitting a bivariate model where `pre` has a residual correlation with `post_observed`. That original data-generating value, recall, was $.75$. Here's the summary of the residual correlation from `fit2`.
+
+```{r}
+posterior_summary(fit2)["rescor__pre__postobserved", ] %>% 
+  round(digits = 2)
+```
+
+Using language perhaps more familiar to those from a structural equation modeling background, the `pre` values acted like a missing data covariate for the missing `post_observed` values. Had that residual correlation been lower, the relation in the two axes of our plot would have been less impressive, too. Anyway, the point is that one-step Bayesian imputation gives users a nice way to explore the missing data assumptions they've imposed in their models, which I think is pretty cool.
+
+## Would you like more?
+
+To my knowledge, the introductory material on applied missing data analysis seems awash with full-information maximum likelihood and multiple imputation. One-step Bayesian imputation methods haven't made it into the mainstream, yet. McElreath covered the one-step approach in both editions of his text and since the way he covered the material was quite different in the two editions, I really recommend you check out both [@mcelreathStatisticalRethinkingBayesian2015; @mcelreathStatisticalRethinkingBayesian2020]. My ebook translations of McElreath's texts covered that material from a **brms** + **tidyverse** perspective [@kurzStatisticalRethinkingBrms2020; @kurzStatisticalRethinkingSecondEd2021]. Otherwise, you should check out Bürkner's [-@Bürkner2021HandleMissingValues] vignette, [*Handle missing values with brms*](https://CRAN.R-project.org/package=brms/vignettes/brms_missings.html).
+
+If you are aware of any other applied text books covering one-step Bayesian imputation, please drop a comment on this tweet.
+
+```{r echo = FALSE}
+blogdown::shortcode('tweet', user = "SolomonKurz", id = '1420434272142434304')
+```
+
+## Session info
+
+```{r}
+sessionInfo()
+```
+
+## References
+
+[^1]: As has been noted by others [e.g., @mcelreathStatisticalRethinkingBayesian2020] missing-data jargon is generally awful. I'm so sorry you have to contend with acronyms like MCAR, MAR (missing at random) and MNAR (missing not at random), but that's just the way it is. If you're not sure about the difference between the three, do consider spending some time with one of the missing data texts I recommended, above.
+
+```{r, eval = F, echo = F}
+posterior_summary(fit2) %>% 
+  data.frame() %>% 
+  rownames_to_column("par") %>% 
+  # isolate the imputed values
+  filter(str_detect(par, "Ymi")) %>% 
+  mutate(row = str_extract(par, "\\d+") %>% as.integer()) %>% 
+  # join the original data
+  left_join(
+    d %>% mutate(row = 1:n()),
+    by = "row"
+  ) %>% 
+
+  # plot!
+  ggplot(aes(x = pre, y = Estimate, ymin = Q2.5, ymax = Q97.5, color = tx)) +
+  geom_pointrange(fatten = 1/2, linewidth = 1/6) +
+  scale_color_viridis_d(NULL, option = "F", begin = .2, end = .6, direction = -1) +
+  ylab("post (imputed)") +
+  coord_equal(xlim = c(1.5, 8.5),
+              ylim = c(1.5, 8.5)) +
+  theme(text = element_text(size = 9))
+
+ggsave("featured.jpg", width = 3.6, height = 3.5, units = "in")
+```
+

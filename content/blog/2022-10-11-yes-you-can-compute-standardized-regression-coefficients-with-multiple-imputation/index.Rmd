@@ -1,0 +1,255 @@
+---
+title: Yes, you can compute standardized regression coefficients with multiple imputation
+author: A. Solomon Kurz
+date: '2022-10-11'
+draft: false
+excerpt: "In an earlier post, we walked through method for plotting the fitted lines from models fit with multiply-imputed data. In this post, we'll discuss another neglected topic: *How might one compute* **standardized regression coefficients** *from models fit with multiply-imputed data?*"
+layout: single
+tags:
+- effect size
+- mice
+- missing data
+- multiple imputation
+- R
+- tidyverse
+- tutorial
+lastmod: '2022-10-11T11:13:04-05:00'
+featured: no
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+biblio-style: apalike
+csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+link-citations: yes
+---
+
+## What?
+
+All the players know there are three major ways to handle missing data:
+
+* full-information maximum likelihood,
+* multiple imputation, and
+* one-step full-luxury[^1] Bayesian imputation.
+
+In an [earlier post](https://solomonkurz.netlify.app/post/2021-10-21-if-you-fit-a-model-with-multiply-imputed-data-you-can-still-plot-the-line/), we walked through method for plotting the fitted lines from models fit with multiply-imputed data. In this post, we'll discuss another neglected topic: *How might one compute* **standardized regression coefficients** *from models fit with multiply-imputed data?*
+
+### I make assumptions.
+
+For this post, I'm presuming some background knowledge:
+
+* You should be familiar with regression. For frequentist introductions, I recommend Roback and Legler's [-@roback2021beyond] online text or James, Witten, Hastie, and Tibshirani's [-@james2021AnIntroduction] online text. For Bayesian introductions, I recommend either edition of McElreath's text [-@mcelreathStatisticalRethinkingBayesian2015; -@mcelreathStatisticalRethinkingBayesian2020]; Kruschke's [-@kruschkeDoingBayesianData2015] text; or Gelman, Hill, and Vehtari's [-@gelmanRegressionOtherStories2020] text.
+
+* You should be familiar with contemporary missing data theory. You can find brief overviews in the texts by McElreath and Gelman et al, above. For a deeper dive, I recommend @enders2022applied, @little2019statistical, or @vanbuurenFlexibleImputationMissing2018.
+
+* All code is in **R**. Data wrangling and plotting were done with help from the **tidyverse** [@R-tidyverse; @wickhamWelcomeTidyverse2019] and **ggside** [@R-ggside]. The data and multiple-imputation workflow are from the [**mice** package](https://CRAN.R-project.org/package=mice) [@R-mice; @mice2011].
+
+Here we load our primary **R** packages.
+
+```{r, warning = F, message = F}
+library(tidyverse)
+library(ggside)
+library(mice)
+```
+
+### We need data.
+
+In this post we'll use the `nhanes` data set [@schafer1997analysis].
+
+```{r}
+data(nhanes, package = "mice")
+```
+
+We'll be focusing on the two variables, `bmi` and `chl`. Here's a look at their univarite and bivariate distributions.
+
+```{r, warning = F, fig.width = 4, fig.height = 4}
+nhanes %>% 
+  ggplot(aes(x = bmi, y = chl)) +
+  geom_point() +
+  geom_xsidehistogram(bins = 20) +
+  geom_ysidehistogram(bins = 20) +
+  scale_xsidey_continuous(breaks = NULL) +
+  scale_ysidex_continuous(breaks = NULL) +
+  theme(axis.title = element_text(hjust = 1/3),
+        ggside.panel.scale = 0.5,
+        panel.grid = element_blank())
+```
+
+We can use `mice::md.pattern()` to reveal their four distinct missing data patterns.
+
+```{r}
+nhanes %>% 
+  select(bmi, chl) %>% 
+  md.pattern()
+```
+
+We're missing nine cases in `bmi` and missing 10 cases in `chl`.
+
+## Impute
+
+We'll use the `mice()` function to impute. By setting `m = 100`, we'll get back 100 multiply-imputed data sets. By setting `method = "norm"`, we will be using Bayesian linear regression with the Gaussian likelihood to compute the imputed values. The `seed` argument makes our results reproducible.
+
+```{r}
+imp <- nhanes %>% 
+  select(bmi, chl) %>% 
+  mice(seed = 1, m = 100, method = "norm", print = FALSE)
+```
+
+## Model
+
+Our basic model will be
+
+$$
+\begin{align*}
+\text{chl}_i & \sim \operatorname{Gaussian}(\mu_i, \sigma) \\
+\mu_i & = \beta_0 + \beta_1 \text{bmi}_i,
+\end{align*}
+$$
+
+where `bmi` is the sole predictor of `chl`. Here's how we use the `with()` function to fit that model to each of the 100 imputed data sets.
+
+```{r}
+fit1 <- with(imp, lm(chl ~ 1 + bmi))
+```
+
+We use the `pool()` function to pool the results from the 100 MI data sets according to Ruben's rules.
+
+```{r}
+pooled1 <- pool(fit1)
+```
+
+Now we can summarize the results.
+
+```{r}
+summary(pooled1, conf.int = T)
+```
+
+Since I'm not an expert in the `nhanes` data, it's hard to know how impressed I should be with the 3.6 estimate for `bmi`. An effect size could help.
+
+## Standadrdized coefficients with van Ginkel's proposal
+
+In his [-@vanGinkel2020standardized] paper, *Standardized regression coefficients and newly proposed estimators for* $R^2$ *in multiply imputed data*, [Joost van Ginkel](https://www.universiteitleiden.nl/en/staffmembers/joost-van-ginkel#tab-1) presented two methods for computing standardized regression coefficients from multiply imputed data. van Ginkel called these two methods $\bar{\hat\beta}_\text{PS}$, which stands for *Pooling before Standardization*, and $\bar{\hat\beta}_\text{SP}$, which stands for *Standardization before Pooling*. In the paper, he showed both methods are pretty good in terms of bias and coverage. I find the SP approach intuitive and easy to use, so that's the one we'll be using in this post.
+
+For the SP method, we don't need to change our `mice()`-based imputation step from above. The  big change is how we fit the model with `lm()` and `with()`. As van Ginkel covered in the paper, one of the ways you might compute standardized regression coefficients is by fitting the model with standardized variables. Instead of messing with the actual `imp` data, we can simply standardize the variables directly in the model formula within `lm()` by way of the base-**R** `scale()` function.
+
+```{r}
+fit2 <- with(imp, lm(scale(chl) ~ 1 + scale(bmi)))
+```
+
+I should note it was Mattan S. Ben-Shachar who came up with the `scale()` insight for our `with()` implementation.
+
+```{r echo = FALSE}
+blogdown::shortcode('tweet',  user = "mattansb", id = '1578447175998373893')
+```
+
+While I'm at it, it was Isabella R. Ghement who directed me to the van Ginkel paper.
+
+```{r echo = FALSE}
+blogdown::shortcode('tweet', user = "IsabellaGhement", id = '1578557862733045760')
+```
+
+Anyway, now we've fit the standardized model, we can pool as normal.
+
+```{r}
+pooled2 <- pool(fit2)
+```
+
+Here are the results.
+
+```{r}
+summary(pooled2, conf.int = T)
+```
+
+The standardized regression coefficient for `bmi` is $0.33$, $95\% \text{CI}$ $[-0.21, 0.86]$. As we only have one predictor, the standardized coefficient is in a correlation metric, which makes it easy to interpret the point estimate.
+
+Just for kicks, here's how you might plot the pooled fitted line and its pooled 95% interval using the method from an [earlier post](https://solomonkurz.netlify.app/post/2021-10-21-if-you-fit-a-model-with-multiply-imputed-data-you-can-still-plot-the-line/).
+
+```{r, warning = F, fig.width = 4, fig.height = 4}
+# define the total number of imputations
+m <- 100
+
+# define the new data
+nd <- tibble(bmi = seq(from = min(nhanes$bmi, na.rm = T), to = max(nhanes$bmi, na.rm = T), length.out = 30))
+
+# compute the fitted values, by imputation
+tibble(.imp = 1:100) %>% 
+  mutate(p = map(.imp, ~ predict(fit1$analyses[[.]], 
+                                 newdata = nd, 
+                                 se.fit = TRUE) %>% 
+                   data.frame())
+         ) %>% 
+  unnest(p) %>%
+  # add in the nd predictor data
+  bind_cols(
+    bind_rows(replicate(100, nd, simplify = FALSE))
+    ) %>% 
+  # drop two unneeded columns
+  select(-df, -residual.scale) %>% 
+  group_by(bmi) %>% 
+  # compute the pooled fitted values and the pooled standard errors
+  summarise(fit_bar = mean(fit),
+            v_w     = mean(se.fit^2),
+            v_b     = sum((fit - fit_bar)^2) / (m - 1),
+            v_p     = v_w + v_b * (1 + (1 / m)),
+            se_p    = sqrt(v_p)) %>% 
+  # compute the pooled 95% intervals
+  mutate(lwr_p = fit_bar - se_p * 1.96,
+         upr_p = fit_bar + se_p * 1.96) %>%
+  
+  # plot!
+  ggplot(aes(x = bmi)) +
+  geom_ribbon(aes(ymin = lwr_p, ymax = upr_p),
+              alpha = 1/2) +
+  geom_line(aes(y = fit_bar), 
+            linewidth = 1/2) +
+  geom_point(data = nhanes,
+             aes(y = chl)) +
+  labs(y = "chl") +
+  theme(panel.grid = element_blank())
+```
+
+## Limitation
+
+To my knowledge, @vanGinkel2020standardized is the first and only methodological paper to discuss standardized regression coefficients with multiply imputed data. In the abstract, for example, van Ginkel reported: "No combination rules for standardized regression coefficients and their confidence intervals seem to have been developed at all." Though this initial method has its strengths, it has one major limitation: The $t$-tests will tend to differ between the standardized and unstandardized models. To give a sense, let's compare the results from our unstandardized and standardized models.
+
+```{r}
+# unstandardized t-test
+summary(pooled1, conf.int = T)[2, "statistic"]
+# standardized t-test
+summary(pooled2, conf.int = T)[2, "statistic"]
+```
+
+Yep, they're a little different. van Ginkel covered this issue in his Discussion section, the details of which I'll leave to the interested reader. This limitation notwithstanding, van Ginkel ultimately preferred the SP method. `r emo::ji("shrug")` We can't have it all, friends.
+
+Happy modeling!
+
+## Session info
+
+```{r}
+sessionInfo()
+```
+
+## References
+
+[^1]: Be warned that "full-luxury Bayesian ..." isn't a real term. It's just a playful term Richard McElreath coined a while back. To hear him use it in action, check out his [nifty talk](https://youtu.be/KNPYUVmY3NM) on causal inference. One-step Bayesian imputation is a real thing, though. McElreath covered it in both editions of his text and I've even blogged about it [here](https://solomonkurz.netlify.app/post/2021-07-27-one-step-bayesian-imputation-when-you-have-dropout-in-your-rct/).
+
+```{r, eval = F, echo = F}
+# make a custom function
+pull_tidy <- function(k = 1) {
+  tidy(fit2$analyses[[k]], conf.int = T)
+}
+
+# use the function to extract the MI draws
+tibble(k = 1:100) %>% 
+  mutate(tidy = map(k, pull_tidy)) %>% 
+  unnest(tidy) %>% 
+  filter(term == "scale(bmi)") %>% 
+  
+  # plot!
+  ggplot(aes(x = estimate, xmin = conf.low, xmax = conf.high, y = k)) +
+  geom_pointrange(linewidth = 1/4, fatten = 1/4) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  xlab(expression(beta[italic(k)])) +
+  coord_cartesian(xlim = c(-1, 1)) +
+  theme(panel.grid = element_blank())
+
+ggsave("mi-standardized-featured.jpg", width = 4, height = 3.5, units = "in")
+```
+

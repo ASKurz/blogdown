@@ -1,0 +1,561 @@
+---
+title: Sum-score effect sizes for multilevel Bayesian cumulative probit models
+author: A. Solomon Kurz
+date: '2022-07-18'
+draft: false
+excerpt: "This is a follow-up to my earlier post, *Notes on the Bayesian cumulative probit*. This time, the topic we're addressing is: *After you fit a full multilevel Bayesian cumulative probit model of several Likert-type items from a multi-item questionnaire, how can you use the model to compute an effect size in the sum-score metric?*"
+layout: single
+tags:
+- Bayesian
+- brms
+- cumulative probit
+- effect size
+- IRT
+- multilevel
+- ordinal
+- probit
+- R
+- tidyverse
+- tutorial
+lastmod: '2022-07-18T08:43:23-05:00'
+featured: no
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+biblio-style: apalike
+csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+link-citations: yes
+---
+
+```{r, echo = F, cache = F}
+# knitr::opts_chunk$set(fig.retina = 2.5)
+options(width = 120)
+```
+
+```{r, echo = F}
+# save(fit8, file = "fits/fit8.rda")
+
+load("fits/fit8.rda")
+```
+
+## What/why?
+
+This is a follow-up to my earlier post, [*Notes on the Bayesian cumulative probit*](https://solomonkurz.netlify.app/post/2021-12-29-notes-on-the-bayesian-cumulative-probit/). If you haven't browsed through that post or if you aren't at least familiar with Bayesian cumulative probit models, you'll want to go there, first. Comparatively speaking, this post will be short and focused. The topic we're addressing is: *After you fit a full multilevel Bayesian cumulative probit model of several Likert-type items from a multi-item questionnaire, how can you use the model to compute an effect size in the sum-score metric?*
+
+Needless to say, I'm assuming my readers are familiar with the Bayesian generalized linear mixed model, in general, and with ordinal models in particular. For a refresher on the latter, check out @burknerOrdinalRegressionModels2019 and @burknerBayesianItemResponse2020.
+
+## Set it up
+
+All code is in **R** [@R-base], with healthy doses of the **tidyverse** [@R-tidyverse; @wickhamWelcomeTidyverse2019] for data wrangling and plotting. All models are fit with [**brms**](https://github.com/paul-buerkner/brms) [@R-brms; @burknerBrmsPackageBayesian2017; @burknerAdvancedBayesianMultilevel2018] and we'll make use of the [**tidybayes** package](https://mjskay.github.io/tidybayes/) [@R-tidybayes] for some tricky data wrangling. We will also use the [**NatParksPalettes** package](https://github.com/kevinsblake/NatParksPalettes) [@R-NatParksPalettes] to select the color palette for our figures.
+
+Here we load the packages and adjust the global plotting theme.
+
+```{r, warning = F, message = F}
+# load
+library(tidyverse)
+library(brms)
+library(tidybayes)
+
+# save a color vector
+npp <- NatParksPalettes::natparks.pals("Olympic", n = 41)
+
+# adjust the global plotting theme
+theme_set(
+  theme_grey(base_size = 14,
+             base_family = "Times") +
+    theme(text = element_text(color = npp[1]),
+          axis.text = element_text(color = npp[1]),
+          axis.ticks = element_line(color = npp[1]),
+          panel.background = element_rect(fill = npp[21], color = npp[21]),
+          panel.grid = element_blank(),
+          plot.background = element_rect(fill = alpha(npp[21], alpha = .5), 
+                                         color = alpha(npp[21], alpha = .5)),
+          strip.background = element_rect(fill = npp[23]),
+          strip.text = element_text(color = npp[1]))
+)
+```
+
+Our data will be a subset of the `bfi` data [@revelle2010individual] from the [**psych** package](https://CRAN.R-project.org/package=psych) [@R-psych]. Here we load, subset, and wrangle the data to suit our needs.
+
+```{r}
+set.seed(1)
+
+d <- psych::bfi %>% 
+  mutate(male = ifelse(gender == 1, 1, 0),
+         female = ifelse(gender == 2, 1, 0)) %>% 
+  drop_na() %>% 
+  slice_sample(n = 200) %>% 
+  mutate(id = 1:n()) %>% 
+  select(id, male, female, N1:N5) %>% 
+  pivot_longer(N1:N5, names_to = "item", values_to = "rating")
+
+# what is this?
+glimpse(d)
+```
+
+Our focal variables will be `rating`, which is a combination of the responses to the five questions in the Neuroticism scale of a version of the Big Five inventory [@goldberg1999broad]. Here's a quick plot of the responses, by item and sex.
+
+```{r, fig.height = 4.5, fig.width = 8}
+d %>% 
+  mutate(sex = ifelse(male == 0, "female", "male")) %>% 
+  
+  ggplot(aes(x = rating)) +
+  geom_bar(fill = npp[15]) +  
+  scale_x_continuous(breaks = 1:6) +
+  facet_grid(sex ~ item)
+```
+
+## Model
+
+In the earlier post, we explored eight different cumulative probit models for the neuroticism data. Here, we'll jump straight to the final model, `fit8`, which we described as a multilevel conditional distributional model. When the data are in the long format, we can describe the criterion variable `rating`, as varying across $i$ persons, $j$ items, and $k$ Likert-type rating options, with the model
+
+$$
+\begin{align*}
+\small{p(\text{rating} = k | \{ \tau_{kj} \}, \mu_{ij}, \alpha_{ij})} & = \small{\Phi(\alpha_{ij}[\tau_{kj} - \mu_{ij}]) - \Phi(\alpha_{ij}[\tau_{k - 1,j} - \mu_{ij}])} \\
+\mu_{ij}          & = \beta_1 \text{male}_i + u_i + v_j \\ 
+\log(\alpha_{ij}) & = \eta_1 \text{male}_i + w_i + x_j \\
+u_i & \sim \mathcal N(0, \sigma_u) \\
+v_j & \sim \mathcal N(0, \sigma_v) \\
+w_i & \sim \mathcal N(0, \sigma_w) \\
+x_j & \sim \mathcal N(0, \sigma_x) \\
+\tau_{1j} & \sim \mathcal N(-0.97, 1) \\
+\tau_{2j} & \sim \mathcal N(-0.43, 1) \\
+\tau_{3j} & \sim \mathcal N(0, 1) \\
+\tau_{4j} & \sim \mathcal N(0.43, 1) \\
+\tau_{5j} & \sim \mathcal N(0.97, 1) \\
+\beta_1 & \sim \mathcal N(0, 1) \\
+\eta_1  & \sim \mathcal N(0, 0.347) \\
+\sigma_u, \sigma_v & \sim \operatorname{Exponential}(1) \\
+\sigma_w, \sigma_x & \sim \operatorname{Exponential}(1 / 0.463),
+\end{align*}
+$$
+
+where the only predictor is the dummy variable `male`. We call this a distributional model because we have attached linear models to both $\mu_{ij}$ AND $\log(\alpha_{ij})$. Here's how to fit the model with `brm()`.
+
+```{r fit8, eval = F}
+# 2.786367 mins
+fit8 <- brm(
+  data = d,
+  family = cumulative(probit),
+  bf(rating | thres(gr = item) ~ 1 + male + (1 | id) + (1 | item)) +
+    lf(disc                    ~ 0 + male + (1 | id) + (1 | item),
+       # don't forget this line
+       cmc = FALSE),
+  prior = c(prior(normal(-0.97, 1), class = Intercept, coef = 1, group = N1),
+            prior(normal(-0.43, 1), class = Intercept, coef = 2, group = N1),
+            prior(normal( 0.00, 1), class = Intercept, coef = 3, group = N1),
+            prior(normal( 0.43, 1), class = Intercept, coef = 4, group = N1),
+            prior(normal( 0.97, 1), class = Intercept, coef = 5, group = N1),
+            
+            prior(normal(-0.97, 1), class = Intercept, coef = 1, group = N2),
+            prior(normal(-0.43, 1), class = Intercept, coef = 2, group = N2),
+            prior(normal( 0.00, 1), class = Intercept, coef = 3, group = N2),
+            prior(normal( 0.43, 1), class = Intercept, coef = 4, group = N2),
+            prior(normal( 0.97, 1), class = Intercept, coef = 5, group = N2),
+            
+            prior(normal(-0.97, 1), class = Intercept, coef = 1, group = N3),
+            prior(normal(-0.43, 1), class = Intercept, coef = 2, group = N3),
+            prior(normal( 0.00, 1), class = Intercept, coef = 3, group = N3),
+            prior(normal( 0.43, 1), class = Intercept, coef = 4, group = N3),
+            prior(normal( 0.97, 1), class = Intercept, coef = 5, group = N3),
+            
+            prior(normal(-0.97, 1), class = Intercept, coef = 1, group = N4),
+            prior(normal(-0.43, 1), class = Intercept, coef = 2, group = N4),
+            prior(normal( 0.00, 1), class = Intercept, coef = 3, group = N4),
+            prior(normal( 0.43, 1), class = Intercept, coef = 4, group = N4),
+            prior(normal( 0.97, 1), class = Intercept, coef = 5, group = N4),
+            
+            prior(normal(-0.97, 1), class = Intercept, coef = 1, group = N5),
+            prior(normal(-0.43, 1), class = Intercept, coef = 2, group = N5),
+            prior(normal( 0.00, 1), class = Intercept, coef = 3, group = N5),
+            prior(normal( 0.43, 1), class = Intercept, coef = 4, group = N5),
+            prior(normal( 0.97, 1), class = Intercept, coef = 5, group = N5),
+            
+            prior(normal(0, 1), class = b),
+            prior(normal(0, log(2) / 2), class = b, dpar = disc),
+            
+            prior(exponential(1), class = sd),
+            prior(exponential(1 / 0.463), class = sd, dpar = disc)),
+  cores = 4,
+  seed = 1,
+  init_r = 0.2,
+  control = list(adapt_delta = .99)
+)
+```
+
+You might check the model summary.
+
+```{r}
+print(fit8)
+```
+
+Before we get into the sum-score effect sizes, we might point out that the `fit8` model summary provides two effect sizes on the latent Gaussian scale. The reference category, female, follows a normal distribution with a mean of zero and standard deviation of 1. When you use the cumulative probit, these constraints identify an otherwise unidentified model. The $\beta_1$ parameter is the latent mean difference in neuroticism for males, relative to females. If this was not a full distributional model containing a submodel for $\log(\alpha_{ij})$, we could interpret $\beta_1$ like a latent Cohen's $d$ standardized mean difference. But we do have a submodel for $\log(\alpha_{ij})$, which complicates the interpretation a bit. To clarify, first we'll transform the posteriors for $\log(\alpha_{ij})$ for the two levels of the `male` dummy into the latent $\sigma$ scale. Here's what they look like.
+
+```{r, fig.width = 5.5, fig.height = 2.75, warning = F}
+# extract the posterior draws
+post <- as_draws_df(fit8)
+
+# wrangle
+post %>% 
+  mutate(`sigma[female]` = 1 / exp(0),
+         `sigma[male]`   = 1 / exp(b_disc_male)) %>% 
+  select(.draw, contains("sigma")) %>% 
+  pivot_longer(-.draw) %>% 
+  
+  # plot
+  ggplot(aes(x = value, y = name)) +
+  stat_halfeye(.width = .95, fill = npp[14], color = npp[1]) +
+  scale_y_discrete(labels = ggplot2:::parse_safe) +
+  labs(x = "latent standard deviation (grand means across persons and items)",
+       y = NULL)
+```
+
+Since $\eta_0$ was fixed to 0 for identification purposes, the posterior for $\sigma_\text{female}$ is a constant at 1. We might express that effect size for the latent standard deviations as a difference in $\sigma$ or a ratio.
+
+```{r, fig.width = 5.5, fig.height = 2.75, warning = F}
+post %>% 
+  mutate(`sigma[female]` = 1 / exp(0),
+         `sigma[male]`   = 1 / exp(b_disc_male)) %>% 
+  select(.draw, contains("sigma")) %>% 
+  mutate(`sigma[male]-sigma[female]`     = `sigma[male]` - `sigma[female]`,
+         `sigma[male]*'/'*sigma[female]` = `sigma[male]` / `sigma[female]`) %>% 
+  pivot_longer(`sigma[male]-sigma[female]`:`sigma[male]*'/'*sigma[female]`) %>% 
+  
+  # plot
+  ggplot(aes(x = value, y = name)) +
+  geom_vline(xintercept = 0:1, color = npp[26]) +
+  stat_halfeye(.width = .95, fill = npp[14], color = npp[1]) +
+  scale_y_discrete(labels = ggplot2:::parse_safe) +
+  labs(x = "latent standard deviation effect sizes (two ways!)",
+       y = NULL)
+```
+
+Whether you express the difference as a difference or a ratio, it's not particularly large. Anyway, now we're practiced with wrangling those posteriors, we might use them to make a latent pooled standard deviation, with with we might convert our $\beta_1$ into a proper Cohen's $d$.
+
+```{r, fig.width = 4, fig.height = 2.25}
+post %>%
+  mutate(`sigma[female]` = 1 / exp(0),
+         `sigma[male]`   = 1 / exp(b_disc_male)) %>% 
+  # compute the latent pooled standard deviation
+  mutate(`sigma[pooled]` = sqrt((`sigma[female]`^2 + `sigma[male]`^2) / 2)) %>% 
+  mutate(d = b_male / `sigma[pooled]`) %>% 
+    
+  ggplot(aes(x = d)) +
+  stat_halfeye(.width = .95, fill = npp[14], color = npp[1]) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  xlab(expression(beta[1]*" converted to a latent Cohen's "*italic(d)))
+```
+
+This all has been fun, but we should discuss a few caveats. First, the $\beta_1$ and $\eta_1$ have to do with the latent grand means across persons and items. These have relations to sum scores, but they aren't really sum scores and these kinds of effect sizes aren't what we're looking for in this post. Second, latent mean differences like with $\beta_1$ map on to Cohen's $d$ effect sizes reasonably well when you are not using a full distributional model. That is, they work well when you don't have a submodel for $\log(\alpha_{ij})$. But once you start fiddling with $\log(\alpha_{ij})$, the scales of the parameters become difficult to interpret. This is because $\log(\alpha_{ij})$ doesn't map directly onto the standard deviations of the criterion variable `rating`. They're related, but in a complicated way that's probably not the most intuitive for non-statisticians or experts in IRT. So this whole latent pooled standard deviation talk is fraught. For more on this, look through some of the plots we made from `fit8` in the [original blog post](https://solomonkurz.netlify.app/post/2021-12-29-notes-on-the-bayesian-cumulative-probit/).
+
+Okay, let's get into our sum-score effect sizes.
+
+## Sum-score effect sizes
+
+In this post, we will discuss three approaches for reporting sum-score contrasts as effect sizes. Those will include:
+
+* unstandardized mean differences,
+* standardized mean differences, and
+* differences in POMP.
+
+But before we get to all that effect-size goodness, we'll first define how we can use our model to compute conditional sum scores, and connect that approach to conditional item-level means.
+
+### Condtional sum scores and item-level means.
+
+In the earlier post, we said the mean of the criterion variable is the sum of the $p_k$ probabilities multiplied by the $k$ values of the criterion. We can express this in an equation as
+
+$$
+\mathbb{E}(\text{rating}) = \sum_1^K p_k \times k,
+$$
+
+where $\mathbb{E}$ is the expectation operator (the model-based mean), $p_k$ is the probability of the $k^\text{th}$ ordinal value, and $k$ is the actual ordinal value. Since we have modeled the ordinal `rating` values of $j$ items in a multilevel model, we might want to generalize that equation to
+
+$$\mathbb{E}(\text{rating}_j) = \sum_1^K p_{jk} \times k,$$
+
+where the probabilities now vary across $j$ items and $k$ rating options. Because we are computing all the $p_k$ values with MCMC and expressing those values as posterior distributions, we have to perform this operation within each of our MCMC draws. In the earlier post, we practiced this by working directly with the posterior draws returned from `brms::as_draws_df()`. In this post, we'll take a short cut with help from the `tidybayes::add_epred_draws()` function. Here's a start.
+
+```{r}
+d %>% 
+  distinct(item, male) %>% 
+  add_epred_draws(fit8, re_formula = ~ (1 | item)) %>% 
+  head(n = 10)
+```
+
+In that code block, we used the `distinct()` function to compute the unique combinations of the two variables `item` and `male` in the `d` data. We then used `add_epred_draws()` to compute the full 4,000-draw posterior distributions for $p_k$ from each of the five neuroticism items. Note that to compute this by averaging across the levels for participants, we adjusted the settings of the `re_formula` argument. The draws from $p_k$ are listed in the `.epred` column and the levels of $k$ are listed as a factor in the `.category` column.
+
+Here's how to expand on that code to compute $p_{jk} \times k$ for each posterior draw; sum those products up within each level of `item`, `male`, and `.draw`; convert the results into a sum-scale metric; and then summarize those posteriors by their means and 95% intervals.
+
+```{r, warning = F, message = F}
+posterior_item_means <- d %>% 
+  distinct(item, male) %>% 
+  add_epred_draws(fit8, re_formula = ~ (1 | item)) %>% 
+  # compute p[jk] * k
+  mutate(product = as.double(.category) * .epred) %>% 
+  # group and convert to the sum-score metric
+  group_by(item, male, .draw) %>% 
+  summarise(item_mean = sum(product)) %>% 
+  # summarize
+  group_by(item, male) %>% 
+  mean_qi(item_mean)
+  
+# what?
+posterior_item_means
+```
+
+Here we might look at how those posterior summaries compare to the sample means and the sample data in a plot.
+
+```{r, fig.height = 5, fig.width = 8, warning = F, message = F}
+# compute and save the sample means
+sample_item_means <- d %>% 
+  group_by(item, male) %>% 
+  summarise(item_mean = mean(rating))
+
+# plot!
+d %>%
+  ggplot() +
+  geom_bar(aes(x = rating),
+           fill = npp[15]) +
+  geom_pointinterval(data = posterior_item_means,
+                     aes(x = item_mean, xmin = .lower, xmax = .upper, y = -1),
+                     color = npp[1], size = 1.5) +
+  geom_point(data = sample_item_means,
+             aes(x = item_mean, y = -3),
+             size = 3, shape = 18, color = npp[39]) +
+  scale_x_continuous(breaks = 1:6) +
+  labs(subtitle = "The mean and 95% intervals for the posterior of each mean are depicted by the dark dots\nand intersecting horizontal lines. The brown diamonds below mark the sample means.",
+       y = "count") +
+  facet_grid(male ~ item, labeller = label_both)
+```
+
+If you're shaken by the differences in the posterior means and the sample means, keep in mind that the posteriors are based on a multilevel model, which imposed partial pooling across persons and items. The job of the model is to compute the population parameters, not reproduce the sample estimates. To brush up on why we like partial pooling, check out the classic [-@efronSteinParadoxStatistics1977] paper by Efron and Morris, [*Stein's paradox in statistics*](https://efron.ckirby.su.domains//other/Article1977.pdf), or my blog post on the topic, [*Stein's Paradox and what partial pooling can do for you*](https://solomonkurz.netlify.app/post/2019-02-23-stein-s-paradox-and-what-partial-pooling-can-do-for-you/).
+
+Anyway, we only have to make one minor adjustment to our workflow to convert these results into a sum-score metric. In the first `group_by()` line, we just omit `item`. 
+
+```{r, warning = F, message = F}
+posterior_sum_score_means <- d %>% 
+  distinct(item, male) %>% 
+  add_epred_draws(fit8, re_formula = ~ (1 | item)) %>% 
+  mutate(product = as.double(.category) * .epred) %>% 
+  # this line has been changed
+  group_by(male, .draw) %>% 
+  summarise(sum_score_mean = sum(product)) %>% 
+  group_by(male) %>% 
+  mean_qi(sum_score_mean)
+  
+# what?
+posterior_sum_score_means
+```
+
+As we did with the items, we might look at how those posterior summaries compare to the sample means and the sample data in a plot.
+
+```{r, fig.height = 5, fig.width = 8, warning = F, message = F}
+# compute and save the sample means
+sample_sum_score_means <- d %>% 
+  group_by(id, male, female) %>% 
+  summarise(sum_score = sum(rating)) %>% 
+  group_by(male) %>% 
+  summarise(sum_score_mean = mean(sum_score))
+
+d %>% 
+  group_by(id, male, female) %>% 
+  summarise(sum_score = sum(rating)) %>% 
+  
+  ggplot() +
+  geom_bar(aes(x = sum_score),
+           fill = npp[15]) +
+  geom_pointinterval(data = posterior_sum_score_means,
+                     aes(x = sum_score_mean, xmin = .lower, xmax = .upper, y = -0.5),
+                     color = npp[1], size = 1.75) +
+  geom_point(data = sample_sum_score_means,
+             aes(x = sum_score_mean, y = -1.2),
+             size = 3, shape = 18, color = npp[39]) +
+  scale_x_continuous("neuroticism sum score", breaks = c(1, 2, 4, 6) * 5) +
+  labs(subtitle = "The mean and 95% intervals for the posterior of each mean are depicted by the dark dots\nand intersecting horizontal lines. The brown diamonds below mark the sample means.",
+       y = "count") +
+  facet_grid(male ~ ., labeller = label_both)
+```
+
+Happily, this time the posterior distributions for the sum-score means matched up nicely with the sample statistics. Now we have a sense of how to convert out posterior summaries into a sum-score metric, let's explore effect sizes.
+
+### Unstandardized mean differences.
+
+Probably the easiest way to express the sum-score difference between males and females with with an standardized mean difference.
+
+```{r, fig.height = 2.25, fig.width = 4, warning = F, message = F}
+d %>% 
+  distinct(item, male) %>% 
+  add_epred_draws(fit8, re_formula = ~ (1 | item)) %>% 
+  mutate(product = as.double(.category) * .epred) %>% 
+  # this line has been changed
+  group_by(male, .draw) %>% 
+  summarise(sum_score_mean = sum(product)) %>% 
+  pivot_wider(names_from = male, values_from = sum_score_mean) %>% 
+  mutate(d = `1` - `0`) %>% 
+  
+  ggplot(aes(x = d)) +
+  stat_halfeye(.width = .95, fill = npp[14], color = npp[1]) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  labs(title = "Neuroticism sum score effect size",
+       x = "male - female (unstandardized mean difference)")
+```
+
+The plot shows that for the 5-to-30-point neuroticism sum score, males average about 2 points lower than females. To the extent this 5-item scale is widely used and understood by contemporary personality researchers, this might be a meaningful way to present the results. However, members of any audience unaccustomed to this five-item scale may find themselves wondering how impressed they should feel. This is the downfall of presenting an unstandardized mean difference for a scale with an arbitrary and idiosyncratic metric.
+
+### Standardized mean differences.
+
+I'm generally a big fan of standardized mean differences, the most common of which are variants of Cohen's $d$. People report Cohen's $d$'s for sum score data all the time. However, I don't think that's wise, here. If you look back into Cohen's [-@cohenStatisticalPowerAnalysis1988a] text, he introduced $d$ as an effect size for to group means, based on data drawn from populations with normally distributed data. He made this clear in the first couple pages of Chapter 2, *The t test for means*. On page 19, for example: "The tables have been designed to render very simple the procedure for power analysis in the case where two samples, each of **n** cases, have been randomly and independently drawn from normal populations" (**emphasis** in the original). A little further down on the same page: "In the formal development of the **t** distribution for the difference between two independent means, the assumption is made that the populations sampled are normally distributed and that they are of homogeneous (i.e., equal) variance" (**emphasis** in the original). Then on the very next page, Cohen introduced his $d$ effect size for data of this kind.
+
+```{r, echo = F, eval = F}
+# population distribution
+psych::bfi %>% 
+  transmute(sum_score = N1 + N2 + N3 + N4 + N5) %>% 
+  ggplot(aes(x = sum_score)) +
+  geom_bar()
+```
+
+Here's the issue: Sum-score data aren't really normally distributed. There are a lot of ways to characterize Gaussian data. They're continuous, unimodal, symmetric, bell-shaped, and not near any lower or upper boundaries[^1]. Given our finite sample size, it's hard to determine how unimodal, symmetric, or bell-shaped the neuroticism sum scores might look in the population[^2]. But we know for sure that these sum-score data are not truly continuous and they have well-defined lower and upper boundaries. In fact, these characteristics are part of the reason we analyzed the data with a cumulative probit model to begin with. So if you are going to go to the trouble of analyzing your ordinal data with a cumulative probit model, I recommend you express the results with an effect size that was not explicitly designed for Gaussian data.
+
+In short, I think Cohen's $d$'s are a bad fit for Likert-type items fit with cumulative probit models.
+
+### POMP differences.
+
+Given how we just spent a section discrediting Cohen's $d$'s for sum-score data, it's satisfying that Patricia Cohen, Jacob Cohen, and colleagues [-@cohen1999problem] are also the group who have provided us with a slick alternative. We can express our mean differences in a POMP-score metric. The acronym POMP stands for the *percent of maximum possible*. Say you have some score variable $y$ with a clear lower and upper limit. You can convert those data into a POMP metric with the formula
+
+$$
+\text{POMP}_i = \frac{y_i - \min(y_i)}{\max(y_i) - \min(y_i)} \times 100.
+$$
+
+Here's what that transformation would look like for our neuroticism sum-score values.
+
+```{r, fig.height = 4, fig.width = 4.5, warning = F, message = F}
+tibble(sum_score = 5:30) %>% 
+  mutate(POMP = (sum_score - min(sum_score)) / (max(sum_score) - min(sum_score)) * 100) %>% 
+
+  ggplot(aes(x = sum_score, y = POMP, label = POMP)) +
+  geom_col(width = .75, color = npp[17], fill = npp[17]) +
+  geom_text(nudge_y = 2, size = 2.75) +
+  scale_x_continuous("neuroticism sum score", breaks = c(1, 2, 4, 6) * 5)
+```
+
+However, our strategy will not be to transform the neuroticism sum-score data, itself. Rather, we will transform the model-based means into the POMP metric, will will put our group contrasts into a POMP difference metric. 
+
+```{r, fig.height = 2.75, fig.width = 6.5, warning = F, message = F}
+# define the min and max values
+sum_score_min <- 5
+sum_score_max <- 30
+
+# start the same as before
+pomp <- d %>% 
+  distinct(item, male) %>% 
+  add_epred_draws(fit8, re_formula = ~ (1 | item)) %>% 
+  mutate(product = as.double(.category) * .epred,
+         sex     = ifelse(male == 0, "female", "male")) %>% 
+  group_by(sex, .draw) %>% 
+  summarise(sum_score_mean = sum(product)) %>% 
+  # compute the POMP scores
+  mutate(pomp = (sum_score_mean - sum_score_min) / (sum_score_max - sum_score_min) * 100) %>% 
+  # wrangle
+  select(-sum_score_mean) %>% 
+  pivot_wider(names_from = sex, values_from = pomp) %>% 
+  mutate(`male - female` = male - female) %>% 
+  pivot_longer(-.draw, values_to = "pomp") 
+
+# plot
+pomp %>% 
+  ggplot(aes(x = pomp)) +
+  stat_halfeye(point_interval = mean_qi, .width = .95, normalize = "panels",
+               fill = npp[14], color = npp[1]) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  labs(title = "Neuroticism sum score effect size",
+       x = "percent of maximum possible (POMP)") +
+  facet_wrap(~ name, scales = "free")
+```
+
+The plot shows the average scores for both males and females are a little below the middle of the full range of the neuroticism sum-score range, which bodes well from a psychometric perspective. The right panel clarifies the mean for males is about 7% lower than the mean for females, plus or minus 8%. To my mind, a POMP difference of 7% is large enough to take note.
+
+If you're curious, here are the numeric summaries.
+
+```{r}
+pomp %>% 
+  group_by(name) %>% 
+  mean_qi(pomp) %>% 
+  mutate_if(is.double, round, digits = 1)
+```
+
+```{r, eval = F, echo = F}
+pomp %>% 
+  group_by(name) %>% 
+  mean_qi(pomp) %>% 
+  mutate(width = .upper - .lower)
+```
+
+POMP scores are handy, but they aren't nearly as popular as unstandardized mean differences or Cohen's $d$'s. I'm just warming up to them, myself. If you'd like more examples of how POMP scoring can look in applied research, check out @goodman2021SocialComparisons or @popescu2022MelodicIntonationTherapy[^3].
+
+## Wrap it up
+
+Okay friends, in this post we
+
+* practiced analyzing several Likert-type items with a multilevel distributional Bayesian cumulative probit model,
+* used the `tidybayes::add_epred_draws()` function to help compute conditional means for the items,
+* extended that approach to compute conditional means for the sum score, and
+* discussed three ways to express sum-score contrasts as effect sizes.
+
+This topic is pushing the edges of my competence. If you have insights to add, chime in on twitter.
+
+```{r echo = FALSE}
+blogdown::shortcode('tweet', user = "SolomonKurz", id = '1549458168937385986')
+```
+
+Happy modeling, friends.
+
+## Session info
+
+```{r}
+sessionInfo()
+```
+
+## References
+
+[^1]: Technically, proper Gaussian data range between $-\infty$ and $\infty$. In the real world, researchers generally find it acceptable to use the Gaussian likelihood as long as the data distributions aren't too close to a lower or upper boundary. What constitutes "too close" is up for debate, and probably has more to do with the pickiness of one's peer reviewers than anything else.
+
+[^2]: Okay, I'm getting a little lazy, here. If you recall, our `d` data are a random subset of the 2,800-row `bfi` data from the **psych** package. If you compute the neuroticism sum score from the full data set, you can get a better sense of the population distribution. As it turns out, they're unimodal, but not particularly symmetric or bell shaped.
+
+[^3]: Both examples of POMP used in the wild are co-authored by the great [Brenton Wiernik](https://wiernik.org/), who is the person who first introduced me to POMP scoring.
+
+```{r, echo = F, eval = F}
+# compute and save the sample means
+sample_sum_score_means <- d %>% 
+  group_by(id, male, female) %>% 
+  summarise(sum_score = sum(rating)) %>% 
+  group_by(male) %>% 
+  summarise(sum_score_mean = mean(sum_score))
+
+d %>% 
+  group_by(id, male, female) %>% 
+  summarise(sum_score = sum(rating)) %>% 
+  
+  ggplot() +
+  geom_bar(aes(x = sum_score),
+           fill = npp[15]) +
+  geom_pointinterval(data = posterior_sum_score_means,
+                     aes(x = sum_score_mean, xmin = .lower, xmax = .upper, y = -0.5),
+                     color = npp[1], size = 1.75) +
+  geom_point(data = sample_sum_score_means,
+             aes(x = sum_score_mean, y = -1.2),
+             size = 3, shape = 18, color = npp[39]) +
+  scale_x_continuous("neuroticism sum score", breaks = c(1, 2, 4, 6) * 5) +
+  labs(subtitle = "The mean and 95% intervals for the posterior of each mean are depicted by the dark dots\nand intersecting horizontal lines. The brown diamonds below mark the sample means.",
+       y = "count") +
+  facet_grid(male ~ ., labeller = label_both) +
+  theme_grey(base_size = 6.67,
+             base_family = "Times") +
+    theme(text = element_text(color = npp[1]),
+          axis.text = element_text(color = npp[1]),
+          axis.ticks = element_line(color = npp[1]),
+          panel.background = element_rect(fill = npp[21], color = npp[21]),
+          panel.grid = element_blank(),
+          plot.background = element_rect(fill = "#fdfbf0", color = "#fdfbf0"),
+          strip.background = element_rect(fill = npp[23]),
+          strip.text = element_text(color = npp[1]))
+
+ggsave("d-ordinal-featured.jpg", width = 3.6, height = 3.5, units = "in")
+```
+
