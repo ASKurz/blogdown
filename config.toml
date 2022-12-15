@@ -133,11 +133,6 @@ buildFuture = true
     title = "Workshops"
     url = "/workshop/"
     weight = 4
-    [[menu.header]]
-    name = "Talks"
-    title = "Talks"
-    url = "/talk/"
-    weight = 5
 
     
   # Configure footer  
