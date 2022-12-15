@@ -1,0 +1,28 @@
+---
+title: "Make the featured.jpg"
+author: "A. Solomon Kurz"
+output: html_notebook
+---
+
+```{r, eval = F, echo = F}
+# make the featured pic
+library(tidyverse)
+
+tibble(x = seq(from = 0.001, to = 0.999, by = 0.001)) %>% 
+  mutate(prior = dbeta(x, 10, 10),
+         posterior = dbeta(x, 2, 5)) %>% 
+  
+  ggplot(aes(x = x)) +
+  geom_line(aes(y = posterior),
+            size = 3, color = "red3") +
+  geom_line(aes(y = prior),
+            size = 3, color = "blue3") +
+  theme_void() +
+  theme(plot.background = element_rect(color = "white", fill = "white"),
+        panel.background = element_rect(color = "white", fill = "white"))
+
+ggsave("featured.jpg", width = 4, height = 3.5, units = "in")
+```
+
+
+

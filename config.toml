@@ -14,6 +14,10 @@ preserveTaxonomyNames = true
 ignoreFiles = ["\\.Rmd$", "\\.Rmarkdown$", "_cache$", "\\.knit\\.md$", "\\.utf8\\.md$"]
 enableEmoji = true
 
+# to allow for posting future events
+# see https://github.com/hugo-apero/hugo-apero/issues/82
+buildFuture = true
+
 [markup]
   defaultMarkdownHandler = "goldmark"
   [markup.goldmark.renderer]
@@ -33,7 +37,7 @@ enableEmoji = true
   description = "Clinical psychology researcher"
   favicon = "/img/avatar.ico"  # default was "/img/favicon.ico"
   logo = "/img/avatar.ico" # defualt was "/img/blogophonic-mark-dark.png"
-  mainSections = ["blog", "pub", "project", "talk"]
+  mainSections = ["blog", "pub", "project", "workshop", "talk"]
   navallcaps = true
   # show/hide social icons in site header & footer
   # configure social icons and links below in [[params.social]]
@@ -125,10 +129,15 @@ enableEmoji = true
     url = "/pub/"
     weight = 3
   [[menu.header]]
+    name = "Workshops"
+    title = "Workshops"
+    url = "/workshop/"
+    weight = 4
+    [[menu.header]]
     name = "Talks"
     title = "Talks"
     url = "/talk/"
-    weight = 4
+    weight = 5
 
     
   # Configure footer  
