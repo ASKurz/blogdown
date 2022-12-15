@@ -148,7 +148,11 @@ buildFuture = true
     title = "Support"
     url = "/support/"
     weight = 7
-
+  [[menu.header]]
+    name = "CV"
+    title = "CV"
+    url = "/cv/Kurz_CV.pdf"
+    weight = 8
     
   # Configure footer  
 #  [[menu.footer]]
