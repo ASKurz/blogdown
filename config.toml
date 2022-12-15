@@ -72,13 +72,21 @@ buildFuture = true
   textFontFamily = "sans-serif"
   headingFontFamily = "sans-serif"
 
-  # Configuration of https://utteranc.es/ for comments
-  [params.utterances]
-    use_utterances = true
-    repo_name = "ASKurz/blogdown"
-    issue_term = "pathname" # url, pathname, or title
-    theme = "boxy-light"
-    label = "comments :crystal_ball:"
+  # Specify use of utterances, giscus or disqus
+  comments = "giscus"
+
+  # Configuration of https://giscus.app/ for comments
+  [params.giscus]
+    use_giscus = true
+    repo = "ASKurz/blogdown5"
+    repo_id = "R_kgDOInfFgA"
+    category = "Comments"
+    category_id = "DIC_kwDOInfFgM4CTFM3"
+    mapping = "pathname"
+    reactions_enabled = "1"
+    emit_metadata = "0"
+    theme = "preferred_color_scheme"
+    lang = "en"
 
   # Configuration of math rendering
   [params.math]
