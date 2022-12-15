@@ -129,10 +129,25 @@ buildFuture = true
     url = "/pub/"
     weight = 3
   [[menu.header]]
+    name = "Books"
+    title = "Books"
+    url = "/book/"
+    weight = 4
+  [[menu.header]]
     name = "Workshops"
     title = "Workshops"
     url = "/workshop/"
-    weight = 4
+    weight = 5
+  [[menu.header]]
+    name = "Courses"
+    title = "Courses"
+    url = "/course/"
+    weight = 6
+  [[menu.header]]
+    name = "Support"
+    title = "Support"
+    url = "/support/"
+    weight = 7
 
     
   # Configure footer  
