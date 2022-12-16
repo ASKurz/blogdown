@@ -25,6 +25,9 @@ location: Online
 show_post_time: false
 ---
 
+:warning: This workshop is officially **sold out**. I am told there is a waiting list, about which you can learn more by contacting info@physalia-courses.org.
+
+
 ## Overview
 
 We are entering the Golden Age of Bayesian statistics. Thanks to fast personal computers and powerful free software (e.g., [Stan](https://mc-stan.org/)), working scientists can fit an array of Bayesian models tailored to their specific needs. Recent textbooks from authors like McElreath (2015, 2020) have also made Bayesian methods more accessible to applied researchers with minimal backgrounds in mathematics. However, many graduate programs still do not offer introductory courses on Bayesian statistics. To help fill that pedagogical gap, this course is designed to provide an accessible and applied introduction to Bayesian data analysis for a wide variety of linear models using user-friendly [brms](https://cran.r-project.org/web/packages/brms/index.html) R package.
