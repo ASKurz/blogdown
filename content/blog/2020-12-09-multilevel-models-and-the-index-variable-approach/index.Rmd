@@ -1,0 +1,475 @@
+---
+title: Multilevel models and the index-variable approach
+author: A. Solomon Kurz
+date: '2020-12-09'
+draft: false
+excerpt: "PhD candidate Huaiyu Liu recently reached out with a question about how to analyze clustered data. Liu's basic setup was an experiment with four conditions. The dependent variable was binary, where success = 1, fail = 0. Each participant completed multiple trials under each of the four conditions. The catch was Liu wanted to model those four conditions with a multilevel model using the index-variable approach McElreath advocated for in the second edition of his text. Like any good question, this one got my gears turning. Thanks, Liu! The purpose of this post will be to show how to model data like this two different ways."
+layout: single
+tags:
+- Bayesian
+- brms
+- Kruschke
+- McElreath
+- R
+- tidyverse
+- Statistical Rethinking
+- tutorial
+lastmod: '2021-04-22T10:40:07-07:00'
+featured: no
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
+biblio-style: apalike
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl
+link-citations: yes
+---
+
+```{r, echo = F}
+# save(fit1, file = "fits/fit1.rda")
+# save(fit2, file = "fits/fit2.rda")
+
+load("fits/fit1.rda")
+load("fits/fit2.rda")
+```
+
+```{r, echo = F, cache = F}
+knitr::opts_chunk$set(fig.align = "center")
+options(width = 100)
+```
+
+## Version 1.1.0
+
+Edited on December 16, 2022, to use the new `as_draws_df()` workflow.
+
+## The set-up
+
+PhD candidate Huaiyu Liu recently reached out with a question about how to analyze clustered data. Liu's basic setup was an experiment with four conditions. The dependent variable was binary, where success = 1, fail = 0. Each participant completed multiple trials under each of the four conditions. The catch was Liu wanted to model those four conditions with a multilevel model using the index-variable approach McElreath advocated for in the second edition of his text [@mcelreathStatisticalRethinkingBayesian2020].
+
+Like any good question, this one got my gears turning. Thanks, Liu! The purpose of this post will be to show how to model data like this two different ways.
+
+### I make assumptions.
+
+In this post, I'm presuming you are familiar with Bayesian multilevel models and with logistic regression. All code is in **R** [@R-base], with healthy doses of the **tidyverse** [@R-tidyverse; @wickhamWelcomeTidyverse2019]. The statistical models will be fit with **brms** [@R-brms; @burknerBrmsPackageBayesian2017; @burknerAdvancedBayesianMultilevel2018]. We'll also make a little use of the **tidybayes** [@R-tidybayes] and **rethinking** [@R-rethinking] packages. If you need to shore up, I list some educational resources at the [end of the post][Next steps].
+
+Load the primary packages.
+
+```{r, warning = F, message = F}
+library(tidyverse)
+library(brms)
+library(tidybayes)
+```
+
+## Data
+
+The data for Liu's question had the same basic structure as the `chimpanzees` data from the **rethinking** package. Happily, it's also the case that Liu wanted to fit a model that was very similar to model `m14.3` from Chapter 14 of McElreath's text. Here we'll load the data and wrangle a little.
+
+```{r, warning = F, message = F}
+data(chimpanzees, package = "rethinking")
+d <- chimpanzees
+rm(chimpanzees)
+
+# wrangle
+d <-
+  d %>% 
+  mutate(actor = factor(actor),
+         treatment = factor(1 + prosoc_left + 2 * condition),
+         # this will come in handy, later
+         labels    = factor(treatment,
+                            levels = 1:4,
+                            labels = c("r/n", "l/n", "r/p", "l/p")))
+
+glimpse(d)
+```
+
+The focal variable will be `pulled_left`, which is binary and coded yes = 1, no = 0. We have four experimental conditions, which are indexed `1` through `4` in the `treatment` variable. The shorthand labels for those conditions are saved as `labels`. These data are simple in that there are only seven participants, who are indexed in the `actor` column.
+
+Within the generalized linear model framework, we typically model binary variables with binomial likelihood[^1]. When you use the conventional link function, you can call this *logistic regression*. When you have a binary variable, the parameter of interest is the probability of a 1 in your criterion variable. When you want a quick sample statistic, you can estimate those probabilities with the mean. To get a sense of the data, here are the sample probabilities `pulled_left == 1` for each of our seven participants, by the four levels of `treatment`.
+
+```{r kable, message = F}
+d %>% 
+  mutate(treatment = str_c("treatment ", treatment)) %>% 
+  group_by(actor, treatment) %>% 
+  summarise(p = mean(pulled_left) %>% round(digits = 2)) %>% 
+  pivot_wider(values_from = p, names_from = treatment) %>% 
+  knitr::kable()
+```
+
+## Models
+
+We are going to analyze these data two kinds of multilevel models. The first way is the direct analogue to McElreath's model `m14.3`; it'll be a multilevel model using the index-variable approach for the population-level intercepts. The second way is a multilevel Bayesian alternative to the ANOVA, based on Kruschke's [-@kruschkeDoingBayesianData2015] text.
+
+However, some readers might benefit from a review of what I even mean by the "index-variable" approach. This approach is uncommon in my field of clinical psychology, for example. So before we get down to business, we'll clear that up by contrasting it with the widely-used dummy-variable approach.
+
+### Warm-up with the simple index-variable model.
+
+Let's forget the multilevel model for a moment. One of the more popular ways to use a categorical predictor variable is with the dummy-variable approach. Say we wanted to predict our criterion variable `pulled_left` with `treatment`, which is a four-category nominal variable. If we denote the number of categories $K$, `treatment` is a $K = 4$ nominal variable. The dummy-variable approach would be to break `treatment` into $K - 1$ binary variables, which we'd simultaneously enter into the model. Say we broke `treatment` into three dummies with the following code.
+
+```{r}
+d <-
+  d %>% 
+  mutate(d2 = if_else(treatment == 2, 1, 0),
+         d3 = if_else(treatment == 3, 1, 0),
+         d4 = if_else(treatment == 4, 1, 0))
+```
+
+The dummy variables `d2`, `d3`, and `d4` would capture the four levels of `treatment` like so:
+
+```{r}
+d %>% 
+  distinct(treatment, d2, d3, d4)
+```
+
+Here `d2 == 1` only when `treatment == 2`. Similarly, `d3 == 1` only when `treatment == 3` and `d4 == 1` only when `treatment == 4`. When `treatment == 1`, all three dummies are `0`, which makes `treatment == 1` the reference category.
+
+You can write out the statistical model using these $K - 1$ dummies as
+
+$$
+\begin{align*}
+\text{left_pull}_i & \sim \operatorname{Binomial}(n_i = 1, p_i) \\
+\operatorname{logit} (p_i) & = \beta_0 + \beta_1 \text{d2}_i + \beta_2 \text{d3}_i + \beta_3 \text{d4}_i,
+\end{align*}
+$$
+
+where $\beta_0$ is both the "intercept" and the expected value for the first level of `treatment`. $\beta_1$ is the expected change in value, relative to $\beta_0$, for the second level of `treatment`. In the same way, $\beta_2$ and $\beta_3$ are changes relative to $\beta_0$ for the third and fourth levels of `treatment`, respectively.
+
+The index-variable approach takes a different stance. Rather than dividing `treatment` into dummies, one simply allows each level of `treatment` to have its own intercept. You can write that in statistical notation as
+
+$$
+\begin{align*}
+\text{left_pull}_i & \sim \operatorname{Binomial}(n_i = 1, p_i) \\
+\operatorname{logit} (p_i) & = \gamma_{\text{treatment}[i]},
+\end{align*}
+$$
+
+where the $\text{treatment}[i]$ subscript indicates the different levels of `treatment`, which vary across cases $i$, each get their own $\gamma$ parameter. Because `treatment` has four levels, we end up with four $\gamma$'s: $\gamma_1$, $\gamma_2$, $\gamma_3$, and $\gamma_4$. When you model intercepts in this way, none of the levels of `treatment` end up as the reference category and none of the other levels of `treatment` are parameterized in terms of deviations from the reference category. Each intercept is estimated in its own terms.
+
+**Quick note on notation**: There's nothing special about using the letter $\gamma$ for our index variable. We could just as easily have used $\alpha$, $\beta$, $\xi$, or whatever. The only reason I'm using $\gamma$, here, is because that's what McElreath used for his model `m14.3`.
+
+If you'd like more practice with dummy variables, McElreath lectured on them [here](https://www.youtube.com/watch?v=e0tO64mtYMU&feature=youtu.be&t=3360).  If you'd like to hear McElreath walk out index variables a bit more, you can find that lecture [here](https://youtu.be/l_7yIUqWBmE?t=83).
+
+### McElreath's approach.
+
+Okay, now we're up to speed on what Liu meant by wanting to fit a model with the index-variable approach, let's see what that looks like in a multilevel model.
+
+#### The statistical model.
+
+Here's how we might express McElreath's index-variable approach to these data in statistical notation:
+
+$$
+\begin{align*}
+\text{left_pull}_i & \sim \operatorname{Binomial}(n_i = 1, p_i) \\
+\operatorname{logit} (p_i) & = \gamma_{\text{treatment}[i]} + \alpha_{\text{actor}[i], \text{treatment}[i]} \\
+\gamma_j & \sim \operatorname{Normal}(0, 1), \;\;\; \text{for } j = 1, \dots, 4 \\
+\begin{bmatrix} \alpha_{j, 1} \\ \alpha_{j, 2} \\ \alpha_{j, 3} \\ \alpha_{j, 4} \end{bmatrix} & \sim \operatorname{MVNormal} \begin{pmatrix} \begin{bmatrix} 0 \\ 0 \\ 0 \\ 0 \end{bmatrix}, \mathbf \Sigma_\text{actor} \end{pmatrix} \\
+\mathbf \Sigma_\text{actor} & = \mathbf{S_\alpha R_\alpha S_\alpha} \\
+\sigma_{\alpha, [1]}, \dots, \sigma_{\alpha, [4]} & \sim \operatorname{Exponential}(1) \\
+\mathbf R_\alpha & \sim \operatorname{LKJ}(2).
+\end{align*}
+$$
+
+In this model, we have four population-level intercepts, $\gamma_1, \dots, \gamma_4$, one for each of the four levels of `treatment`. This is one of the critical features required by Liu's question. `actor` is our higher-level grouping variable. The third line spells out the priors for those four $\gamma$'s. Though they all get the same prior in this model, you could use different priors for each, if you wanted.
+
+Going back to the second line, the term $\alpha_{\text{actor}[i], \text{treatment}[i]}$ is meant to convey that each of the `treatment` effects can vary by `actor`. We can--and should--do this because each of our participants experienced each of the four levels of `treatment` many times. The fourth line containing the $\operatorname{MVNormal}(\cdot)$ operator might look intimidating. The vector on the left is just a way to list those four `actor`-level deviations we just mentioned. We'll be treating them much the same way you might treat a random intercept and slope in a multilevel growth model. That is, we presume they follow a multivariate normal distribution. Since these are all deviations, the 4-dimensional mean vector in our multivariate normal distribution contains four zeros. The spread around those zeros are controlled by the variance/covariance matrix $\Sigma_\text{actor}$. In the next line, we learn that $\Sigma_\text{actor}$ can be decomposed into two terms, $\mathbf S_\alpha$ and $\mathbf R_\alpha$[^3]. It may not yet be clear by the notation, but $\mathbf S_\alpha$ is a $4 \times 4$ diagonal matrix of standard deviations,
+
+$$
+\mathbf S_\alpha = \begin{bmatrix} \sigma_{\alpha, [1]} & 0 & 0 & 0 \\ 0 & \sigma_{\alpha, [2]} & 0 & 0 \\ 0 & 0 & \sigma_{\alpha, [3]} & 0 \\ 0 & 0 & 0 & \sigma_{\alpha, [4]} \end{bmatrix}.
+$$
+
+In a similar way, $\mathbf R_\alpha$ is a $4 \times 4$ correlation matrix,
+
+$$
+\mathbf R_\alpha = \begin{bmatrix} 1 & \rho_{\alpha, [1, 2]} & \rho_{\alpha, [1, 3]} & \rho_{\alpha, [1, 4]} \\ \rho_{\alpha, [2, 1]} & 1 & \rho_{\alpha, [2, 3]} & \rho_{\alpha, [2, 4]} \\ \rho_{\alpha, [3, 1]} & \rho_{\alpha, [3, 2]} & 1 & \rho_{\alpha, [3, 4]} \\ \rho_{\alpha, [4, 1]} & \rho_{\alpha, [4, 2]} & \rho_{\alpha, [4, 3]} & 1 \end{bmatrix}.
+$$
+
+As we see in the sixth line, all the $\sigma_\alpha$ parameters have individual $\operatorname{Exponential}(1)$ priors. The final line shows the $\mathbf R_\alpha$ matrix has the $\operatorname{LKJ}(2)$ prior. Though you could certainly use different priors, here we're sticking close to those McElreath used in his text.
+
+#### Fit the model.
+
+Though the statistical model might look intimidating, we can fit it pretty easily with `brms::brm()`. We'll call this `fit1`.
+
+```{r fit1, eval = F}
+fit1 <- 
+  brm(data = d, 
+      family = binomial,
+      pulled_left | trials(1) ~ 0 + treatment + (0 + treatment | actor),
+      prior = c(prior(normal(0, 1), class = b),
+                prior(exponential(1), class = sd),
+                prior(lkj(2), class = cor)),
+      cores = 4, seed = 1)
+```
+
+From a syntax perspective, the important parts were the two occurrences of `0 + treatment` in the model `formula` line. The first occurrence was how we told **brms** we wanted our population-level intercept to be indexed by the four levels of `treatment`. The second occurrence was where we told **brms** we wanted those to vary across our seven levels of `actor`.
+
+Check the model summary.
+
+```{r}
+print(fit1)
+```
+
+If you look at the lower level of the output, the four levels in the 'Population-Level Effects' section are the four levels of $\gamma_{\text{treatment}[i]}$ from our statistical formula. If you look above at the 'Group-Level Effects' section, the four lines beginning with "sd" correspond to our four $\sigma_{\alpha, [1]}, \dots, \sigma_{\alpha, [4]}$ parameters. The correlations among those are depicted in the six rows beginning with "cor," which correspond to the elements within the $\mathbf R_\alpha$ matrix.
+
+It might help if we visualized the model in a plot. Here are the results depicted in a streamlined version of McElreath's Figure 14.7 [@mcelreathStatisticalRethinkingBayesian2020, p. 452].
+
+```{r fig1, fig.width = 8, fig.height = 2.5}
+# for annotation
+text <-
+  distinct(d, labels) %>% 
+  mutate(actor = "actor[1]",
+         prop  = c(.07, .8, .08, .795))
+
+# define the new data
+nd <-
+  d %>% 
+  distinct(actor, condition, labels, prosoc_left, treatment)
+
+# get the fitted draws
+fitted(fit1,
+       newdata = nd) %>% 
+  data.frame() %>% 
+  bind_cols(nd) %>% 
+  mutate(actor     = str_c("actor[", actor, "]"),
+         condition = factor(condition)) %>% 
+  
+  # plot!
+  ggplot(aes(x = labels)) +
+  geom_hline(yintercept = .5, color = "white", linetype = 2) +
+  # posterior predictions
+  geom_line(aes(y = Estimate, group = prosoc_left),
+            size = 3/4) +
+  geom_pointrange(aes(y = Estimate, ymin = Q2.5, ymax = Q97.5, shape = condition),
+                  fill = "transparent", fatten = 10, size = 1/3, show.legend = F) + 
+  # annotation for the conditions
+  geom_text(data = text,
+            aes(y = prop, label = labels), 
+            size = 3) +
+  scale_shape_manual(values = c(21, 19)) +
+  scale_x_discrete(NULL, breaks = NULL) +
+  scale_y_continuous("proportion left lever", breaks = 0:2 / 2, labels = c("0", ".5", "1")) +
+  theme(panel.grid = element_blank()) +
+  facet_wrap(~actor, nrow = 1, labeller = label_parsed)
+```
+
+Here's an alternative version, this time faceting by treatment.
+
+```{r fig2, fig.width = 5, fig.height = 2.5}
+fitted(fit1,
+       newdata = nd) %>% 
+  data.frame() %>% 
+  bind_cols(nd) %>% 
+  # add the gamma summaries
+  left_join(
+    tibble(treatment = as.character(1:4),
+       gamma = inv_logit_scaled(fixef(fit1)[, 1])),
+    by = "treatment"
+  )  %>% 
+  mutate(treatment = str_c("treatment[", treatment, "]")) %>% 
+  
+  # plot!
+  ggplot(aes(x = reorder(actor, Estimate), y = Estimate, ymin = Q2.5, ymax = Q97.5)) +
+  geom_hline(aes(yintercept = gamma),
+             color = "white") +
+  geom_pointrange(size = 1/3) +
+  scale_x_discrete(breaks = NULL) +
+  labs(x = "actor, rank orderred by their average probability",
+       y = "probability of pulling the lever") +
+  theme(panel.grid = element_blank()) +
+  facet_wrap(~treatment, nrow = 1, labeller = label_parsed)
+```
+
+The horizontal white lines mark off the posterior means for the $\gamma_{\text{treatment}[i]}$ parameters.
+
+### Kruschke's approach.
+
+One way to think about our `pulled_left` data is they are grouped by two factors. The first factor is the experimental condition, `treatment`. The second factor is participant, `actor`. Now imagine you arrange the number of times `pulled_left == 1` within the cells of a $2 \times 2$ contingency table where the four levels of the `treatment` factor are in the rows and the seven levels of `actor` are in the columns. Here's what that might look like in a tile plot.
+
+```{r fig3, message = F, fig.width = 5, fig.height = 2}
+d %>% 
+  group_by(actor, treatment) %>% 
+  summarise(count = sum(pulled_left)) %>% 
+  mutate(treatment = factor(treatment, levels = 4:1)) %>% 
+  
+  ggplot(aes(x = actor, y = treatment, fill = count, label = count)) +
+  geom_tile() +
+  geom_text(aes(color = count > 6)) +
+  scale_color_viridis_d(option = "E", direction = -1, breaks = NULL) +
+  scale_fill_viridis_c(option = "E", limits = c(0, 18), breaks = NULL) +
+  scale_x_discrete(position = "top", expand = c(0, 0)) +
+  scale_y_discrete(expand = c(0, 0)) +
+  theme(axis.ticks = element_blank())
+```
+
+With this arrangement, we can model $\text{left_pull}_i \sim \operatorname{Binomial}(n_i = 1, p_i)$, with three hierarchical grouping factors. The first will be `actor`, the second will be `treatment`, and the third will be their interaction. Kruschke gave a general depiction of this kind of statistical model in Figure 20.2[^2] of his text [@kruschkeDoingBayesianData2015, p. 588]. However, I generally prefer expressing my models using statistical notation similar to McElreath. Though I'm not exactly sure how McElreath would express a model like this, here's my best attempt using his style of notation:
+
+$$
+\begin{align*}
+\text{left_pull}_i & \sim \operatorname{Binomial}(n_i = 1, p_i) \\
+\operatorname{logit} (p_i) & = \gamma + \alpha_{\text{actor}[i]} + \alpha_{\text{treatment}[i]} + \alpha_{\text{actor}[i] \times \text{treatment}[i]} \\
+\gamma & \sim \operatorname{Normal}(0, 1) \\
+\alpha_\text{actor}  & \sim \operatorname{Normal}(0, \sigma_\text{actor}) \\
+\alpha_\text{treatment}  & \sim \operatorname{Normal}(0, \sigma_\text{treatment}) \\
+\alpha_{\text{actor} \times \text{treatment}} & \sim \operatorname{Normal}(0, \sigma_{\text{actor} \times \text{treatment}}) \\
+\sigma_\text{actor} & \sim \operatorname{Exponential}(1) \\
+\sigma_\text{treatment} & \sim \operatorname{Exponential}(1) \\
+\sigma_{\text{actor} \times \text{treatment}} & \sim \operatorname{Exponential}(1).
+\end{align*}
+$$
+
+Here $\gamma$ is our overall intercept and the three $\alpha_{\text{<group>}[i]}$ terms are our multilevel deviations around that overall intercept. Notice that because $\gamma$ nas no $j$ index, we are not technically using the index variable approach we discussed earlier in this post. But we are still indexing the four levels of `treatment` by way of higher-level deviations depicted by the $\alpha_{\text{treatment}[i]}$ and $\alpha_{\text{actor}[i] \times \text{treatment}[i]}$ parameters in the second line. In contrast to our first model based on McElreath's work, notice our three $\alpha_{\text{<group>}[i]}$ term are all modeled as *univariate* normal. This makes this model an extension of the cross-classified model.
+
+#### Fit the second model.
+
+Here's how to fit the model with **brms**. We'll call it `fit2`.
+
+```{r fit, eval = F}
+fit2 <- 
+  brm(data = d, 
+      family = binomial,
+      pulled_left | trials(1) ~ 1 + (1 | actor) + (1 | treatment) + (1 | actor:treatment),
+      prior = c(prior(normal(0, 1), class = Intercept),
+                prior(exponential(1), class = sd)),
+      cores = 4, seed = 1,
+      control = list(adapt_delta = .85))
+```
+
+Check the summary.
+
+```{r}
+print(fit2)
+```
+
+With a model like this, a natural first question is: *Where is the variance at?* We can answer that by comparing the three lines in the output from the 'Group-Level Effects' section. It might be easier if we plotted the posteriors for those $\sigma_\text{<group>}$ parameters, instead.
+
+```{r fig4, fig.width = 6, fig.height = 2.5, warning = F}
+library(tidybayes)
+
+as_draws_df(fit2) %>% 
+  select(starts_with("sd")) %>% 
+  set_names(str_c("sigma[", c("actor", "actor~X~treatment", "treatment"), "]")) %>% 
+  pivot_longer(everything()) %>% 
+  mutate(name = factor(name,
+                       levels = str_c("sigma[", c("actor~X~treatment", "treatment", "actor"), "]"))) %>% 
+  
+  ggplot(aes(x = value, y = name)) +
+  stat_halfeye(.width = .95, size = 1/2) +
+  scale_y_discrete(NULL, labels = ggplot2:::parse_safe,
+                   expand = expansion(add = 0.1)) +
+  xlab("marginal posterior (log-odds scale)") +
+  theme(axis.text.y = element_text(hjust = 0),
+        axis.ticks.y = element_blank(),
+        panel.grid = element_blank())
+```
+
+It looks like most of the action was between the seven actors. But there was some variation among the four levels of `treatment` and even the interaction between the two factors wasn't completely pushed against zero.
+
+Okay, here's an alternative version of the first plot from `fit1`, above.
+
+```{r fig5, fig.width = 8, fig.height = 2.5}
+fitted(fit2,
+       newdata = nd) %>% 
+  data.frame() %>% 
+  bind_cols(nd) %>% 
+  mutate(actor     = str_c("actor[", actor, "]"),
+         condition = factor(condition)) %>% 
+  
+  # plot!
+  ggplot(aes(x = labels)) +
+  geom_hline(yintercept = .5, color = "white", linetype = 2) +
+  # posterior predictions
+  geom_line(aes(y = Estimate, group = prosoc_left),
+            size = 3/4) +
+  geom_pointrange(aes(y = Estimate, ymin = Q2.5, ymax = Q97.5, shape = condition),
+                  fill = "transparent", fatten = 10, size = 1/3, show.legend = F) + 
+  scale_shape_manual(values = c(21, 19)) +
+  scale_x_discrete(NULL, breaks = NULL) +
+  scale_y_continuous("proportion left lever", limits = 0:1,
+                     breaks = 0:2 / 2, labels = c("0", ".5", "1")) +
+  theme(panel.grid = element_blank()) +
+  facet_wrap(~actor, nrow = 1, labeller = label_parsed)
+```
+
+The two models made similar predictions.
+
+### Why not make the horse race official?
+
+Just for kicks and giggles, we'll compare the two models with the LOO.
+
+```{r}
+fit1 <- add_criterion(fit1, criterion = "loo")
+fit2 <- add_criterion(fit2, criterion = "loo")
+
+# LOO differences
+loo_compare(fit1, fit2) %>% print(simplify = F)
+
+# LOO weights
+model_weights(fit1, fit2, weights = "loo")
+```
+
+It looks like there's a little bit of an edge for the Kruschke's multilevel ANOVA model.
+
+### But what's the difference, anyway?
+
+Rather than attempt to chose one model based on information criteria, we might back up and focus on the conceptual differences between the two models.
+
+Our first model, based on McElreath's index-variable approach, explicitly emphasized the four levels of `treatment`. Each one got its own $\gamma_j$. By modeling those $\gamma_j$'s with the multivariate normal distribution, we also got an explicit accounting of the $4 \times 4$ correlation structure for those parameters.
+
+Our second model, based on Kruschke's multilevel ANOVA approach, took a more general perspective. By modeling `actor`, `treatment` and their interaction as higher-level grouping factors, `fit2` conceptualized both participants and experimental conditions as coming from populations of potential participants and conditions, respectively. No longer are those four `treatment` levels inherently special. They're just the four we happen to have in this iteration of the experiment. Were we to run the experiment again, after all, we might want to alter them a little. The $\sigma_\text{treatment}$ and $\sigma_{\text{actor} \times \text{treatment}}$ parameters can help give us a sense of how much variation we'd expect among other similar experimental conditions.
+
+Since I'm not a chimpanzee researcher, I'm in no position to say which perspective is better for these data. At a predictive level, the models perform similarly. But if I were a researcher wanting to analyze these data or others with a similar structure, I'd want to think clearly about what kinds of points I'd want to make to my target audience. Would I want to make focused points about the four levels of `treatment`, or would it make sense to generalize from those four levels to other similar conditions? Each model has its rhetorical strengths and weaknesses.
+
+## Next steps
+
+If you're new to the Bayesian multilevel model, I recommend the introductory text by either McElreath [@mcelreathStatisticalRethinkingBayesian2020] or Kruschke [@kruschkeDoingBayesianData2015]. I have ebook versions of both wherein I translated their code into the **tidyverse** style and fit their models with **brms** [@kurzStatisticalRethinkingSecondEd2020; @kurzDoingBayesianData2020]. Both McElreath and Kruschke have blogs ([here](https://elevanth.org/blog/) and [here](https://doingbayesiandataanalysis.blogspot.com/)). Also, though it doesn't cover the multilevel model, you can get a lot of practice with Bayesian regression with the new book by Gelman, Hill, and Vehtari [-@gelmanRegressionOtherStories2020]. And for more hot Bayesian regression talk, you always have the Stan forums, which even have a [**brms** section](https://discourse.mc-stan.org/c/interfaces/brms/36).
+
+## Session info
+
+```{r}
+sessionInfo()
+```
+
+## References
+
+[^1]: Given the data are coded 0/1, one could also use the Bernoulli likelihood [@Bürkner2021Parameterization, [*Binary and count data models*](https://CRAN.R-project.org/package=brms/vignettes/brms_families.html#binary-and-count-data-models)]. I'm just partial to the binomial.
+
+[^2]: The careful reader might notice that the models Kruschke focused on in Chapter 20 were all based on the Gaussian likelihood. So in the most technical sense, the model in Figure 20.2 is not a perfect match to our `fit2`. I'm hoping my readers might look past those details to see the more general point. For more practice, [Section 24.2](https://bookdown.org/content/3686/count-predicted-variable.html#example-hair-eye-go-again) and [Section 24.3](https://bookdown.org/content/3686/count-predicted-variable.html#example-interaction-contrasts-shrinkage-and-omnibus-test) of my translation of Kruschke's text [@kurzDoingBayesianData2020] show variants of this model type using the Poisson likelihood. In Section [24.4](https://bookdown.org/content/3686/count-predicted-variable.html#log-linear-models-for-contingency-tables-bonus-alternative-parameterization) you can even find a variant using the aggregated binomial likelihood.
+
+[^3]: This is the typical parameterization for multilevel models fit with **brms**. Though he used different notation, Bürkner spelled this all out in his [-@burknerBrmsPackageBayesian2017] overview paper, [*brms: An R package for Bayesian multilevel models using Stan*](https://CRAN.R-project.org/package=brms/vignettes/brms_overview.pdf).
+
+```{r, eval = F, echo = F}
+# for annotation
+text <-
+  distinct(d, labels) %>% 
+  mutate(actor = "actor[1]",
+         prop  = c(.07, .8, .08, .795))
+
+# define the new data
+nd <-
+  d %>% 
+  distinct(actor, condition, labels, prosoc_left, treatment)
+
+# get the fitted draws
+fitted(fit1,
+       newdata = nd) %>% 
+  data.frame() %>% 
+  bind_cols(nd) %>% 
+  mutate(actor     = str_c("actor[", actor, "]"),
+         condition = factor(condition)) %>% 
+  
+  # plot!
+  ggplot(aes(x = labels)) +
+  geom_hline(yintercept = .5, color = "white", linetype = 2) +
+  # posterior predictions
+  geom_line(aes(y = Estimate, group = prosoc_left),
+            size = 3/4) +
+  geom_pointrange(aes(y = Estimate, ymin = Q2.5, ymax = Q97.5, shape = condition),
+                  fill = "transparent", fatten = 10, size = 1/3, show.legend = F) + 
+  # annotation for the conditions
+  geom_text(data = text,
+            aes(y = prop, label = labels), 
+            size = 3) +
+  scale_shape_manual(values = c(21, 19)) +
+  scale_x_discrete(NULL, breaks = NULL) +
+  scale_y_continuous("proportion left lever", breaks = 0:2 / 2, labels = c("0", ".5", "1")) +
+  theme(panel.grid = element_blank()) +
+  facet_wrap(~actor, nrow = 1, labeller = label_parsed)
+
+ggsave("mcelreath-index-featured.jpg", width = 8, height = 2.5, units = "in")
+```
+
