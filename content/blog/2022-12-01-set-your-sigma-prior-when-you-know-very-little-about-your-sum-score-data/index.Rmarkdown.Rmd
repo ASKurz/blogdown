@@ -1,0 +1,612 @@
+---
+title: Set your sigma prior when you know very little about your sum-score data
+author: A. Solomon Kurz
+date: '2022-12-01'
+draft: false
+excerpt: "In this post, we discuss ways to set a prior for sigma when you know little about your sum-score data. Along the way, we intruduce Popoviciu's inequality, the uniform distribution, and the beta-binomial distribution."
+layout: single
+tags:
+- Bayesian
+- beta-binomial
+- brms
+- Likert
+- Popoviciu's inequality
+- prior
+- R
+- sigma
+- sum score
+- tidyverse
+- tutorial
+- uniform
+lastmod: '2022-12-01T11:21:32-06:00'
+featured: no
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
+biblio-style: apalike
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
+link-citations: yes
+---
+
+```{r, echo = F}
+# save(fit1, file = "fits/fit1.rda")
+
+load("fits/fit1.rda")
+```
+
+## What?
+
+We psychologists analyze a lot of sum-score data. Even though it's not the best, we usually use the Gaussian likelihood[^1] for these analyses. I was recently in a situation were I wanted to model sum-scores from a new questionnaire and there was no good prior research on the distribution of the sum-scores. Like, there wasn't a single published paper reporting the sample statistics. Crazy, I know... Anyway, I spent some time trying to reason through how I would set a justifiable prior for my $\sigma$ parameter, and in this blog post we'll cover how I came up with a solution.
+
+### I make assumptions.
+
+* For this post, I'm presuming you are familiar with Bayesian regression. For an introduction, I recommend either edition of McElreath's text [-@mcelreathStatisticalRethinkingBayesian2015; -@mcelreathStatisticalRethinkingBayesian2020]; Kruschke's [-@kruschkeDoingBayesianData2015] text; or Gelman, Hill, and Vehtari's [-@gelmanRegressionOtherStories2020] text.
+
+* All code is in **R**. Data wrangling and plotting were done with help from the **tidyverse** [@R-tidyverse; @wickhamWelcomeTidyverse2019], **tidybayes** [@R-tidybayes], and **patchwork** [@R-patchwork]. The Bayesian model will be fit with [**brms**](https://github.com/paul-buerkner/brms) [@R-brms; @burknerBrmsPackageBayesian2017; @burknerAdvancedBayesianMultilevel2018].  We will also use the [**MetBrewer** package](https://CRAN.R-project.org/package=MetBrewer) [@R-MetBrewer] to select the color palette for our figures.
+
+Here we load the packages and adjust the global plotting theme.
+
+```{r, warning = F, message = F}
+# load
+library(tidyverse)
+library(tidybayes)
+library(patchwork)
+library(brms)
+library(MetBrewer)
+
+# save a color vector
+h <- met.brewer(colorblind_palettes[8])  # "Hiroshige"
+
+# adjust the global plotting theme
+theme_set(
+  theme_linedraw(base_size = 13) +
+    theme(panel.background = element_rect(fill = alpha(h[5], 0.33)),
+          panel.border = element_rect(linewidth = 0.33),
+          panel.grid = element_blank(),
+          plot.background = element_rect(fill = alpha(h[5], 0.2)),
+          strip.background = element_rect(fill = alpha(h[5], 0.67), linewidth = 0),
+          strip.text = element_text(color = "black"))
+)
+```
+
+The color palette in this post is inspired by Utagawa Hiroshige's *Sailing Boats Returning to Yabase, Lake Biwa*, about which you can learn more from [The Met's website](https://www.metmuseum.org/art/collection/search/36534).
+
+## Overview
+
+I came up with three broad strategies for settling in on a prior for $\sigma$ when in a state of relative ignorance:
+
+* Compute the maximum value with Popoviciu's inequality.
+* Compute an approximate standard deviation presuming a uniform distribution.
+* Compute standard deviations based on plausible beta-binomial distributions.
+
+We'll explore each in turn.
+
+### Popoviciu's inequality.
+
+If you have continuous data with clear lower and upper boundaries, you can use Popoviciu's [-@popoviciu1935equations] [inequality on variances](https://en.wikipedia.org/wiki/Popoviciu%27s_inequality_on_variances) to compute the maximum variance of the distribution. If we let $U$ be the upper bound and $L$ be the lower bound, Popoviciu's inequality states
+
+$$
+\sigma^2 \leq \frac{1}{4} (U - L)^2.
+$$
+
+For example, let's say you're using a questionnaire like the PHQ-9 [@spitzer1999validation], which is a widely-used depression questionnaire[^2] composed of 9 Likert-type items ranging from 0 to 3. The PHQ-9 sum score has a possible range of 0 to 27, with higher scores indicating deeper depression. Using Popoviciu's inequality, we can compute the maximum variance for the PHQ-9 sum score like so.
+
+```{r}
+u <- 27  # upper limit
+l <- 0   # lower limit
+
+(u - l)^2 / 4  # maximum variance
+```
+
+Since variances are the same as standard deviations squared, we can take the square root of that value to compute the maximum standard deviation possible for the PHQ-9.
+
+```{r}
+sqrt((u - l)^2 / 4)  # maximum standard deviation
+```
+
+We might check this out with a little simulation. If we had a data set composed of $N = 10{,}000$ PHQ-9 sum-score values which were evenly split between all zero's and all 27's, here's what the sample standard deviation would be.
+
+```{r}
+n <- 10000
+
+tibble(y = rep(c(0, 27), each = n / 2)) %>% 
+  summarise(var = var(y),
+            sd = sd(y))
+```
+
+The displayed output values are rounded, but the sample statistics are just a hair above the population values from Popoviciu's inequality[^3].
+
+When in a state of complete ignorance, you know your $\sigma$ prior should be centered somewhere between zero and the value returned by Popoviciu's inequality. Though I wouldn't recommend it, one way to use this information would be to set a uniform prior ranging from zero to the upper-limit based on Popoviciu's inequality.
+
+### Take the standard deviation from the uniform distribution.
+
+Though Popoviciu's inequality gives us a sense of the range of possible values, it doesn't do a great job helping us decide which parts of that range are more likely than not. As a next stab, you might assume the sum-score data were uniformly distributed. This would be something of a null hypothesis stating: *All values are equally likely.*
+
+If you have a uniform distribution with a lower limit of $L$ and an upper limit of $U$, you can compute the variance with the equation
+
+$$
+\sigma^2 = \frac{1}{12} (U - L)^2,
+$$
+
+with the standard deviation being the square root of that value. Continuing on with our PHQ-9 data as an example, here are the variance and standard deviation presuming they were uniformly distributed.
+
+```{r}
+u <- 27  # upper limit
+l <- 0   # lower limit
+
+(u - l)^2 / 12  # variance
+sqrt((u - l)^2 / 12)  # sd
+```
+
+Again, let's run a little simulation to see how this shakes out.
+
+```{r}
+n_option <- 1000
+
+tibble(y = rep(0:27, each = n_option)) %>% 
+  summarise(var = var(y),
+            sd = sd(y))
+```
+
+In this case, the sample statistics from our simulation are a little bit off from the statistics we'd expect based on the formula from the uniform distribution. Here, though, keep in mind that the uniform distribution presumes truly continuous data, not integer values like those you'd get from a sum score. Thus the uniform distribution is only an approximation, not a true analogue. However, this isn't a bad approach if you just want to get a sense of where to start.
+
+Thus Popoviciu's inequality gave us a possible range for $\sigma$, and the uniform distribution gave us an approximate value given the null assumption all sum-scores are equally plausible.
+
+But do you really want to use the null assumption that all sum-scores are equally plausible? If not, we'll want to work with a new distribution.
+
+### Sum scores might look beta-binomial.
+
+So even though we tend to use the Gaussian likelihood to model sum-score data for *reasons*[^4], it's not the only distribution in town. If you search around in the backwater of applied statistics, you'll find papers on the beta-binomial likelihood for sum-score-type data. For example, Lord discussed the beta-binomial distribution for psychological test data in [-@lord1962estimating], Wilcox later reviewed it for the same purpose in [-@wilcox1981review], and Carlin and Rubin kept the conversation rolling in [-@carlin1991summarizing]. Though these authors didn't focus on Likert-type data per se, Greenleaf used the beta-binomial to describe a distribution of sums of Likert-type items in [-@greenleaf1992measuring]. I'd like to extrapolate further and suggest the beta-binomial distribution can help us understand sum-score data in general, and the standard deviations of sum-score data in particular.
+
+Given some count variable $y$ with a clear upper bound $n$, we can describe the beta-binomial likelihood as
+
+$$
+f(y | n, \alpha, \beta) = \binom{n}{y} \frac{\operatorname B (y + \alpha, n - y + \beta)}{\operatorname B(\alpha, \beta)},
+$$
+
+where $\alpha$ and $\beta$ are the two parameters from the canonical version of the beta likelihood, $\operatorname B(\cdot)$ is the [beta function](https://en.wikipedia.org/wiki/Beta_function), and $\tbinom{n}{y}$ is a shorthand factorial notation. The $\alpha$ and $\beta$ parameters aren't the most intuitive, but for our purposes the main thing to understand is when the mean of the distribution is in the middle of the range, $\alpha = \beta$. I propose that when you are in a state of ignorance about a new sum-score, your go-to assumption should be the mean is in the middle. *Why?* Well, you have to start somewhere and the middle is at least as good a place as any other. But also keep in mind that most questionnaire developers have had at least *some*[^5] training in psychometrics, and they know that it's generally a good idea to develop measures with approximately bell-shaped and symmetric distributions. Thus even of you've never seen prior examples of a given sum score, a good initial guess is the sample mean is somewhere in the middle of the possible range.
+
+In the case of our PHQ-9 example where the lower limit is zero and the upper limit is 27, we could presume the data were uniformly distributed with $\operatorname{BetaBinomial}(27, 1, 1)$. We can simulate data of that kind with the `rbetabinom.ab()` function from the **VGAM** package [@R-VGAM]. Here's a sample of $N = 10{,}000$.
+
+```{r}
+set.seed(9)
+
+d <- tibble(phq = VGAM::rbetabinom.ab(n = 1e4, size = 27, shape1 = 1, shape2 = 1))
+
+# what?
+head(d)
+```
+
+Here's what our simulated `phq` values look like in a plot.
+
+```{r, fig.width = 4.75, fig.height = 3}
+d %>% 
+  ggplot(aes(x = phq)) +
+  geom_bar(fill = h[7]) +
+  scale_x_continuous(breaks = 0:3 * 9) +
+  ggtitle("10,000 draws from BetaBinomial(27, 1, 1)")
+```
+
+Here are the sample statistics.
+
+```{r}
+d %>% 
+  summarise(m = mean(phq),
+            v = var(phq),
+            s = sd(phq))
+```
+
+Now we've shifted from the exponential distribution to the beta-binomial, we might point out the variance of the beta-binomial is defined as
+
+$$
+\sigma^2 = \frac{n \alpha \beta (\alpha + \beta + n)}{(\alpha + \beta)^2 (\alpha + \beta + 1)},
+$$
+
+and the standard deviation of the beta-binomial is just the square root of that value. Here's what that looks like in the case of $\operatorname{BetaBinomial}(27, 1, 1)$.
+
+```{r}
+n <- 27
+a <- 1
+b <- a
+
+# population variance
+((n * a * b) * (a + b + n)) / ((a + b)^2 * (a + b + 1))
+
+# population sd
+sqrt(((n * a * b) * (a + b + n)) / ((a + b)^2 * (a + b + 1)))
+```
+
+So if we're willing to describe the sum scores of our Likert-type items as integers, the flat beta-binomial may give us a better first stab at the standard deviation than the exponential distribution approach, above.
+
+But we can go further. The beta-binomial $\alpha$ and $\beta$ parameters can take on any positive real values. For simplicity, consider what the beta-binomial distribution looks like if we hold $n = 27$ and serially increase both $\alpha$ and $\beta$ from 1 to 9.
+
+```{r, fig.width = 6.5, fig.height = 5.5}
+tibble(a = 1:9) %>% 
+  mutate(b = a) %>% 
+  expand(nesting(a, b),
+         phq = 0:27) %>% 
+  mutate(d = VGAM::dbetabinom.ab(x = phq, size = 27, shape1 = a, shape2 = b)) %>% 
+  mutate(label = str_c("BetaBinomial(27, ", a, ", ", b, ")")) %>% 
+  
+  ggplot(aes(x = phq, y = d)) +
+  geom_col(fill = h[7]) +
+  scale_x_continuous(breaks = 0:3 * 9) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  facet_wrap(~ label)
+```
+
+As the $\alpha$ and $\beta$ parameters increase, the distribution becomes more concentrated around the mean. I don't know about you, but my experience has been that most roughly-symmetric sum-score data tend to look about like the distributions in $\operatorname{BetaBinomial}(27, 3, 3)$ through $\operatorname{BetaBinomial}(27, 7, 7)$.
+
+Using the formula from above, here are the expected standard deviations from each of the 9 distributions.
+
+```{r}
+tibble(n = 27,
+       a = 1:9) %>% 
+  mutate(b = a) %>% 
+  mutate(variance = (n * a * b * (a + b + n)) / ((a + b)^2 * (a + b + 1))) %>% 
+  mutate(standard_deviation = sqrt(variance))
+```
+
+If you're in a total state of ignorance, it's hard to know which one's best. But I assert that in the right ballpark, here.
+
+### Recap.
+
+* Popoviciu's inequality gave us a possible range for $\sigma$, which was between 0 and 13.5 for our PHQ-9 example.
+* When we used the uniform distribution as a rough null default, the expected standard deviation was about 7.8.
+* When we used plausible candidate beta-binomial distributions, we got $\sigma$ values ranging from 6 to 4, depending on which seems like the best default.
+
+Thus, if I were to try modeling actual PHQ-9 data for the first time, and I had no access to all the previous studies using the PHQ-9, I'd set something like
+
+$$
+\sigma \sim \operatorname{Exponential}(1 / 5.641049),
+$$
+
+based of the expected standard deviation from $\operatorname{BetaBinomial}(27, 3, 3)$. Here's what that prior looks like:
+
+```{r, fig.width = 4.75, fig.height = 2.75, warning = F}
+# 1 / 5.641049 is about 0.177272
+prior(exponential(0.177272)) %>% 
+  parse_dist() %>% 
+  ggplot(aes(y = 0, dist = .dist, args = .args)) +
+  stat_halfeye(point_interval = mean_qi, .width = c(.5, .95),
+               fill = h[6]) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  labs(title = "Exponential(1 / 5.641049)",
+       x = NULL)
+```
+
+Such a distribution puts the inner 50% of the prior mass between 1.6 and 7.8, which is centered where I want it. The exponential prior, by default, holds the standard deviation constant with the mean. If you wanted a stronger prior with a smaller standard deviation, you could switch to a 2-parameter distribution like the gamma or lognormal.
+
+```{r, eval = F}
+# to compute the 50% and 95% ranges, execute this code
+qexp(p = c(0.25, 0.75), rate = 1 / 5.641049)    # 50% interval
+qexp(p = c(0.025, 0.975), rate = 1 / 5.641049)  # 95% interval
+```
+
+If you're not familiar with using the exponential distribution for $\sigma$ priors, check out the second edition of McElreath's [textbook](https://xcelab.net/rm/statistical-rethinking/). In chapter 4, he made the case the exponential distribution can be a good option when you have a sense of where the mean of the prior should be, but you're unsure how large you want its spread. I've found it pretty handy over the past couple years.
+
+## Applied example
+
+Okay, that's enough theory. Let's see how this works in practice.
+
+### We need data.
+
+In response to a [call on twitter](https://twitter.com/SolomonKurz/status/1597718777797705730), neuroscience graduate student [Sam Zorowitz](https://szorowi1.github.io/) kindly shared some de-identified PHQ-9 data collected by the good folks in the Niv Lab. I've saved the file on GitHub. Here we'll load the data and save them as `phq9`.
+
+```{r, message = F}
+# load
+phq9 <- read_csv("data/phq9.csv")
+
+# what is this?
+glimpse(phq9)
+```
+
+These data are a subset of $n = 500$ cases, which Zorowitz randomly drew from a larger pool of $N \approx 10{,}000$ cases. In a personal communication (11-30-2022), Zorowitz reported the full parent data set will eventually be made public. In the meantime, this $n = 500$ subset is more than enough for our purposes. In this file:
+
+* `subject`: anonymized participant ID
+* `item`: the unique item on the PHQ-9
+* `order`: the position of the item on the webpage as presented to that participant
+* `response`: the participant's response
+
+As we'd expect, the `response` values range from `0` to `3`.
+
+```{r}
+phq9 %>% 
+  count(response)
+```
+
+Happily, there are no missing values to contend with. Since our focus is on the sum scores, rather than the items, we'll need to wrangle the data a bit.
+
+```{r}
+phq9 <- phq9 %>% 
+  group_by(subject) %>% 
+  summarise(phq = sum(response)) %>% 
+  ungroup()
+
+# what?
+glimpse(phq9)
+```
+
+Now the sum scores are in the `phq` column. Though we don't technically need to, it will help me make my point if we subset the data further to $n = 200$. We can take a random subset with the `slice_sample()` function.
+
+```{r}
+set.seed(9)
+
+phq9 <- phq9 %>% 
+  slice_sample(n = 200)
+
+# confirm the sample size
+nrow(phq9)
+```
+
+Here's what the data look like.
+
+```{r, fig.width = 4.75, fig.height = 2.75}
+phq9 %>% 
+  ggplot(aes(x = phq)) +
+  geom_bar(fill = h[3]) +
+  scale_x_continuous(breaks = 0:3 * 9, limits = c(-0.5, 27.5))
+```
+
+Based on my experience, this is a pretty typical distribution for the PHQ-9.
+
+### We need a model.
+
+For the sake of the blog, let's keep things simple and fit an intercept-only model of the `phq` scores. In the real world, I actually know a lot about the PHQ-9 and there's a mountain of prior studies reporting sample statistics for its sum score. But if this weren't the case and we were trying to fit a model in a state of near-complete ignorance, I think a pretty great place to start would be
+
+$$
+\begin{align*}
+\text{PHQ-9}_i & \sim \operatorname{Normal}(\mu, \sigma) \\
+\mu & = \beta_0 \\
+\beta_0 & \sim \operatorname{Normal}(12, 5.641049) \\
+\sigma & \sim \operatorname{Exponential}(1 / 5.641049),
+\end{align*}
+$$
+
+where the top line indicates the PHQ-9 scores vary across the $i$ cases, and the scores are described as following the normal distribution. The second line of the equation indicates this is an intercept-only model, with $\beta_0$ defining the intercept. Skipping the third line for a moment, the fourth line shows we've chosen an exponential prior for $\sigma$ for which the rate is $1 / 5.641049$ and thus the mean is $5.641049$[^6]. Where did that value come from, again? After exploring some nice candidate beta-binomial distributions, we said $\operatorname{BetaBinomial}(27, 3, 3)$ might be a good default option, and the expected standard deviation for that distribution is 5.641049. Here those are, again:
+
+```{r, fig.width = 4.75, fig.height = 2.75}
+# define
+n <- 27
+a <- 3
+b <- a
+
+tibble(phq = 0:27,
+       a   = a,
+       b   = b) %>% 
+  mutate(d = VGAM::dbetabinom.ab(x = phq, size = n, shape1 = a, shape2 = b)) %>%
+
+  # plot
+  ggplot(aes(x = phq, y = d)) +
+  geom_col(fill = h[7]) +
+  scale_x_continuous(breaks = 0:3 * 9) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  ggtitle("BetaBinomial(27, 3, 3)")
+
+# compute the population sd
+sqrt(((n * a * b) * (a + b + n)) / ((a + b)^2 * (a + b + 1)))
+```
+
+Now back to the third line in the model equation. As per usual, we have used a Gaussian prior for $\beta_0$. We've centered the prior on the middle of the possible range of the sum score, which is 13.5. Since we've decided 5.641049 is a pretty good value for $\sigma$, it's not a bad idea to use that value for the scale of our $\beta_0$ prior. Such a prior would have an inner 95% range of about 2.4 to 22.6, which covers most of the possible sum-score range.
+
+```{r}
+qnorm(p = c(0.025, 0.975), mean = 13.5, sd = 5.641049)
+```
+
+Otherwise put, the full range of the PHQ-9 sum score is 13.5 plus or minus 2.4 standard deviations, as defined by our $\sigma$ prior.
+
+```{r}
+13.5 / 5.641049
+```
+
+### F* around and find out.[^7]
+
+Here's how to fit the model with `brm()`.
+
+```{r fit1, eval = F}
+fit1 <- brm(
+  data = phq9,
+  family = gaussian,
+  phq ~ 1,
+  prior(normal(13.5, 5.641049), class = Intercept) +
+    prior(exponential(1 / 5.641049), class = sigma),
+  cores = 4, seed = 1
+)
+```
+
+Check the model summary.
+
+```{r}
+summary(fit1)
+```
+
+At a glance, everything looks fine. It might be more instructive to look the results in a couple plots where we compare the priors with the posteriors.
+
+```{r, fig.width = 6.5, fig.height = 4}
+# intercept
+p1 <- as_draws_df(fit1) %>% 
+  ggplot(aes(x = b_Intercept, y = after_stat(density))) +
+  geom_area(data = tibble(b_Intercept = seq(-5, 30, by = 0.01),
+                          density = dnorm(b_Intercept, 13.5, 5.641049)),
+            aes(y = density),
+            fill = h[10]) +
+  geom_histogram(fill = alpha(h[2], 2/3), boundary = 0, binwidth = 0.2) +
+  scale_x_continuous(expression(beta[0]), breaks = 0:3 * 9) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  coord_cartesian(xlim = c(0, 27))
+
+# sigma
+p2 <- as_draws_df(fit1) %>% 
+  ggplot(aes(x = sigma, y = after_stat(density))) +
+  geom_area(data = tibble(sigma = seq(0, 20, by = 0.01),
+                          density = dexp(sigma, 1 / 5.641049)),
+            aes(y = density),
+            fill = h[10]) +
+  geom_histogram(fill = alpha(h[2], 2/3), boundary = 0, binwidth = 0.1) +
+  geom_vline(xintercept = 13.5, linetype = 2, color = h[1]) +
+  annotate(geom = "text",
+           x = 13.3, y = 1.37,
+           label = "Upper limit via\nPopoviciu's inequality",
+           hjust = 1, size = 3) +
+  scale_x_continuous(expression(sigma), breaks = 0:3 * 5) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  coord_cartesian(xlim = c(0, 15))
+
+# combine
+(p1 | p2) &
+  plot_annotation(title = "Careful priors can express our substantive ignorance, but still\naccount for our methodological knowledge.",
+                  subtitle = "The prior densities lurk in the background. The posteriors are the\nsemitransparent orange histograms in the foreground.")
+```
+
+It looks like both priors did their jobs well.
+
+## Objections
+
+### But the data were skewed!
+
+Some readers might not like how we centered the prior for $\beta_0$ or how we used a symmetric beta-binomial distribution to determine the prior for $\sigma$ given how the actual PHQ-9 data were skewed to the right, and given how PHQ-9 data are very often skewed to the right in other samples. Keep in mind that our focus is a strategy which will work when we don't have information like that going in. When you're completely ignorant of how your sum-score data tend to look, I recommend assuming they'll be roughly symmetric.
+
+However, it's possible some of y'all work in fields where your sum-scores are routinely skewed in one direction or the other. If so, great! That means you have useful domain knowledge upon which you can base your priors. One of the nice things about the beta-binomial distribution is it can take on a variety of non-symmetric shapes. For example, take a look at the distribution of $\operatorname{BetaBinomial}(27, 1.5, 3.25)$.
+
+```{r, fig.width = 4.75, fig.height = 2.75}
+# define
+n <- 27
+a <- 1.5
+b <- 3.25
+
+tibble(phq = 0:27,
+       a   = a,
+       b   = b) %>% 
+  mutate(d = VGAM::dbetabinom.ab(x = phq, size = n, shape1 = a, shape2 = b)) %>% 
+
+  # plot
+  ggplot(aes(x = phq, y = d)) +
+  geom_col(fill = h[7]) +
+  scale_x_continuous(breaks = 0:3 * 9) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  ggtitle("BetaBinomial(27, 1.5, 3.25)")
+```
+
+This looks a lot like the empirical distribution in our `phq9` data, doesn't it? We could then use this skewed version of the beta-binomial to compute the expected standard deviation.
+
+```{r}
+# compute the population sd
+sqrt(((n * a * b) * (a + b + n)) / ((a + b)^2 * (a + b + 1)))
+```
+
+So if you were working with questionnaire data in a domain where you expected the sum-score to have this kind of skewed distribution, you might assume $\sigma \sim \operatorname{Exponential}(1 / 5.675623)$. It's worth spending some time plotting beta-binomial distributions with different values for its $n$, $\alpha$, and $\beta$ parameters. Scientists working in different research domains might prefer different default versions of the distribution.
+
+### Just standardize.
+
+If you wanted to take a different approach, you could just standardize the sum-score data before the analysis and then fit the model to the standardized values. This is a fine practice and it would greatly simplify how you choose your priors. I do this on occasion, myself. However, sometimes I want to fit the model to the un-transformed data and I'd like a workflow that can work on those occasions. This is such a workflow.
+
+Plus, like, do you really care so little about your data and your research questions that you don't want to put a little thought into what you expect the data will look like? If not, maybe science isn't a good fit for you.[^8]
+
+### You sure about that Gauss?
+
+Some readers might wonder whether it's such a great idea to model sum-score data with the conventional Gaussian likelihood. The Gauss expects truly continuous data, and it doesn't have a natural way to handle data with well-defined minimum and maximum values. The Gaussian likelihood might not be the best when dealing with markedly-skewed data, either.
+
+One alternative would be using skew-normal or skew-Student likelihood. For details, see the [-@martin2017outgrowing] preprint by Martin and Williams. This approach, however, will not fully solve the problem with the lower and upper boundaries. A more sophisticated approach would be to model the item-level data with a multilevel-ordinal IRT-type model, such as discussed by @burknerBayesianItemResponse2020. This approach is excellent for respecting the ordinal nature of the questionnaire items and for expressing the data-generating process, but it comes at the cost of a complex, highly-parameterized model which may be difficult to fit.
+
+If you've been following along, another option is to model the sum scores as beta-binomial. This approach would account for skew, upper and lower boundaries, and for the integer values. The beta-binomial would not faithfully reproduce the item-level data-generating process, but you might think of it as a pragmatic and simpler alternative to the rigorous item-level multilevel-ordinal IRT approach. This approach is possible with `brm()` by setting `family = beta_binomial`. Though it's beyond the scope of this blog post, I've been chipping away at a blog series which will explore the beta-binomial distribution for sum-score data. As a preview, here's how to fit such a model to these data.
+
+```{r, eval = F}
+fit2 <- brm(
+  data = phq9,
+  family = beta_binomial,
+  phq | trials(27) ~ 1,
+  prior(normal(0, 1), class = Intercept) +
+    prior(gamma(2.25, 0.375), class = phi),
+  cores = 4, seed = 1
+)
+```
+
+Whichever method you use in your research, I hope this post gave you some helpful ideas. Happy modeling, friends!
+
+```{r fit2, warning = F, message = F, results = "hide", eval = F, echo = F}
+# determine the priors
+gamma_a_b_from_mean_sd <- function(mean, sd) {
+  if (mean <= 0) stop("mean must be > 0")
+  if (sd   <= 0) stop("sd must be > 0")
+  shape <- mean^2 / sd^2
+  rate  <- mean   / sd^2
+  
+  return(tibble(shape = shape, rate = rate))
+}
+
+p <- 1/2
+qlogis(p)
+
+phi <- 3 + 3
+gamma_a_b_from_mean_sd(mean = phi, sd = 4)
+
+prior(gamma(2.25, 0.375)) %>% 
+  parse_dist() %>% 
+  ggplot(aes(y = 0, dist = .dist, args = .args)) +
+  stat_halfeye(point_interval = mean_qi, .width = c(.5, .95),
+               fill = h[6]) +
+  scale_y_continuous(NULL, breaks = NULL)
+
+# fit the model
+fit2 <- brm(
+  data = phq9,
+  family = beta_binomial,
+  phq | trials(27) ~ 1,
+  prior(normal(0, 1), class = Intercept) +
+    prior(gamma(2.25, 0.375), class = phi),
+  cores = 4, seed = 1
+)
+
+# check the posterior[s]
+pp_check(fit1, ndraws = 100)
+pp_check(fit2, ndraws = 100)
+
+# convert the parameters into alpha and beta
+as_draws_df(fit2) %>% 
+  transmute(mu = inv_logit_scaled(b_Intercept),
+            phi = phi) %>% 
+  transmute(alpha = mu * phi,
+            beta = (1 - mu) * phi) %>% 
+  pivot_longer(everything()) %>% 
+  group_by(name) %>% 
+  mean_qi(value)
+```
+
+## Session info
+
+```{r}
+sessionInfo()
+```
+
+## References
+
+[^1]: Or if you're thinking in terms of OLS, presume the residuals are normally distributed.
+
+[^2]: We use the PHQ-9 all the time in the VA (i.e., the US Department of Veterans Affairs) both in clinical services and in research settings. It's reasonably brief and it does a fair job assessing the primary diagnostic criteria for [major depressive disorder](https://www.mdcalc.com/calc/10195/dsm-5-criteria-major-depressive-disorder).
+
+[^3]: If you increase the `n` of the sample, you'll see the sample statistics quickly approach the values from Popoviciu's inequality.
+
+[^4]: There's the whole 'Fisher liked the normal distribution, so you should too' bit. Plus we do need defaults and the Gaussian isn't a bad candidate, all things considered. But yeah, *sigh*
+
+[^5]: Yes, I know; *some* is doing a *lot* of work, here.
+
+[^6]: If you didn't know, the *rate* of the exponential distribution is the reciprocal of its mean.
+
+[^7]: In case you're not in on the joke, behold: https://youtu.be/d6sbPCIEMyI
+
+[^8]: Okay, I admit that was a little snarky. But what are we really doing here? Are we just churning out $p$-values for pubs or does the science matter at all?
+
+```{r, eval = F, echo = F}
+library(tidyverse)
+
+tibble(x = 0, 
+       y = 0, 
+       text = "italic(p)(sigma)") %>% 
+  
+  ggplot(aes(x = x, y = y, label = text)) +
+  geom_text(parse = TRUE, size = 30) +
+  theme_void() +
+  theme(panel.background = element_rect(fill = "white", color = "white"),
+        plot.background = element_rect(fill = "white", color = "white"))
+
+ggsave("p-sigma-featured.jpg", width = 4, height = 3.5, units = "in")
+```
+
