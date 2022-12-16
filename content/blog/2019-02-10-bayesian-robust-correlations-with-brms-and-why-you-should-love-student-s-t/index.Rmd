@@ -8,6 +8,7 @@ layout: single
 tags:
 - Bayesian
 - brms
+- correlation
 - outlier
 - R
 - robust
