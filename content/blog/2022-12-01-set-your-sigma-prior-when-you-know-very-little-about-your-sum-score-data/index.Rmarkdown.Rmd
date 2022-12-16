@@ -356,7 +356,7 @@ $$
 \begin{align*}
 \text{PHQ-9}_i & \sim \operatorname{Normal}(\mu, \sigma) \\
 \mu & = \beta_0 \\
-\beta_0 & \sim \operatorname{Normal}(12, 5.641049) \\
+\beta_0 & \sim \operatorname{Normal}(13.5, 5.641049) \\
 \sigma & \sim \operatorname{Exponential}(1 / 5.641049),
 \end{align*}
 $$
