@@ -1,0 +1,418 @@
+---
+title: 'Bayesian power analysis: Part III.a. Counts are special.'
+author: A. Solomon Kurz
+date: '2019-08-11'
+draft: false
+excerpt: "Data analysts need more than the Gauss. In this post, we'll focus on how to perform power simulations when using the Poisson likelihood to model counts."
+layout: single
+slug: bayesian-power-analysis-part-iii-a
+tags:
+- Bayesian
+- brms
+- counts
+- power
+- R
+- tidyverse
+- tutorial
+lastmod: '2021-04-21T20:38:33-07:00'
+featured: no
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
+biblio-style: apalike
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
+link-citations: yes
+---
+
+```{r, echo = F}
+# save(fit1, file = "fits/fit1.rda")
+# 
+# save(sim1, file = "sims/sim1.rda")
+# save(sim2, file = "sims/sim2.rda")
+# save(sim3, file = "sims/sim3.rda")
+# save(sim4, file = "sims/sim4.rda")
+
+load("fits/fit1.rda")
+
+load("sims/sim1.rda")
+load("sims/sim2.rda")
+load("sims/sim3.rda")
+load("sims/sim4.rda")
+```
+
+## Version 1.2.0
+
+Edited on December 11, 2022, to use the new `as_draws_df()` workflow.
+
+## Orientation
+
+So far we've covered Bayesian power simulations from both a null hypothesis orientation (see [part I](https://solomonkurz.netlify.com/post/bayesian-power-analysis-part-i/)) and a parameter width perspective (see [part II](https://solomonkurz.netlify.com/post/bayesian-power-analysis-part-ii/)). In both instances, we kept things simple and stayed with Gaussian (i.e., normally distributed) data. But not all data follow that form, so it might do us well to expand our skill set a bit. In the next few posts, we'll cover how we might perform power simulations with other kinds of data. In this post, we'll focus on how to use the Poisson likelihood to model counts. In follow-up posts, we'll explore how to model binary and Likert-type data.
+
+## The Poisson distribution is handy for counts.
+
+In the social sciences, count data arise when we ask questions like:
+
+* How many sexual partners have you had?
+* How many pets do you have at home?
+* How many cigarettes did you smoke, yesterday?
+
+The values these data will take are discrete [^1] in that you've either slept with 9 or 10 people, but definitely not 9.5. The values cannot go below zero in that even if you quit smoking cold turkey 15 years ago and have been a health nut since, you still could not have smoked -3 cigarettes, yesterday. Zero is as low as it goes.
+
+The canonical distribution for data of this type--non-negative integers--is the Poisson. It's named after the French mathematician Siméon Denis Poisson, [who had quite the confident stare in his youth](https://upload.wikimedia.org/wikipedia/commons/e/e8/E._Marcellot_Siméon-Denis_Poisson_1804.jpg). The Poisson distribution has one parameter, $\lambda$, which controls both its mean and variance. Although the numbers the Poisson describes are counts, the $\lambda$ parameter does not need to be an integer. For example, here's the plot of 1,000 draws from a Poisson for which $\lambda = 3.2$.
+
+```{r, fig.width = 4, fig.height = 2.5, warning = F, message = F}
+library(tidyverse)
+
+theme_set(theme_gray() + theme(panel.grid = element_blank()))
+
+tibble(x = rpois(n = 1e3, lambda = 3.2)) %>% 
+  mutate(x = factor(x)) %>% 
+  
+  ggplot(aes(x = x)) +
+  geom_bar()
+```
+
+In case you missed it, the key function for generating those data was `rpois()` (see `?rpois`). I'm not going to go into a full-blown tutorial on the Poisson distribution or on count regression. For more thorough introductions, check out Atkins et al's [-@atkinsTutorialOnCount2013] [*A tutorial on count regression and zero-altered count models for longitudinal substance use data*](https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3513584/pdf/nihms396181.pdf), chapters 9 through 11 in McElreath's [-@mcelreathStatisticalRethinkingBayesian2015] [*Statistical Rethinking*](https://xcelab.net/rm/statistical-rethinking/), or, if you really want to dive in, Agresti's [-@agrestiFoundationsLinearGeneralized2015] [*Foundations of linear and generalized linear models*](https://www.wiley.com/en-us/Foundations+of+Linear+and+Generalized+Linear+Models-p-9781118730034).
+
+For our power example, let's say you were interested in drinking. Using data from [the National Epidemiologic Survey on Alcohol and Related Conditions](https://pubs.niaaa.nih.gov/publications/AA70/AA70.htm) [@niaaaNationalEpidemiologicSurvey2006], Christopher Ingraham [-@ingrahamThinkYouDrink2014] presented [a data visualization](https://www.washingtonpost.com/news/wonk/wp/2014/09/25/think-you-drink-a-lot-this-chart-will-tell-you/?utm_term=.b81599bbbe25) of the average number of alcoholic drinks American adults consume, per week. By decile, the numbers were:
+
+1. 0.00
+2. 0.00 
+3. 0.00
+4. 0.02
+5. 0.14 
+6. 0.63
+7. 2.17
+8. 6.25
+9. 15.28
+10. 73.85
+
+Let's say you wanted to run a study where you planned on comparing two demographic groups by their weekly drinking levels. Let's further say you suspected one of those groups drank like the American adults in the 7^th^ decile and the other drank like American adults in the 8^th^. We'll call them low and high drinkers, respectively. For convenience, let's further presume you'll be able to recruit equal numbers of participants from both groups. The objective for our power analysis--or sample size analysis if you prefer to avoid the language of *power*--is to determine how many you'd need per group to detect reliable differences. Using $n = 50$ as a starting point, here's what the data for our hypothetical groups might look like.
+
+```{r, fig.width = 4, fig.height = 4}
+mu_7 <- 2.17
+mu_8 <- 6.25
+
+n <- 50
+
+set.seed(3)
+
+d <-
+  tibble(low  = rpois(n = n, lambda = mu_7),
+         high = rpois(n = n, lambda = mu_8)) %>% 
+  gather(group, count) 
+
+d %>%
+  mutate(count = factor(count)) %>% 
+  
+  ggplot(aes(x = count)) +
+  geom_bar() +
+  facet_wrap(~group, ncol = 1)
+```
+
+This will be our primary data type. Our next step is to determine how to express our research question as a regression model. Like with our two-group Gaussian models, we can predict counts in terms of an intercept (i.e., standing for the expected value on the reference group) and slope (i.e., standing for the expected difference between the reference group and the comparison group). If we coded our two groups by a `high` variable for which 0 stood for low drinkers and 1 stood for high drinkers, the basic model would follow the form
+
+$$
+\begin{align*}
+\text{drinks_per_week}_i         & \sim \operatorname{Poisson}(\lambda_i) \\
+\log(\lambda_i)   & = \beta_0 + \beta_1 \text{high}_i.
+\end{align*}
+$$
+
+Here's how to set the data up for that model.
+
+```{r}
+d <-
+  d %>% 
+  mutate(high = ifelse(group == "low", 0, 1))
+```
+
+If you were attending closely to our model formula, you noticed we ran into a detail. Count regression, such as with the Poisson likelihood, tends to use the log link. *Why?* you ask. Recall that counts need to be 0 and above. Same deal for our $\lambda$ parameter. In order to make sure our models don't yield silly estimates for $\lambda$, like -2 or something, we typically use the log link. You don't have to, of course. The world is your playground. But this is the method most of your colleagues are likely to use and it's the one I suggest you use until you have compelling reasons to do otherwise.
+
+So then since we're now fitting a model with a log link, it might seem challenging to pick good priors. As a place to start, we can use the `brms::get_prior()` function to see the **brms** defaults.
+
+```{r, warning = F, message = F}
+library(brms)
+
+get_prior(data = d,
+          family = poisson,
+          count ~ 0 + Intercept + high)
+```
+
+Hopefully two things popped out. First, there's no prior of `class = sigma`. Since the Poisson distribution only has one parameter $\lambda$, we don't need to set a prior for $\sigma$. Our model won't have one. Second, because we're continuing to use the `0 + Intercept` syntax for our model intercept, both our intercept and slope are of prior `class = b` and those currently have default flat priors with **brms**. To be sure, flat priors aren't the best. But maybe if this was your first time playing around with a Poisson model, default flat priors might seem like a safe place to start. [Feel free to disagree](https://xkcd.com/386/). In the meantime, here's how to fit that default Poisson model with `brms::brm()`.
+
+```{r fit1, eval = F}
+fit1 <-
+  brm(data = d,
+      family = poisson,
+      count ~ 0 + Intercept + high,
+      seed = 3)
+```
+
+```{r}
+print(fit1)
+```
+
+Since we used the log link, our model results are in the log metric, too. If you'd like them in the metric of the data, you'd work directly with the poster samples and exponentiate.
+
+```{r}
+draws <- 
+  as_draws_df(fit1) %>% 
+  mutate(`beta_0 (i.e., low)`                       = exp(b_Intercept),
+         `beta_1 (i.e., difference score for high)` = exp(b_high))
+```
+
+We can then just summarize our parameters of interest.
+
+```{r, warning = F}
+draws %>% 
+  select(starts_with("beta_")) %>% 
+  gather() %>% 
+  group_by(key) %>% 
+  summarise(mean  = mean(value),
+            lower = quantile(value, prob = .025),
+            upper = quantile(value, prob = .975))
+```
+
+For the sake of simulation, it'll be easier if we press on with evaluating the parameters on the log metric, though. If you're working within a null-hypothesis oriented power paradigm, you'll be happy to know zero is still the number to beat for evaluating our 95% intervals for $\beta_1$, even when that parameter is in the log metric. Here it is, again.
+
+```{r, warning = F, message = F}
+fixef(fit1)["high", ]
+```
+
+So our first fit suggests we're on good footing to run a quick power simulation holding $n = 50$. As in the prior blog posts, our lives will be simpler if we set up a custom simulation function. Since we'll be using it to simulate the data and fit the model in one step, let's call it `sim_data_fit()`.
+
+```{r}
+sim_data_fit <- function(seed, n) {
+  
+  # define our mus in the function
+  mu_7 <- 2.17
+  mu_8 <- 6.25
+
+  # make your results reproducible
+  set.seed(seed)
+  
+  # simulate the data
+  d <-
+    tibble(high  = rep(0:1, each = n),
+           count = c(rpois(n = n, lambda = mu_7),
+                     rpois(n = n, lambda = mu_8)))
+  
+  # fit and summarize
+  update(fit1,
+         newdata = d,
+         seed = seed) %>% 
+    fixef() %>% 
+    data.frame() %>% 
+    rownames_to_column("parameter") %>% 
+    filter(parameter == "high") %>% 
+    select(Q2.5:Q97.5 )
+  
+}
+```
+
+Here's the simulation for a simple 100 iterations.
+
+```{r sim1, eval = F}
+sim1 <-
+  tibble(seed = 1:100) %>% 
+  mutate(ci = map(seed, sim_data_fit, n = 50)) %>% 
+  unnest(ci)
+```
+
+That went quick--just a little over a minute on my laptop. Here's what those 100 $\beta_1$ intervals look like in bulk.
+
+```{r, fig.width = 8, fig.height = 3}
+sim1 %>% 
+  ggplot(aes(x = seed, ymin = Q2.5, ymax = Q97.5)) +
+  geom_hline(yintercept = 0, color = "white") +
+  geom_linerange() +
+  labs(x = "seed (i.e., simulation index)",
+       y = expression(beta[1]))
+```
+
+None of them are anywhere near the null value 0. So it appears we're well above .8 power to reject the typical $H_0$ with $n = 50$. Switching to the precision orientation, here's the distribution of their widths.
+
+```{r, fig.width = 4, fig.height = 2.5}
+sim1 %>% 
+  mutate(width = Q97.5 - Q2.5) %>% 
+  
+  ggplot(aes(x = width)) +
+  geom_histogram(binwidth = 0.01) +
+  geom_rug(linewidth = 1/6)
+```
+
+What if we wanted a mean width of 0.25 on the log scale? We might try the simulation with $n = 150$.
+
+```{r sim2, eval = F}
+sim2 <-
+  tibble(seed = 1:100) %>% 
+  mutate(ci = map(seed, sim_data_fit, n = 150)) %>% 
+  unnest(ci)
+```
+
+Here we'll summarize the widths both in terms of their mean and what proportion were smaller than 0.25.
+
+```{r}
+sim2 %>% 
+  mutate(width = Q97.5 - Q2.5) %>% 
+  summarise(`mean width` = mean(width),
+            `below 0.25` = mean(width < 0.25))
+```
+
+If we wanted to focus on the mean, we did pretty good. Perhaps set the $n = 155$ and simulate a full 1,000+ iterations for a serious power analysis. But if we wanted to make the stricter criteria of all below 0.25, we'd need to up the $n$ quite a bit more. And of course, once you have a little experience working with Poisson models, you might do the power simulations with more ambitious priors. For example, if your count values are lower than like 1,000, there's a good chance a `normal(0, 6)` prior on your $\beta$ parameters will be nearly flat within the reasonable neighborhoods of the parameter space.
+
+```{r, fig.width = 5, fig.height = 2, eval = F, echo = F}
+# here's a quick visualization of why that's so
+tibble(sd = 0:6,
+       `sd * 2` = sd * 2) %>% 
+  gather() %>% 
+  
+  ggplot(aes(x = value, y = exp(value))) +
+  geom_point() +
+  facet_wrap(~key, scales = "free")
+```
+
+## But logs are hard.
+
+If we approach our Bayesian power analysis from a precision perspective, it can be difficult to settle on a reasonable interval width when they're on the log scale. So let's modify our simulation flow so it converts the width summaries back into the natural metric. Before we go big, let's practice with a single iteration.
+
+```{r fit2, message = F, warning = F, results = "hide"}
+seed <- 0
+set.seed(seed)
+
+# simulate the data
+d <-
+  tibble(high  = rep(0:1, each = n),
+         count = c(rpois(n = n, lambda = mu_7),
+                   rpois(n = n, lambda = mu_8)))
+
+# fit the model
+fit2 <-
+  update(fit1,
+         newdata = d,
+         seed = seed) 
+```
+
+Now summarize.
+
+```{r, message = F, warning = F}
+library(tidybayes)
+
+fit2 %>% 
+  as_draws_df() %>% 
+  transmute(`beta_1` = exp(b_high)) %>% 
+  mean_qi()
+```
+
+Before we used the `fixef()` function to extract our intervals, which took the **brms** fit object as input. Here we took a different approach. Because we are transforming $\beta_1$, we used the `as_draws_df()` function to work directly with the posterior draws. We then exponentiated within `transmute()`, which returned a single-column tibble, not a **brms** fit object. So instead of `fixef()`, it's easier to get our summary statistics with the `tidybayes::mean_qi()` function. Do note that now our lower and upper levels are named `.lower` and `.upper`, respectively.
+
+Now we've practiced with the new flow, let's redefine our simulation function.
+
+```{r}
+sim_data_fit <- function(seed, n) {
+  
+  # define our mus in the function
+  mu_7 <- 2.17
+  mu_8 <- 6.25
+
+  # make your results reproducible
+  set.seed(seed)
+  
+  # simulate the data
+  d <-
+    tibble(high  = rep(0:1, each = n),
+           count = c(rpois(n = n, lambda = mu_7),
+                     rpois(n = n, lambda = mu_8)))
+  
+  # fit and summarize
+  update(fit1,
+         newdata = d,
+         seed = seed) %>% 
+  as_draws_df() %>% 
+  transmute(`beta_1` = exp(b_high)) %>% 
+  mean_qi()
+  
+}
+```
+
+Simulate.
+
+```{r sim3, eval = F}
+sim3 <-
+  tibble(seed = 1:100) %>% 
+  mutate(ci = map(seed, sim_data_fit, n = 50)) %>% 
+  unnest(ci)
+```
+
+Here's what those 100 $\beta_1$ intervals look like in bulk.
+
+```{r, fig.width = 8, fig.height = 3}
+sim3 %>% 
+  ggplot(aes(x = seed, y = beta_1, ymin = .lower, ymax = .upper)) +
+  geom_hline(yintercept = 0, color = "white") +
+  geom_pointrange(fatten = 1) +
+  labs(x = "seed (i.e., simulation index)",
+       y = expression(beta[1]))
+```
+
+Inspect the distribution of their widths.
+
+```{r, fig.width = 4, fig.height = 2.5}
+sim3 %>% 
+  mutate(width = .upper - .lower) %>% 
+  
+  ggplot(aes(x = width)) +
+  geom_histogram(binwidth = 0.05) +
+  geom_rug(linewidth = 1/6)
+```
+
+What if we wanted a mean 95% interval width of 1? Let's run the simulation again, this time with $n = 100$.
+
+```{r sim4, eval = F}
+sim4 <-
+  tibble(seed = 1:100) %>% 
+  mutate(ci = map(seed, sim_data_fit, n = 100)) %>% 
+  unnest(ci) %>% 
+  mutate(width = .upper - .lower)
+```
+
+Here's the new width distribution.
+
+```{r, fig.width = 4, fig.height = 2.5}
+sim4 %>% 
+  ggplot(aes(x = width)) +
+  geom_histogram(binwidth = 0.05) +
+  geom_rug(linewidth = 1/6)
+```
+
+And the mean width is:
+
+```{r}
+sim4 %>% 
+  summarise(mean_width = mean(width))
+```
+
+Nice! If we want a mean width of 1, it looks like we're a little *overpowered* with $n = 100$. The next step would be to up your iterations to 1,000 or so to run a properly-sized simulation.
+
+Now you've got a sense of how to work with the Poisson likelihood, [next time](https://solomonkurz.netlify.app/post/bayesian-power-analysis-part-iii-b/) we'll play with binary data.
+
+## Session info
+
+```{r}
+sessionInfo()
+```
+
+## References
+
+[^1]: Yes, one can smoke half a cigarette or drink 1/3 of a drink. Ideally, we'd have the exact amount of nicotine in your blood at a given moment and over time and the same for the amount of alcohol in your system relative to your blood volume and such. But in practice, substance use researchers just don't tend to have access to data of that quality. Instead, we're typically stuck with simple counts. And I look forward to the day the right team of engineers, computer scientists, and substance use researchers (and whoever else I forgot to mention) release the cheap, non-invasive technology we need to passively measure these things. Until then: *How many standard servings of alcohol did you drink, last night?*
+
+```{r, eval = F, echo = F}
+sim1 %>% 
+  ggplot(aes(x = seed, ymin = Q2.5, ymax = Q97.5)) +
+  geom_hline(yintercept = 0, color = "white") +
+  geom_linerange() +
+  labs(x = "seed (i.e., simulation index)",
+       y = expression(beta[1]))
+
+ggsave("count-sim-featured.jpg", width = 6, height = 3.5, units = "in")
+```
+
