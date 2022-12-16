@@ -298,7 +298,7 @@ tibble(n = 27,
     ## 8    27     8     8     17.1               4.13
     ## 9    27     9     9     16.0               4.00
 
-If you’re in a total state of ignorance, it’s hard to know which one’s best. But I assert that in the right ballpark, here.
+If you’re in a total state of ignorance, it’s hard to know which one’s best. But I think we’re in the right ballpark, here.
 
 ### Recap.
 
@@ -361,7 +361,7 @@ glimpse(phq9)
     ## $ order    <dbl> 1, 6, 10, 3, 9, 8, 4, 5, 7, 3, 2, 8, 10, 4, 5, 1, 9, 6, 3, 5,…
     ## $ response <dbl> 1, 0, 2, 2, 0, 0, 1, 0, 0, 0, 1, 1, 2, 0, 1, 0, 0, 0, 2, 3, 3…
 
-These data are a subset of `\(n = 500\)` cases, which Zorowitz randomly drew from a larger pool of `\(N \approx 10{,}000\)` cases. In a personal communication (11-30-2022), Zorowitz reported the full parent data set will eventually be made public. In the meantime, this `\(n = 500\)` subset is more than enough for our purposes. In this file:
+These data are a subset of `\(n = 500\)` cases, which Zorowitz randomly drew from a larger pool of `\(N \approx 10{,}000\)` cases. In a personal communication (11-30-2022), Zorowitz reported his team plans to make the full parent data set publicly available in the near future. In the meantime, this `\(n = 500\)` subset is more than enough for our purposes. In this file:
 
 -   `subject`: anonymized participant ID
 -   `item`: the unique item on the PHQ-9
@@ -618,7 +618,7 @@ Plus, like, do you really care so little about your data and your research quest
 
 Some readers might wonder whether it’s such a great idea to model sum-score data with the conventional Gaussian likelihood. The Gauss expects truly continuous data, and it doesn’t have a natural way to handle data with well-defined minimum and maximum values. The Gaussian likelihood might not be the best when dealing with markedly-skewed data, either.
 
-One alternative would be using skew-normal or skew-Student likelihood. For details, see the ([2017](#ref-martin2017outgrowing)) preprint by Martin and Williams. This approach, however, will not fully solve the problem with the lower and upper boundaries. A more sophisticated approach would be to model the item-level data with a multilevel-ordinal IRT-type model, such as discussed by Bürkner ([2020](#ref-burknerBayesianItemResponse2020)). This approach is excellent for respecting the ordinal nature of the questionnaire items and for expressing the data-generating process, but it comes at the cost of a complex, highly-parameterized model which may be difficult to fit.
+One alternative would be using skew-normal or skew-Student likelihood. For details, see the ([2017](#ref-martin2017outgrowing)) preprint by Martin and Williams. This approach, however, will not fully solve the problem with the lower and upper boundaries. A more sophisticated approach would be to model the item-level data with a multilevel-ordinal IRT-type model, such as discussed by Bürkner ([2020](#ref-burknerBayesianItemResponse2020)). This approach is excellent for respecting the ordinal nature of the questionnaire items and for expressing the data-generating process, but it comes at the cost of a complex, highly-parameterized model which may be difficult to fit and explain in a manuscript.
 
 If you’ve been following along, another option is to model the sum scores as beta-binomial. This approach would account for skew, upper and lower boundaries, and for the integer values. The beta-binomial would not faithfully reproduce the item-level data-generating process, but you might think of it as a pragmatic and simpler alternative to the rigorous item-level multilevel-ordinal IRT approach. This approach is possible with `brm()` by setting `family = beta_binomial`. Though it’s beyond the scope of this blog post, I’ve been chipping away at a blog series which will explore the beta-binomial distribution for sum-score data. As a preview, here’s how to fit such a model to these data.
 
