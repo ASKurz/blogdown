@@ -1,0 +1,483 @@
+---
+title: "Bayesian Correlations: Let's Talk Options."
+author: A. Solomon Kurz
+date: '2019-02-16'
+draft: false
+excerpt: "There's more than one way to fit a Bayesian correlation in brms. Here we explore a few."
+layout: single
+tags:
+- Bayesian
+- brms
+- correlation
+- R
+- tutorial
+lastmod: '2021-04-21T15:52:33-07:00'
+featured: no
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
+biblio-style: apalike
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
+link-citations: yes
+---
+
+```{r, echo = F}
+# save(f1, file = "fits/f1.rda")
+# save(f2, file = "fits/f2.rda")
+# save(f3, file = "fits/f3.rda")
+# save(f4, file = "fits/f4.rda")
+# save(f5, file = "fits/f5.rda")
+# save(f6, file = "fits/f6.rda")
+# save(f7, file = "fits/f7.rda")
+# save(f8, file = "fits/f8.rda")
+# save(f9, file = "fits/f9.rda")
+# save(f10, file = "fits/f10.rda")
+
+load("fits/f1.rda")
+load("fits/f2.rda")
+load("fits/f3.rda")
+load("fits/f4.rda")
+load("fits/f5.rda")
+load("fits/f6.rda")
+load("fits/f7.rda")
+load("fits/f8.rda")
+load("fits/f9.rda")
+load("fits/f10.rda")
+```
+
+[edited Dec 11, 2022]
+
+## tl;dr
+
+There's more than one way to fit a Bayesian correlation in brms.
+
+## Here’s the deal.
+
+In the last post, we considered how we might estimate correlations when our data contain influential outlier values. Our big insight was that if we use variants of Student's $t$-distribution as the likelihood rather than the conventional normal distribution, our correlation estimates were less influenced by those outliers. And we mainly did that as Bayesians using the [brms package](https://github.com/paul-buerkner/brms). Click [here](https://solomonkurz.netlify.com/post/bayesian-robust-correlations-with-brms-and-why-you-should-love-student-s-t/) for a refresher.
+
+Since the brms package is designed to fit regression models, [it can be surprising](https://twitter.com/tjmahr/status/1094808459239981056) when you discover it's handy for correlations, too. In short, you can fit them using a few tricks based on the [multivariate syntax](https://cran.r-project.org/web/packages/brms/vignettes/brms_multivariate.html).
+
+Shortly after uploading the post, it occurred to me we had more options and it might be useful to walk through them a bit.
+
+## I assume things.
+
+For this post, I'm presuming you are vaguely familiar with linear regression--both univariate and multivariate--, have a little background with Bayesian statistics, and have used Paul Bürkner's brms packge. As you might imagine, all code in is [R](https://www.r-bloggers.com/why-use-r-five-reasons/), with a heavy use of the [tidyverse](http://style.tidyverse.org).
+
+## We need data.
+
+First, we'll load our main packages.
+
+```{r, warning = F, message = F}
+library(mvtnorm)
+library(brms)
+library(tidyverse)
+```
+
+We'll use the [mvtnorm package](https://cran.r-project.org/web/packages/mvtnorm/index.html) to simulate three positively correlated variables.
+
+```{r, message = F, warning = F}
+m <- c(10, 15, 20)  # the means
+s <- c(10, 20, 30)  # the sigmas
+r <- c(.9, .6, .3)  # the correlations
+
+# here's the variance/covariance matrix
+v <- 
+  matrix(c((s[1] * s[1]),        (s[2] * s[1] * r[1]), (s[3] * s[1] * r[2]),
+           (s[2] * s[1] * r[1]), (s[2] * s[2]),        (s[3] * s[2] * r[3]),
+           (s[3] * s[1] * r[2]), (s[3] * s[2] * r[3]), (s[3] * s[3])),
+         nrow = 3, ncol = 3)
+
+# after setting our seed, we're ready to simulate with `rmvnorm()`
+set.seed(1)
+d <- 
+  rmvnorm(n = 50, mean = m, sigma = v) %>% 
+  as_tibble() %>% 
+  set_names("x", "y", "z")
+```
+
+Our data look like so.
+
+```{r, fig.width = 4, fig.height = 3.75, message = F, warning = F}
+library(GGally)
+theme_set(theme_gray() +
+            theme(panel.grid = element_blank()))
+
+d %>% 
+  ggpairs(upper = list(continuous = wrap("cor", stars = FALSE)))
+```
+
+Do note the Pearson's correlation coefficients in the upper triangle.
+
+In order to exploit all the methods we'll cover in this post, we need to standardize our data. Here we do so by hand using the typical formula
+
+$$z_{x_i} = \frac{x_i - \overline x}{s_x}$$
+
+where $\overline x$ is the observed mean and $s_x$ is the observed standard deviation.
+
+```{r}
+d <-
+  d %>% 
+  mutate(x_s = (x - mean(x)) / sd(x),
+         y_s = (y - mean(y)) / sd(y),
+         z_s = (z - mean(z)) / sd(z))
+
+head(d)
+```
+
+There are at least two broad ways to get correlations out of standardized data in brms. One way uses the typical univariate syntax. The other way is an extension of the multivariate `cbind()` approach. Let's start univariate.
+
+And for a point of clarification, we're presuming the Gaussian likelihood for all the examples in this post.
+
+## Univariate
+
+If you fit a simple univariate model with standardized data and a single predictor, the coefficient for the slope will be in a correlation-like metric. Happily, since the data are all standardized, it's easy to use [regularizing priors](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations).
+
+```{r f1, eval = F}
+f1 <-
+  brm(data = d, 
+      family = gaussian,
+      y_s ~ 1 + x_s,
+      prior = c(prior(normal(0, 1), class = Intercept),
+                prior(normal(0, 1), class = b),
+                prior(normal(0, 1), class = sigma)),
+      chains = 4, cores = 4, 
+      seed = 1)
+```
+
+Take a look at the model summary.
+
+```{r}
+print(f1)
+```
+
+The 'Population-Level Effects' has the summary information for our intercept and slope. Notice how our `x_s` slope is the same as the Pearson's correlation.
+
+```{r}
+cor(d$x, d$y)
+```
+
+Since this approach only yields one correlation at a time, we have to fit two more models to get the other two correlations. To do so with haste, we can use the `update()` syntax.
+
+```{r f2, eval = F}
+f2 <-
+  update(f1,
+         newdata = d,
+         formula = z_s ~ 1 + x_s)
+
+f3 <-
+  update(f2,
+         newdata = d,
+         formula = z_s ~ 1 + y_s)
+```
+
+With the `fixef()` function, we can easily isolate the $\beta$ estimates.
+
+```{r}
+fixef(f2)[2, ]
+fixef(f3)[2, ]
+```
+
+There's another thing I'd like to point out. Plotting the model results will help make the point.
+
+```{r, fig.width = 3.5, fig.height = 3.25}
+# define the predictor values you'd like the fitted values for
+nd <- tibble(x_s = seq(from = -3, to = 3, length.out = d %>% nrow()))
+
+# wrangle
+fitted(f1,
+       newdata = nd) %>% 
+  data.frame() %>% 
+  bind_cols(nd) %>% 
+  
+  # plot
+  ggplot(aes(x_s)) +
+  geom_vline(xintercept = 0, color = "white") +
+  geom_hline(yintercept = 0, color = "white") +
+  geom_point(data = d,
+             aes(y = y_s)) +
+  geom_smooth(aes(y = Estimate, ymin = Q2.5, ymax = Q97.5),
+              stat = "identity",
+              alpha = 1/4, size = 1/2) +
+  coord_cartesian(xlim = range(d$x_s),
+                  ylim = range(d$y_s))
+```
+
+The blue line is the posterior mean and the surrounding gray ribbon depicts the 95% posterior interval. Notice how the data and their respective fitted lines pass through [0, 0]? This is a consequence of modeling standardized data. We should always expect the intercept of a model like this to be 0. Here are the intercept summaries for all three models.
+
+```{r}
+fixef(f1)["Intercept", ] %>% round(3)
+fixef(f2)["Intercept", ] %>% round(3)
+fixef(f3)["Intercept", ] %>% round(3)
+```
+
+Within simulation error, they're all centered on zero. So instead of estimating the intercept, why not just bake that into the models? Here we refit the models by fixing the intercept for each to zero.
+
+```{r f4, eval = F}
+f4 <-
+  update(f1,
+         formula = y_s ~ 0 + x_s)
+
+f5 <-
+  update(f4,
+         newdata = d,
+         formula = z_s ~ 0 + x_s)
+
+f6 <-
+  update(f4,
+         newdata = d,
+         formula = z_s ~ 0 + y_s)
+```
+
+Let's take a look at the summary for the first.
+
+```{r}
+print(f4)
+```
+
+Even though it may have seemed like we substantially changed the models by fixing the intercepts to 0, the summaries are essentially the same as when we estimated the intercepts. Here we'll confirm the summaries with a plot, like above.
+
+```{r, fig.width = 3.5, fig.height = 3.25}
+# wrangle
+fitted(f4,
+       newdata = nd) %>% 
+  data.frame() %>% 
+  bind_cols(nd) %>% 
+  
+  # plot
+  ggplot(aes(x_s)) +
+  geom_vline(xintercept = 0, color = "white") +
+  geom_hline(yintercept = 0, color = "white") +
+  geom_point(data = d,
+             aes(y = y_s)) +
+  geom_smooth(aes(y = Estimate, ymin = Q2.5, ymax = Q97.5),
+              stat = "identity",
+              alpha = 1/4, size = 1/2) +
+  coord_cartesian(xlim = range(d$x_s),
+                  ylim = range(d$y_s))
+```
+
+The difference is subtle. By fixing the intercepts at 0, we estimated the slopes (i.e., the correlations) with increased precision as demonstrated by the slightly smaller posterior standard deviations (i.e., the values in the 'Est.Error' columns).
+
+Here are the correlation summaries for those last three models.
+
+```{r}
+fixef(f4) %>% round(3)
+fixef(f5) %>% round(3)
+fixef(f6) %>% round(3)
+```
+
+But anyway, you get the idea. If you want to estimate a correlation in brms using simple univariate syntax, just (a) standardize the data and (b) fit a univariate model with or without an intercept. The slop will be in a correlation-like metric.
+
+## Let's go multivariate.
+
+If you don't recall the steps to fit correlations in brms with the multivariate syntax, here they are:
+
+* List the variables you'd like correlations for within `mvbind()`.
+* Place the `mvbind()` function within the left side of the model formula.
+* On the right side of the model formula, indicate you only want intercepts (i.e., `~ 1`).
+* Wrap that whole formula within `bf()`.
+* Then use the `+` operator to append `set_rescor(TRUE)`, which will ensure brms fits a model with residual correlations.
+
+In addition, you you want to use non-default priors, you'll want to use the `resp` argument to specify which prior is associated with which criterion variable. Here's what that all looks like:
+
+```{r f7, eval = F}
+f7 <- 
+  brm(data = d, 
+      family = gaussian,
+      bf(mvbind(x_s, y_s, z_s) ~ 1) + set_rescor(TRUE),
+      prior = c(prior(normal(0, 1), class = Intercept, resp = xs),
+                prior(normal(0, 1), class = Intercept, resp = ys),
+                prior(normal(0, 1), class = Intercept, resp = zs),
+                prior(normal(1, 1), class = sigma, resp = xs),
+                prior(normal(1, 1), class = sigma, resp = ys),
+                prior(normal(1, 1), class = sigma, resp = zs),
+                prior(lkj(2), class = rescor)),
+      chains = 4, cores = 4, 
+      seed = 1)
+```
+
+Behold the summary.
+
+```{r}
+print(f7)
+```
+
+Look at the 'Residual Correlations:' section at the bottom of the output. Since there are no predictors in the model, the residual correlations are just correlations. Now notice how the intercepts in this model are also hovering around 0, just like in our univariate models. Yep, we can fix those, too. We do this by changing our formula to `mvbind(x_s, y_s, z_s) ~ 0`.
+
+```{r f8, eval = F}
+f8 <- 
+  brm(data = d, 
+      family = gaussian,
+      bf(mvbind(x_s, y_s, z_s) ~ 0) + set_rescor(TRUE),
+      prior = c(prior(normal(1, 1), class = sigma, resp = xs),
+                prior(normal(1, 1), class = sigma, resp = ys),
+                prior(normal(1, 1), class = sigma, resp = zs),
+                prior(lkj(2), class = rescor)),
+      chains = 4, cores = 4, 
+      seed = 1)
+```
+
+Without the intercepts, the rest of the model is the same within simulation variance.
+
+```{r}
+print(f8)
+```
+
+If you wanna get silly, we can prune even further. Did you notice how the estimates for $\sigma$ are all hovering around 1? Since we have no predictors, $\sigma$ is just an estimate of the population standard deviation. And since we're working with standardized data, the population standard deviation has to be 1. Any other estimate would be nonsensical. So why not fix it to 1?
+
+With brms, we can fix those $\sigma$'s to 1 with a trick of the nonlinear [distributional modeling syntax](https://cran.r-project.org/web/packages/brms/vignettes/brms_distreg.html). Recall when you model $\sigma$, the brms default is to actually model its log. As is turns out, the log of 1 is zero.
+
+```{r}
+log(1)
+```
+
+Here's how to make use of that within `brm()`.
+
+```{r f9, eval = F}
+f9 <- 
+  brm(data = d, 
+      family = gaussian,
+      bf(mvbind(x_s, y_s, z_s) ~ 0,
+         sigma ~ 0) + 
+        set_rescor(TRUE),
+      prior(lkj(2), class = rescor),
+      chains = 4, cores = 4, 
+      seed = 1)
+```
+
+Here are the results.
+
+```{r}
+print(f9)
+```
+
+The correlations are the only things left in the model.
+
+Just to be clear, the multivariate approach does not require standardized data. To demonstrate, here we refit `f7`, but with the unstandardized variables. And, since we're no longer in the standardized metric, we'll be less certain with our priors.
+
+```{r f10, eval = F}
+f10 <- 
+  brm(data = d, 
+      family = gaussian,
+      bf(mvbind(x, y, z) ~ 1) + set_rescor(TRUE),
+      prior = c(prior(normal(0, 10), class = Intercept, resp = x),
+                prior(normal(0, 10), class = Intercept, resp = y),
+                prior(normal(0, 10), class = Intercept, resp = z),
+                prior(student_t(3, 0, 10), class = sigma, resp = x),
+                prior(student_t(3, 0, 10), class = sigma, resp = y),
+                prior(student_t(3, 0, 10), class = sigma, resp = z),
+                prior(lkj(2), class = rescor)),
+      chains = 4, cores = 4, 
+      seed = 1)
+```
+
+See, the 'rescor()' results are about the same as with `f7`.
+
+```{r}
+print(f10)
+```
+
+## It's time to compare methods.
+
+To recap, we've compared several ways to fit correlations in brms. Some of the methods were with univariate syntax, others were with the multivariate syntax. Some of the models had all free parameters, others included fixed intercepts and sigmas. Whereas all the univariate models required standardized data, the multivariate approach can work with unstandardized data, too.
+
+Now it might be of help to compare the results from each of the methods to get a sense of which ones you might prefer. Before we do so, we’ll define a couple custom functions to streamline the data wrangling.
+
+```{r}
+get_rho <- function(fit) {
+  as_draws_df(fit) %>% 
+    select(starts_with("b_"), -contains("Intercept")) %>% 
+    set_names("rho") 
+}
+
+get_rescor <- function(fit) {
+  as_draws_df(fit) %>% 
+    select(starts_with("rescor")) %>% 
+    set_names("x with y", "x with z", "y with z") %>% 
+    gather(label, rho) %>% 
+    select(rho, label)
+}
+```
+
+Now let's put those functions to work and plot.
+
+```{r, fig.width = 8, fig.height = 3.5, warning = F, message = F}
+library(tidybayes)
+
+# collect the posteriors from the univariate models
+tibble(name = str_c("f", 1:6)) %>% 
+  mutate(fit = map(name, get)) %>% 
+  mutate(rho = map(fit, get_rho)) %>% 
+  unnest(rho) %>% 
+  mutate(predictor = rep(c("x", "x", "y"), each = 4000) %>% rep(., times = 2),
+         criterion = rep(c("y", "z", "z"), each = 4000) %>% rep(., times = 2)) %>% 
+  mutate(label = str_c(predictor, " with ", criterion)) %>% 
+  select(-c(predictor:criterion)) %>% 
+  # add in the posteriors from the multivariate models
+  bind_rows(
+    tibble(name = str_c("f", 7:10)) %>% 
+      mutate(fit = map(name, get)) %>% 
+      mutate(post = map(fit, get_rescor)) %>% 
+      unnest(post)
+  ) %>% 
+  # wrangle a bit just to make the y axis easier to understand
+  mutate(name = factor(name, 
+                       levels = c(str_c("f", 1:10)),
+                       labels = c("1. standardized, univariate",
+                                  "2. standardized, univariate",
+                                  "3. standardized, univariate",
+                                  "4. standardized, univariate, fixed intercepts",
+                                  "5. standardized, univariate, fixed intercepts",
+                                  "6. standardized, univariate, fixed intercepts",
+                                  "7. standardized, multivariate, fixed intercepts",
+                                  "8. standardized, multivariate, fixed intercepts",
+                                  "9. standardized, multivariate, fixed intercepts/sigmas",
+                                  "10. unstandardized, multivariate"))) %>%
+  
+  # plot
+  ggplot(aes(x = rho, y = name)) +
+  geom_vline(data = tibble(label = c("x with y", "x with z", "y with z"),
+                           rho   = r),
+             aes(xintercept = rho), color = "white") +
+  stat_halfeye(.width = .95, size = 5/4) +
+  scale_x_continuous(breaks = c(0, r)) +
+  labs(x = expression(rho),
+       y = NULL) +
+  coord_cartesian(0:1) +
+  theme(axis.ticks.y = element_blank(),
+        axis.text.y  = element_text(hjust = 0)) +
+  facet_wrap(~ label, ncol = 3)
+```
+
+To my eye, a few patterns emerged. First, the point estimates were about the same across methods. Second, fixing the intercepts didn't seem to effect things, much. But, third, it appears that fixing the sigmas in the multivariate models did narrow the posteriors a bit.
+
+Fourth, and perhaps most importantly, notice how the posteriors for the multivariate models were more asymmetric when they approached 1. Hopefully this makes intuitive sense. Correlations are bound between -1 and 1. However, standardized regression coefficients are not so bound. Accordingly, notice how the posteriors from the univariate models stayed symmetric when approaching 1 and some of their right tails even crossed over 1. So while the univariate approach did a reasonable job capturing the correlation point estimates, their posteriors weren't quite in a correlation metric. Alternately, the univariate approach did make it convenient to express the correlations with fitted regression lines in scatter plots.
+
+Both univariate and multivariate approaches appear to have their strengths and weaknesses. Choose which methods seems most appropriate for your correlation needs.
+
+Happy modeling.
+
+```{r}
+sessionInfo()
+```
+
+```{r, echo = F, eval = F}
+# wrangle
+fitted(f4,
+       newdata = nd) %>% 
+  data.frame() %>% 
+  bind_cols(nd) %>% 
+  
+  # plot
+  ggplot(aes(x_s)) +
+  geom_vline(xintercept = 0, color = "white") +
+  geom_hline(yintercept = 0, color = "white") +
+  geom_point(data = d,
+             aes(y = y_s)) +
+  geom_smooth(aes(y = Estimate, ymin = Q2.5, ymax = Q97.5),
+              stat = "identity",
+              alpha = 1/4, size = 1/2) +
+  coord_cartesian(xlim = range(d$x_s),
+                  ylim = range(d$y_s))
+
+ggsave("cor-lineplot-featured.jpg", width = 3.7, height = 3.5, units = "in")
+```
+
