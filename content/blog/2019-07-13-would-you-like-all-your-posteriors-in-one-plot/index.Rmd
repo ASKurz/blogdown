@@ -1,0 +1,437 @@
+---
+title: Would you like all your posteriors in one plot?
+author: A. Solomon Kurz
+date: '2019-07-13'
+draft: false
+excerpt: "In response to a DM question, here we practice a few different ways you can combine the posterior samples from your Bayesian models into a single plot."
+layout: single
+tags:
+- Bayesian
+- brms
+- multilevel
+- plot
+- R
+- tidyverse
+- tutorial
+lastmod: '2021-04-21T17:03:31-07:00'
+featured: no
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
+biblio-style: apalike
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
+link-citations: yes
+---
+
+```{r, echo = F}
+# save(fit1, file = "fits/fit1.rda")
+# save(fit2, file = "fits/fit2.rda")
+# save(fit3, file = "fits/fit3.rda")
+# save(fit4, file = "fits/fit4.rda")
+# save(fit5, file = "fits/fit5.rda")
+# save(fit6, file = "fits/fit6.rda")
+# save(fit7, file = "fits/fit7.rda")
+# save(fit8, file = "fits/fit8.rda")
+# save(fit9, file = "fits/fit9.rda")
+# save(fit10, file = "fits/fit10.rda")
+
+load("fits/fit1.rda")
+load("fits/fit2.rda")
+load("fits/fit3.rda")
+load("fits/fit4.rda")
+load("fits/fit5.rda")
+load("fits/fit6.rda")
+load("fits/fit7.rda")
+load("fits/fit8.rda")
+load("fits/fit9.rda")
+load("fits/fit10.rda")
+```
+
+[edited on Dec 11, 2022] 
+
+```{r set-options, echo = FALSE, cache = FALSE}
+options(width = 100)
+```
+
+A colleague reached out to me earlier this week with a plotting question. They had fit a series of Bayesian models, all containing a common parameter of interest. They knew how to plot their focal parameter one model at a time, but were stumped on how to combine the plots across models into a seamless whole. It reminded me a bit of this gif
+
+![](https://media.giphy.com/media/Bqn8Z7xdPCFy0/giphy.gif)
+
+which I originally got from [Jenny Bryan](https://twitter.com/JennyBryan)'s great talk, [*Behind every great plot there's a great deal of wrangling*](https://www.youtube.com/watch?v=4MfUCX_KpdE).
+
+The goal of this post is to provide solutions. We'll practice a few different ways you can combine the posterior samples from your Bayesian models into a single plot. As usual, we'll be fitting our models with [**brms**](https://github.com/paul-buerkner/brms), wrangling with packages from the [**tidyverse**](https://www.tidyverse.org), and getting a little help from the [**tidybayes** package](https://mjskay.github.io/tidybayes/index.html).
+
+## I make assumptions.
+
+For this post, I'm presuming you are familiar Bayesian regression using **brms.** I'm also assuming you've coded using some of the foundational functions from the **tidyverse.** If you'd like to firm up your foundations a bit, check out these resources.
+
+* To learn about Bayesian regression, I recommend the introductory text books by either McElreath ([here](https://xcelab.net/rm/statistical-rethinking/)) or Kruschke ([here](http://www.indiana.edu/~kruschke/DoingBayesianDataAnalysis/)). Both authors host blogs ([here](http://doingbayesiandataanalysis.blogspot.com) and [here](http://elevanth.org/blog/), respectively). If you go with McElreath, do check out his [online lectures](https://www.youtube.com/channel/UCNJK6_DZvcMqNSzQdEkzvzA/playlists) and my ebooks where I translated his text to **brms** and **tidyverse** code ([here](https://bookdown.org/content/3890/) and [here](https://bookdown.org/content/4857/)). I have a similar ebook translation for Kruschke's text ([here](https://bookdown.org/content/3686/)).
+* For even more **brms**-related resources, you can find vignettes and documentation [here](https://cran.r-project.org/web/packages/brms/index.html). 
+* For **tidyverse** introductions, your best bets are [*R4DS*](https://r4ds.had.co.nz) and [*The tidyverse style guide*](https://style.tidyverse.org).
+
+## Same parameter, different models
+
+Let's load our primary statistical packages.
+
+```{r, message = F, warning = F}
+library(tidyverse)
+library(brms)
+library(tidybayes)
+```
+
+Simulate $n = 150$ draws from the standard normal distribution.
+
+```{r}
+n <- 150
+
+set.seed(1)
+d <- tibble(y = rnorm(n, mean = 0, sd = 1))
+
+head(d)
+```
+
+Here we'll fit three intercept-only models for `y`. Each will follow the form
+
+$$
+\begin{align*}
+y_i     & \sim \text{Normal} (\mu, \sigma) \\
+\mu     & = \beta_0 \\
+\beta_0 & \sim \text{Normal} (0, x) \\
+\sigma  & \sim \text{Student-t}(3, 0, 10)
+\end{align*}
+$$
+
+where $\beta_0$ is the unconditional intercept (i.e., an intercept not conditioned on any predictors). We will be fitting three alternative models. All will have the same prior for $\sigma$, $\text{Student-t}(3, 0, 10)$, which is the **brms** default in this case. [If you'd like to check, use the `get_prior()` function.] The only way the models will differ is by their prior on the intercept $\beta_0$. By model, those priors will be
+
+* `fit1`: $\beta_0 \sim \text{Normal} (0, 10)$,
+* `fit2`: $\beta_0 \sim \text{Normal} (0, 1)$, and
+* `fit3`: $\beta_0 \sim \text{Normal} (0, 0.1)$.
+
+So if you were wondering, the $x$ in the $\beta_0 \sim \text{Normal} (0, x)$ line, above, was a stand-in for the varying [hyperparameter](https://en.wikipedia.org/wiki/Hyperparameter).
+
+Here we fit the models in bulk.
+
+```{r, echo = F, eval = F}
+get_prior(data = d,
+          family = gaussian,
+          y ~ 1)
+```
+
+```{r fit1, eval = F}
+fit1 <-
+  brm(data = d,
+      family = gaussian,
+      y ~ 1,
+      prior(normal(0, 10), class = Intercept),
+      seed = 1)
+
+fit2 <-
+  update(fit1,
+         prior = prior(normal(0, 1), class = Intercept),
+         seed = 1)
+
+fit3 <-
+  update(fit1,
+         prior = prior(normal(0, 0.1), class = Intercept),
+         seed = 1)
+```
+
+Normally we'd use `plot()` to make sure the chains look good and then use something like `print()` or `posterior_summary()` to summarize the models' results. I've checked and they're all fine. For the sake of space, let's press forward.
+
+```{r, echo = F, eval = F}
+plot(fit1)
+plot(fit2)
+plot(fit3)
+
+print(fit1)
+print(fit2)
+print(fit3)
+```
+
+If you were going to plot the results of an individual fit using something like the `tidybayes::stat_halfeye()` function, the next step would be extracting the posterior draws. Here we'll do so with the `brms::as_draws_df()` function.
+
+```{r}
+draws1 <- as_draws_df(fit1)
+draws2 <- as_draws_df(fit2)
+draws3 <- as_draws_df(fit3)
+```
+
+Focusing on `fit1`, here's how we'd plot the results for the intercept $\beta_0$.
+
+```{r, fig.width = 5, fig.height = 2, warning = F}
+# this part is unnecessary; it just adjusts some theme defaults to my liking
+theme_set(theme_gray() +
+            theme(axis.text.y  = element_text(hjust = 0),
+                  axis.ticks.y = element_blank(),
+                  panel.grid   = element_blank()))
+
+# plot!
+draws1 %>% 
+  ggplot(aes(x = b_Intercept, y = 0)) +
+  stat_halfeye() +
+  scale_y_continuous(NULL, breaks = NULL)
+```
+
+*But how might we get the posterior draws from all three fits into one plot?* The answer is by somehow combining the posterior draws from each into one data frame. There are many ways to do this. Perhaps the simplest is with the `bind_rows()` function.
+
+```{r}
+draws <-
+  bind_rows(
+    draws1,
+    draws2,
+    draws3
+  ) %>% 
+  mutate(prior = str_c("normal(0, ", c(10, 1, 0.1), ")") %>% rep(., each = 4000))
+
+glimpse(draws)
+```
+
+The `bind_rows()` function worked well, here, because all three post objects had the same number of columns of the same names. So we just stacked them three high. That is, we went from three data objects of 4,000 rows and 3 columns to one data object with 12,000 rows and 3 columns. But with the `mutate()` function we did add a fourth column, `prior`, that indexed which model each row came from. Now our data are ready, we can plot.
+
+```{r, fig.width = 6, fig.height = 2.5}
+draws %>% 
+  ggplot(aes(x = b_Intercept, y = prior)) +
+  stat_halfeye()
+```
+
+Our plot arrangement made it easy to compare the results of tightening the prior on $\beta_0$; the narrower the prior, the narrower the posterior.
+
+## What if my `as_draws_df()`'s aren't of the same dimensions across models?
+
+For the next examples, we need new data. Here we'll simulate three predictors--`x1`, `x2`, and `x3`. We then simulate our criterion `y` as a linear additive function of those predictors.
+
+```{r}
+set.seed(1)
+d <-
+  tibble(x1 = rnorm(n, mean = 0, sd = 1),
+         x2 = rnorm(n, mean = 0, sd = 1),
+         x3 = rnorm(n, mean = 0, sd = 1)) %>% 
+  mutate(y  = rnorm(n, mean = 0 + x1 * 0 + x2 * 0.2 + x3 * -0.4))
+
+head(d)
+```
+
+We are going to work with these data in two ways. For the first example, we'll fit a series of univariable models following the same basic form, but each with a different predictor. For the second example, we'll fit a series of multivariable models with various combinations of the predictors. Each requires its own approach.
+
+### Same form, different predictors.
+
+```{r, echo = F, eval = F}
+get_prior(data = d,
+          family = gaussian,
+          y ~ 1 + x1)
+```
+
+This time we're just using the **brms** default priors. As such, the models all follow the form
+
+$$
+\begin{align*}
+y_i     & \sim \text{Normal} (\mu_i, \sigma) \\
+\mu_i   & = \beta_0 + \beta_n x_n\\
+\beta_0 & \sim \text{Student-t}(3, 0, 10) \\
+\sigma  & \sim \text{Student-t}(3, 0, 10)
+\end{align*}
+$$
+
+You may be wondering *What about the prior for* $\beta_n$*?* The **brms** defaults for those are improper flat priors. We define $\beta_n x_n$ for the next three models as
+
+* `fit4`: $\beta_1 x_1$,
+* `fit5`: $\beta_2 x_2$, and
+* `fit5`: $\beta_3 x_3$.
+
+Let's fit the models.
+
+```{r fit4, eval = F}
+fit4 <-
+  brm(data = d,
+      family = gaussian,
+      y ~ 1 + x1,
+      seed = 1)
+
+fit5 <-
+  update(fit4,
+         newdata = d,
+         y ~ 1 + x2,
+         seed = 1)
+
+fit6 <-
+  update(fit4,
+         newdata = d,
+         y ~ 1 + x3,
+         seed = 1)
+```
+
+Like before, save the posterior draws for each as separate data frames.
+
+```{r}
+draws4 <- as_draws_df(fit4)
+draws5 <- as_draws_df(fit5)
+draws6 <- as_draws_df(fit6)
+```
+
+This time, our simple `bind_rows()` trick won’t work well.
+
+```{r}
+bind_rows(
+  draws4,
+  draws5,
+  draws6
+) %>% 
+  head()
+```
+
+We don't want separate columns for `b_x1`, `b_x2`, and `b_x3`. We want them all stacked atop one another. One simple solution is a two-step wherein we (1) select the relevant columns from each and bind them together with `bind_cols()` and then (2) stack them atop one another with the `gather()` function.
+
+```{r, warning = F}
+draws <-
+  bind_cols(
+    draws4 %>% select(b_x1),
+    draws5 %>% select(b_x2),
+    draws6 %>% select(b_x3)
+  ) %>% 
+  gather() %>% 
+  mutate(predictor = str_remove(key, "b_"))
+
+head(draws)
+```
+
+That `mutate()` line at the end wasn't necessary, but it will make the plot more attractive.
+
+```{r, fig.width = 6, fig.height = 2.5}
+draws %>% 
+  ggplot(aes(x = value, y = predictor)) +
+  stat_halfeye()
+```
+
+### Different combinations of predictors in different forms.
+
+Now we fit a series of multivariable models. The first three will have combinations of two of the predictors. The final model will have all three. For simplicity, we continue to use the **brms** default priors.
+
+```{r fit7, eval = F}
+fit7 <-
+  brm(data = d,
+      family = gaussian,
+      y ~ 1 + x1 + x2,
+      seed = 1)
+
+fit8 <-
+  update(fit7,
+         newdata = d,
+         y ~ 1 + x1 + x3,
+         seed = 1)
+
+fit9 <-
+  update(fit7,
+         newdata = d,
+         y ~ 1 + x2 + x3,
+         seed = 1)
+
+fit10 <-
+  update(fit7,
+         newdata = d,
+         y ~ 1 + x1 + x2 + x3,
+         seed = 1)
+```
+
+Individually extract the posterior draws.
+
+```{r}
+draws7  <- as_draws_df(fit7)
+draws8  <- as_draws_df(fit8)
+draws9  <- as_draws_df(fit9)
+draws10 <- as_draws_df(fit10)
+```
+
+Take a look at what happens this time when we use the `bind_rows()` approach.
+
+```{r}
+draws <-
+  bind_rows(
+    draws7,
+    draws8,
+    draws9,
+    draws10
+  ) 
+
+glimpse(draws)
+```
+
+We still have the various data frames stacked atop another, with the data from `draws7` in the first 4,000 rows. See how the values in the `b_x3` column are all missing (i.e., filled with `NA` values)? That's because `fit7` didn't contain `x3` as a predictor. Similarly, if we were to look at rows 4,001 through 8,000, we'd see column `b_x2` would be the one filled with `NA`s. This behavior is a good thing, here. After a little more wrangling, we'll plot and it should be become clear why. Here's the wrangling.
+
+```{r, warning = F}
+draws <-
+  draws %>% 
+  select(starts_with("b_x")) %>% 
+  mutate(contains = rep(c("<1, 1, 0>", "<1, 0, 1>", "<0, 1, 1>", "<1, 1, 1>"), each = 4000)) %>% 
+  gather(key, value, -contains) %>% 
+  mutate(coefficient = str_remove(key, "b_x") %>% str_c("beta[", ., "]"))
+
+head(draws)
+```
+
+With the `contains` variable, we indexed which fit the draws came from. The 1's and 0's within the angle brackets indicate which of the three predictors were present within the model with the 1's indicating they were and the 0's indicating they were not. For example, `<1, 1, 0>` in the first row indicated this was the model including `x1` and `x2`. Importantly, we also added a `coefficient` index. This is just a variant of `key` that'll make the strip labels in our plot more attractive. Behold:
+
+```{r, fig.width = 6, fig.height = 5, warning = F, message = F}
+draws %>% 
+  drop_na(value) %>% 
+  ggplot(aes(x = value, y = contains)) +
+  stat_halfeye() +
+  ylab(NULL) +
+  facet_wrap(~coefficient, ncol = 1, labeller = label_parsed)
+```
+
+Hopefully now it's clear why it was good to save those cells with the `NA`s.
+
+## Bonus: You can streamline your workflow.
+
+The workflows above are generally fine. But they're a little inefficient. If you'd like to reduce the amount of code you're writing and the number of objects you have floating around in your environment, you might consider a more streamlined workflow where you work with your fit objects in bulk. Here we'll demonstrate a nested tibble approach with the first three fits.
+
+```{r}
+draws <-
+  tibble(name  = str_c("fit", 1:3),
+         prior = str_c("normal(0, ", c(10, 1, 0.1), ")")) %>% 
+  mutate(fit = map(name, get)) %>% 
+  mutate(draws = map(fit, as_draws_df))
+  
+head(draws)
+```
+
+We have a 3-row nested tibble. The first column, `name` is just a character vector with the names of the fits. The next column isn't necessary, but it nicely explicates the main difference in the models: the prior we used on the intercept. It's in the `map()` functions within the two `mutate()`lines where all the magic happens. With the first, we used the `get()` function to snatch up the **brms** fit objects matching the names in the `name` column. In the second, we used the `as_draws_df()` function to extract the posterior draws from each of the fits saved in `fit`. Do you see how each for in the `draws` column contains an entire $4,000 \times 3$ data frame? That's why we refer to this as a nested tibble. We have data frames compressed within data frames. If you’d like to access the data within the `draws` column, just `unnest()`.
+
+```{r}
+draws %>% 
+  select(-fit) %>% 
+  unnest(draws)
+```
+
+After un-nesting, we can remake the plot from above.
+
+```{r, fig.width = 6, fig.height = 2.5}
+draws %>% 
+  select(-fit) %>% 
+  unnest(draws) %>% 
+
+  ggplot(aes(x = b_Intercept, y = prior)) +
+  stat_halfeye()
+```
+
+To learn more about using the **tidyverse** for iterating and saving the results in nested tibbles, check out [Hadley Wickham](https://twitter.com/hadleywickham)'s great talk, [*Managing many models*](https://www.youtube.com/watch?v=rz3_FDVt9eg).
+
+## Session information
+
+```{r}
+sessionInfo()
+```
+
+```{r, echo = F, eval = F}
+bind_cols(
+  draws4 %>% select(b_x1),
+  draws5 %>% select(b_x2),
+  draws6 %>% select(b_x3)
+  ) %>% 
+  gather() %>% 
+  mutate(predictor = str_remove(key, "b_")) %>% 
+  ggplot(aes(x = value, y = predictor)) +
+  stat_halfeye(.width = .95, size = 1/2) +
+  xlab("posterior")
+
+ggsave("three-posteriors-featured.jpg", width = 4, height = 3.5, units = "in")
+```
+
