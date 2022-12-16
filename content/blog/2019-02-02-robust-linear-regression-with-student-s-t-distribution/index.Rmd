@@ -1,0 +1,617 @@
+---
+title: Robust Linear Regression with Student’s $t$-Distribution
+author: A. Solomon Kurz
+date: '2019-02-02'
+draft: false
+excerpt: "The purpose of this post is to demonstrate the advantages of the Student's *t*-distribution for regression with outliers, particularly within a Bayesian framework."
+layout: single
+tags:
+- Bayesian
+- brms
+- outlier
+- R
+- robust
+- Student-t
+- tutorial
+lastmod: '2021-04-21T14:30:44-07:00'
+featured: no
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
+biblio-style: apalike
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
+link-citations: yes
+---
+
+```{r, echo = F}
+# save(b0, file = "fits/b0.rda")
+# save(b1, file = "fits/b1.rda")
+# save(b2, file = "fits/b2.rda")
+# save(b3, file = "fits/b3.rda")
+# save(b4, file = "fits/b4.rda")
+# save(b1.1, file = "fits/b1.1.rda")
+# save(b1.2, file = "fits/b1.2.rda")
+
+load("fits/b0.rda")
+load("fits/b1.rda")
+load("fits/b2.rda")
+load("fits/b3.rda")
+load("fits/b4.rda")
+load("fits/b1.1.rda")
+load("fits/b1.2.rda")
+```
+
+[edited Nov 30, 2020]
+
+The purpose of this post is to demonstrate the advantages of the Student's $t$-distribution for regression with outliers, particularly within a [Bayesian framework](https://www.youtube.com/channel/UCNJK6_DZvcMqNSzQdEkzvzA/playlists).
+
+## I make assumptions
+
+I'm presuming you are familiar with linear regression, familiar with the basic differences between frequentist and Bayesian approaches to fitting regression models, and have a sense that the issue of outlier values is a pickle worth contending with. All code in is [**R**](https://www.r-bloggers.com/why-use-r-five-reasons/), with a heavy use of the [**tidyverse**](https://style.tidyverse.org/) [@R-tidyverse; @wickhamWelcomeTidyverse2019], about which you might learn a lot more from @grolemundDataScience2017, especially [chapter 5](https://r4ds.had.co.nz/transform.html). The Bayesian models are fit with [Paul Bürkner](https://twitter.com/paulbuerkner)'s [-@R-brms; -@burknerBrmsPackageBayesian2017; -@burknerAdvancedBayesianMultilevel2018] [**brms** package](https://github.com/paul-buerkner/brms).
+
+## The problem
+
+Simple regression models typically use the Gaussian likelihood. Say you have some criterion variable $y$, which you can reasonably describe with a mean $\mu$ and standard deviation $\sigma$. Further, you'd like to describe $y$ with a predictor $x$. Using the Gaussian likelihood, we can describe the model as
+
+$$
+\begin{align*}
+y_i & \sim \operatorname{Normal}(\mu_i, \sigma) \\
+\mu_i & = \beta_0 + \beta_1 x_i.
+\end{align*}
+$$
+
+With this formulation, we use $x$ to model the mean of $y$. The $\beta_0$ parameter is the intercept of the regression model and $\beta_1$ is its slope with respect to $x$. After accounting for $y$'s relation with $x$, the leftover variability in $y$ is described by $\sigma$, often called error or residual variance. The reason we describe the model in terms of $\mu$ and $\sigma$ is because those are the two parameters by which we define the Normal distribution, the Gaussian likelihood.
+
+The Gaussian is a sensible default choice for many data types. You might say it works unreasonably well. Unfortunately, the normal (i.e., Gaussian) distribution is sensitive to outliers.
+
+The normal distribution is a special case of Student's $t$-distribution with the $\nu$ parameter (i.e., the degree of freedom) set to infinity. However, when $\nu$ is small, Student's $t$-distribution is more robust to multivariate outliers. See Gelman & Hill [-@gelmanDataAnalysisUsing2006, chapter 6], Kruschke [-@kruschkeDoingBayesianData2015, chapter 16], or McElreath [-@mcelreathStatisticalRethinkingBayesian2020, chapter 7] for textbook treatments on the topic.
+
+In this post, we demonstrate how vulnerable the Gaussian likelihood is to outliers and then compare it to different ways of using Student's $t$-likelihood for the same data.
+
+First, we'll get a sense of the distributions with a plot.
+
+```{r, fig.width = 5.5, fig.height = 3.25, warning = F, message = F}
+library(tidyverse)
+
+tibble(x = seq(from = -6, to = 6, by = .01)) %>% 
+  expand(x, nu = c(1, 2.5, 5, 10, Inf)) %>% 
+  mutate(density = dt(x = x, df = nu),
+         nu      = factor(nu, levels = c("Inf", "10", "5", "2.5", "1"))) %>% 
+  
+  ggplot(aes(x = x, y = density, group = nu, color = nu)) +
+  geom_line() +
+  scale_color_viridis_d(expression(nu),
+                        direction = 1, option = "C", end = .85) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  coord_cartesian(xlim = c(-5, 5)) +
+  xlab(NULL) +
+  theme(panel.grid = element_blank())
+```
+
+So the difference is that a Student's $t$-distribution with a low $\nu$ will have notably heavier tails than the conventional Gaussian distribution. It's easiest to see the difference when $\nu$ approaches 1. Even then, the difference can be subtle when looking at a plot. Another way is to compare how probable relatively extreme values are in a Student's $t$-distribution relative to the Gaussian. For the sake of demonstration, here we'll compare Gauss with Student's $t$ with a $\nu$ of 5. In the plot above, they are clearly different, but not shockingly so. However, that difference is very notable in the tails.
+
+Let's look more closely with a table. Below, we compare the probability of a given $z$-score or lower within the Gaussian and a $\nu = 5$ Student's $t$. In the rightmost column, we compare the probabilities in a ratio.
+
+```{r}
+# here we pic our nu
+nu <- 5
+
+tibble(z_score               = 0:-5,
+       p_Gauss               = pnorm(z_score, mean = 0, sd = 1),
+       p_Student_t           = pt(z_score, df = nu),
+       `Student/Gauss ratio` = p_Student_t/p_Gauss) %>%
+  mutate_if(is.double, round, digits = 5) %>% 
+  knitr::kable()
+```
+
+Note how low $z$-scores are more probable in this Student's $t$ than in the Gaussian. This is most apparent in the `Student/Gauss ratio` column on the right. A consequence of this is that extreme scores are less influential to your solutions when you use a small-$\nu$ Student's $t$-distribution in place of the Gaussian. That is, the small-$\nu$ Student's $t$ is more robust than the Gaussian to unusual and otherwise influential observations.
+
+In order to demonstrate, let's simulate our own. We'll start by creating multivariate normal data.
+
+## Let's create our initial [tibble](https://cran.r-project.org/web/packages/tibble/vignettes/tibble.html) of well-behaved data, `d`
+
+First, we'll need to define our variance/covariance matrix.
+
+```{r}
+s <- matrix(c(1, .6, 
+              .6, 1), 
+             nrow = 2, ncol = 2)
+```
+
+By the two `.6`s on the off-diagonal positions, we indicated we'd like our two variables to have a correlation of .6.
+
+Second, our variables also need means, which we'll define with a mean vector.
+
+```{r}
+m <- c(0, 0)
+```
+
+With means of `0` and variances of `1`, our data are in a standardized metric. 
+
+Third, we'll use the `mvrnorm()` function from the [**MASS** package](https://CRAN.R-project.org/package=MASS) [@R-MASS] to simulate our data.
+
+```{r, warning = F, message = F}
+set.seed(3)
+
+d <- MASS::mvrnorm(n = 100, mu = m, Sigma = s) %>%
+  data.frame() %>%
+  set_names(c("y", "x"))
+```
+
+The first few rows look like so:
+
+```{r}
+head(d)
+```
+
+As an aside, check out [this nice r-bloggers post](https://www.r-bloggers.com/creating-sample-datasets-exercises/) for more information on simulating data with this method.
+
+Anyway, this line reorders our data by `x`, placing the smallest values on top.
+
+```{r}
+d <-
+  d %>%
+  arrange(x)
+
+head(d)
+```
+
+## Let's create our outlier tibble, `o`
+
+Here we'll make two outlying and unduly influential values.
+
+```{r}
+o <- d
+o[c(1:2), 1] <- c(6, 5)
+
+head(o)
+```
+
+With the code, above, we replaced the first two values of our first variable, `y`. They both started out quite negative. Now they are positive values of a large magnitude within the standardized metric.
+
+## Frequentist [OLS](https://en.wikipedia.org/wiki/Ordinary_least_squares) models
+
+To get a quick sense of what we've done, we'll first fit two models with OLS regression via the `lm()` function. The first model, `ols0`, is of the multivariate normal data, `d`. The second model, `ols1`, is on the otherwise identical data with the two odd and influential values, `o`. Here is our model code.
+
+```{r ols0}
+ols0 <- lm(data = d, y ~ 1 + x)
+ols1 <- lm(data = o, y ~ 1 + x)
+```
+
+We'll use the [**broom** package](https://cran.r-project.org/web/packages/broom/index.html) [@R-broom] to assist with model summaries and other things. Here are the parameter estimates for the first model.
+
+```{r, message = F, warning = F}
+library(broom)
+
+tidy(ols0) %>% mutate_if(is.double, round, digits = 2)
+```
+
+And now the parameters for the second model, the one based on the `o` outlier data.
+
+```{r}
+tidy(ols1) %>% mutate_if(is.double, round, digits = 2)
+```
+
+Just two odd and influential values dramatically changed the model parameters, particularly the slope. Let's plot the data and the models to get a visual sense of what happened.
+
+```{r, fig.width = 6.75, fig.height = 3.25, message = F, warning = F}
+# the well-behaved data
+p1 <-
+  ggplot(data = d, aes(x = x, y = y)) +
+  stat_smooth(method = "lm", color = "grey92", fill = "grey67", alpha = 1, fullrange = T) +
+  geom_point(size = 1, alpha = 3/4) +
+  scale_x_continuous(limits = c(-4, 4)) +
+  coord_cartesian(xlim = c(-3, 3), 
+                  ylim = c(-3, 6)) +
+  labs(title = "No Outliers") +
+  theme(panel.grid = element_blank())
+
+# the data with two outliers
+p2 <-
+  ggplot(data = o, aes(x = x, y = y, color = y > 3)) +
+  stat_smooth(method = "lm", color = "grey92", fill = "grey67", alpha = 1, fullrange = T) +
+  geom_point(size = 1, alpha = 3/4) +
+  scale_color_viridis_d(option = "A", end = 4/7) +
+  scale_x_continuous(limits = c(-4, 4)) +
+  coord_cartesian(xlim = c(-3, 3), 
+                  ylim = c(-3, 6)) +
+  labs(title = "Two Outliers") +
+  theme(panel.grid = element_blank(),
+        legend.position = "none")
+
+# combine the ggplots with patchwork syntax
+library(patchwork)
+
+p1 + p2
+```
+
+The two outliers were quite influential on the slope. It went from a nice clear diagonal to almost horizontal. You'll also note how the 95% intervals (i.e., the bowtie shapes) were a bit wider when based on the `o` data.
+
+One of the popular ways to quantify outlier status is with Mahalanobis' distance. However, the Mahalanobis distance is primarily valid for multivariate normal data. Though the data in this example are indeed multivariate normal--or at least they were before we injected two outlying values into them--I am going to resist relying on Mahalanobis' distance. There are other more general approaches that will be of greater use when you need to explore other variants of the generalized linear model. The `broom::augment()` function will give us access to one.
+
+```{r}
+aug0 <- augment(ols0)
+aug1 <- augment(ols1)
+
+glimpse(aug1)
+```
+
+Here we can compare the observations with Cook's distance, $D_i$  (i.e., `.cooksd`). Cook's $D_i$ is a measure of the influence of a given observation on the model. To compute $D_i$, the model is fit once for each $n$ case, after first dropping that case. Then the difference in the model with all observations and the model with all observations but the $i$th observation, as defined by the Euclidean distance between the estimators. Fahrmeir et al [-@fahrmeirRegressionModelsMethods2013, p. 166] suggest that within the OLS framework "as a rule of thumb, observations with $D_i > 0.5$ are worthy of attention, and observations with $D_i > 1$ should always be examined." Here we plot $D_i$ against our observation index, $i$, for both models.
+
+```{r, fig.width = 8, fig.height = 3}
+bind_rows(
+  aug0 %>% mutate(i = 1:n()),  # the well-behaved data
+  aug1 %>% mutate(i = 1:n())   # the data with two outliers
+) %>%
+  mutate(fit = rep(c("fit b0", "fit b1"), each = n()/2)) %>%
+  ggplot(aes(x = i, y = .cooksd)) +
+  geom_hline(yintercept = .5, color = "white") +
+  geom_point(alpha = .5) +
+  geom_text(data = tibble(i = 46, 
+                          .cooksd = .53,
+                          fit = "fit b0"),
+            label = "Fahrmeir et al said we might worry around here",
+            color = "grey50") +
+  coord_cartesian(ylim = c(0, .8)) +
+  theme(panel.grid = element_blank(),
+        axis.title.x = element_text(face = "italic", family = "Times")) +
+    facet_wrap(~ fit)
+```
+
+For the model of the well-behaved data, `ols0`, we have $D_i$ values all hovering near zero. However, the plot for `ols1` shows one $D_i$ value well above the 0.5 level and another not quite that high but deviant relative to the rest. Our two outlier values look quite influential for the results of `ols1`.
+
+## Switch to a Bayesian framework
+
+It's time to fire up **brms**, the package with which we'll be fitting our Bayesian models. As with all Bayesian models, we'll need to us use priors. To keep things simple, we'll use weakly-regularizing priors of the sort [discussed by the Stan team](https://github.com/stan-dev/stan/wiki/Prior-Choice-Recommendations). For more thoughts on how to set priors, check out Kruschke's [-@kruschkeDoingBayesianData2015] text or either edition of McElreath's text [-@mcelreathStatisticalRethinkingBayesian2020; -@mcelreathStatisticalRethinkingBayesian2015].
+
+```{r, warning = F, message = F}
+library(brms)
+```
+
+### Stick with Gauss.
+
+For our first two Bayesian models, `b0` and `b1`, we'll use the conventional Gaussian likelihood (i.e., `family = gaussian` in the `brm()` function). Like with `ols0`, above, the first model is based on the nice `d` data. The second, `b1`, is based on the more-difficult `o` data.
+
+```{r b0, eval = F}
+b0 <- 
+  brm(data = d, 
+      family = gaussian,
+      y ~ 1 + x,
+      prior = c(prior(normal(0, 10), class = Intercept),
+                prior(normal(0, 10), class = b),
+                prior(cauchy(0, 1),  class = sigma)),
+      seed = 1)
+b1 <- 
+  update(b0, 
+         newdata = o,
+         seed = 1)
+```
+
+Here are the model summaries.
+
+```{r}
+posterior_summary(b0)[1:3, ] %>% round(digits = 2)
+posterior_summary(b1)[1:3, ] %>% round(digits = 2)
+```
+
+We summarized our model parameters with `brms::posterior_summary()` rather than `broom::tid()`. Otherwise, these should look familiar. They're very much like the results from the OLS models. Hopefully this isn't surprising. Our priors were quite weak, so there's no reason to suspect the results would differ much.
+
+#### The LOO and other goodies help with diagnostics.
+
+With the `loo()` function, we'll extract loo objects, which contain some handy output.
+
+```{r loo_b0_loo_b1, message = F, warning = F, results = 'hide'}
+loo_b0 <- loo(b0)
+loo_b1 <- loo(b1)
+```
+
+We'll use `str()` to get a sense of what's all in there, using `loo_b1` as an example.
+
+```{r}
+str(loo_b1)
+```
+
+For a detailed explanation of all those elements, see the [**loo** reference manual](https://CRAN.R-project.org/package=loo/loo.pdf) [@loo2020RM]. For our purposes, we'll focus on the `pareto_k`. Here's a glimpse of what it contains for the `b1` model.
+
+```{r}
+loo_b1$diagnostics$pareto_k %>% as_tibble()
+```
+
+We've got us a numeric vector of as many values as our data had observations--100 in this case. The `pareto_k` values can be used to examine overly-influential cases. See, for example [this discussion on stackoverflow.com](https://stackoverflow.com/questions/39578834/linear-model-diagnostics-for-bayesian-models-using-rstan/39595436) in which several members of the [Stan team](http://mc-stan.org) weighed in. The issue is also discussed in @vehtariPracticalBayesianModel2017, in the [**loo** reference manual](https://CRAN.R-project.org/package=loo/loo.pdf), and in [this presentation by Aki Vehtari](https://www.youtube.com/watch?v=FUROJM3u5HQ&feature=youtu.be&a=), himself. If we explicitly open the [**loo** package](https://CRAN.R-project.org/package=loo) [@R-loo], we can use a few convenience functions to leverage `pareto_k` for diagnostic purposes. The `pareto_k_table()` function will categorize the `pareto_k` values and give us a sense of how many values are in problematic ranges.
+
+```{r, warning = F, message = F}
+library(loo)
+
+pareto_k_table(loo_b1)
+```
+
+Happily, most of our cases were in the "good" range. One pesky case was in the "very bad" range [can you guess which one?] and another case was "bad" [and can you guess that one, too?]. The `pareto_k_ids()` function will tell exactly us which cases we'll want to look at.
+
+```{r}
+pareto_k_ids(loo_b1)
+```
+
+Those numbers correspond to the row numbers in the data, `o`. These are exactly the cases that plagued our second OLS model, `fit1`, and are also the ones we hand coded to be outliers. With the simple `plot()` function, we can get a diagnostic plot for the `pareto_k` values.
+
+```{r, fig.width = 5, fig.height = 3.5}
+plot(loo_b1)
+```
+
+There they are, cases 1 and 2, lurking in the "very bad" and "bad" ranges. We can also make a similar plot with **ggplot2**. Though it takes a little more work, **ggplot2** makes it easy to compare `pareto_k` plots across models with a little faceting.
+
+```{r, fig.width = 8, fig.height = 3}
+# for the annotation
+text <-
+  tibble(i     = 1, 
+         k     = c(.45, .65, .95),
+         label = c("good", "[just] ok", "bad"),
+         fit   = "fit b0")
+
+# extract the diagnostics
+tibble(k   = c(loo_b0$diagnostics$pareto_k, loo_b1$diagnostics$pareto_k),
+       i   = rep(1:100, times = 2),
+       fit = rep(str_c("fit b", 0:1), each = 100)) %>%
+  
+  # plot!
+  ggplot(aes(x = i, y = k)) +
+  geom_hline(yintercept = c(.5, .7, 1), color = "white") +
+  geom_point(alpha = .5) +
+  geom_text(data = text,
+            aes(label = label),
+            color = "grey50", hjust = 0) +
+  scale_y_continuous(expression(Pareto~italic(k)), breaks = c(0, .5, .7, 1)) +
+  theme(panel.grid = element_blank(),
+        axis.title.x = element_text(face = "italic", family = "Times")) +
+  facet_wrap(~ fit)
+```
+
+So with `b0`--the model based on the well-behaved multivariate normal data, `d`--, all the `pareto_k` values hovered around zero in the "good" range. Things got concerning with model `b1`. But we know all that. Let's move forward.
+
+#### What do we do with those overly-influential outlying values?
+
+A typical way to handle outlying values is to delete them based on some criterion, such as the Mahalanobis distance, Cook's $D_i$, or our new friend the `pareto_k`. In our next two models, we'll do that. In our `data` arguments, we can use the `slice()` function to omit cases. In model `b1.1`, we simply omit the first and most influential case. In model `b1.2`, we omitted both unduly-influential cases, the values from rows 1 and 2.
+
+```{r b1.1, eval = F}
+b1.1 <- 
+  update(b1, 
+         newdata = o %>% slice(2:100),
+         seed = 1)
+b1.2 <- 
+  update(b1, 
+         newdata = o %>% slice(3:100),
+         seed = 1)
+```
+
+Here are the summaries for our models based on the `slice[d]` data.
+
+```{r}
+posterior_summary(b1.1)[1:3, ] %>% round(digits = 2)
+posterior_summary(b1.2)[1:3, ] %>% round(digits = 2)
+```
+
+They are closer to the true data generating model (i.e., the code we used to make `d`), especially `b1.2`. However, there are other ways to handle the influential cases without dropping them. Finally, we're ready to switch to Student's $t$!
+
+### Time to leave Gauss for the more general Student's $t$
+
+Recall that the normal distribution is equivalent to a Student's $t$ with the degrees of freedom parameter, $\nu$, set to infinity. That is, $\nu$ is fixed. Here we'll relax that assumption and estimate $\nu$ from the data just like we estimate $\mu$ with the linear model and $\sigma$ as the residual spread. Since $\nu$'s now a parameter, we'll have to give it a prior. For our first Student's $t$ model, we'll estimate $\nu$ with the **brms** default `gamma(2, 0.1)` prior.
+
+```{r b2, eval = F}
+b2 <- 
+  brm(data = o, family = student,
+      y ~ 1 + x,
+      prior = c(prior(normal(0, 10), class = Intercept),
+                prior(normal(0, 10), class = b),
+                prior(gamma(2, 0.1), class = nu),
+                prior(cauchy(0, 1),  class = sigma)),
+      seed = 1)
+```
+
+For the next model, we'll switch out that weak `gamma(2, 0.1)` for a stronger `gamma(4, 1)`. In some disciplines, the gamma distribution is something of an exotic bird. So before fitting the model, it might be useful to take a peek at what these gamma priors looks like. In the plot, below, the orange density in the background is the default `gamma(2, 0.1)` and the purple density in the foreground is the stronger `gamma(4, 1)`.
+
+```{r, fig.width = 8, fig.height = 2.5}
+# data
+tibble(x = seq(from = 0, to = 60, by = .1)) %>% 
+  expand(x, nesting(alpha = c(2, 4), 
+                    beta  = c(0.1, 1))) %>% 
+  mutate(density = dgamma(x, alpha, beta),
+         group   = rep(letters[1:2], times = n() / 2)) %>% 
+  
+  # plot
+  ggplot(aes(x = x, y = density, 
+             group = group, fill = group)) +
+  geom_area(linewidth = 0, alpha = 3/4, position = "identity") +
+  scale_fill_viridis_d(option = "B", direction = -1, 
+                       begin = 1/3, end = 2/3) +
+  scale_x_continuous(expand = expansion(mult = c(0, 0.05))) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  coord_cartesian(xlim = c(0, 50)) +
+  theme(panel.grid = element_blank(),
+        legend.position = "none")
+```
+
+So the default prior is centered around values in the 2 to 30 range, but has a long gentle-sloping tail, allowing the model to yield much larger values for $\nu$, as needed. The prior we use below is almost entirely concentrated in the single-digit range. In this case, that will preference Student's $t$ likelihoods with very small $\nu$ parameters and correspondingly thick tails--easily allowing for extreme values.
+
+```{r b3, eval = F}
+b3 <- 
+  update(b2,
+         prior = c(prior(normal(0, 10), class = Intercept),
+                   prior(normal(0, 10), class = b),
+                   prior(gamma(4, 1),   class = nu),
+                   prior(cauchy(0, 1),  class = sigma)),
+         seed = 1)
+```
+
+For our final model, we'll fix the $\nu$ parameter in a `bf()` statement.
+
+```{r b4, eval = F}
+b4 <-
+  brm(data = o, family = student,
+      bf(y ~ 1 + x, nu = 4),
+      prior = c(prior(normal(0, 100), class = Intercept),
+                prior(normal(0, 10),  class = b),
+                prior(cauchy(0, 1),   class = sigma)),
+         seed = 1)
+```
+
+Now we've got all those models, we can gather their results into a single tibble.
+
+```{r}
+b_estimates <-
+  tibble(model = c("b0", "b1", "b1.1", "b1.2", "b2", "b3", "b4")) %>% 
+  mutate(fit = map(model, get)) %>% 
+  mutate(posterior_summary = map(fit, ~posterior_summary(.) %>% 
+                                   data.frame() %>% 
+                                   rownames_to_column("term"))) %>% 
+  unnest(posterior_summary) %>% 
+  select(-fit) %>% 
+  filter(term %in% c("b_Intercept", "b_x")) %>%
+  arrange(term)
+```
+
+To get a sense of what we've done, let's take a peek at our models tibble.
+
+```{r}
+b_estimates %>%
+  mutate_if(is.double, round, digits = 2)  # this is just to round the numbers
+```
+
+The models differ by their intercepts, slopes, sigmas, and $\nu$s. For the sake of this post, we'll focus on the slopes. Here we compare the different Bayesian models' slopes by their posterior means and 95% intervals in a coefficient plot.
+
+```{r, fig.width = 6, fig.height = 2}
+b_estimates %>%
+  filter(term == "b_x") %>% # b_Intercept b_x
+  
+  ggplot(aes(x = model)) +
+  geom_pointrange(aes(y    = Estimate,
+                      ymin = Q2.5,
+                      ymax = Q97.5),
+                  shape = 20) +
+  coord_flip(ylim = c(-.2, 1)) +
+  labs(title    = "The x slope, varying by model",
+       subtitle = "The dots are the posterior means and the lines the percentile-based 95% intervals.",
+       x        = NULL,
+       y        = NULL) +
+  theme(panel.grid   = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.y  = element_text(hjust = 0))
+```
+
+You might think of the `b0` slope as the "true" slope. That's the one estimated from the well-behaved multivariate normal data, `d`. That estimate's just where we'd want it to be. The `b1` slope is a disaster--way lower than the others. The slopes for `b1.1` and `b1.2` get better, but at the expense of deleting data. All three of our Student's $t$ models produced slopes that were pretty close to the `b0` slope. They weren't perfect, but, all in all, Student's $t$-distribution did pretty okay.
+
+### We need more LOO and more `pareto_k`.
+
+We already have loo objects for our first two models, `b0` and `b1`. Let's get some for models `b2` through `b4`.
+
+```{r loo_b2_loo_b4, message = F, warning = F}
+loo_b2 <- loo(b2)
+loo_b3 <- loo(b3)
+loo_b4 <- loo(b4)
+```
+
+With a little data wrangling, we can compare our models by how they look in our custom `pareto_k` diagnostic plots.
+
+```{r, fig.width = 8, fig.height = 5}
+# make a custom function to work with the loo objects in bulk
+get_pareto_k <- function(l) {
+  l$diagnostics$pareto_k %>% 
+    as_tibble() %>%
+    mutate(i = 1:n()) %>% 
+    rename(pareto_k = value)
+}
+
+# wrangle
+tibble(name = str_c("loo_b", 1:4)) %>% 
+  mutate(loo_object = map(name, get)) %>% 
+  mutate(pareto_k = map(loo_object, get_pareto_k)) %>% 
+  unnest(pareto_k) %>% 
+  mutate(fit = rep(c("fit b1", "fit b2", "fit b3", "fit b4"), each = n() / 4)) %>%
+  
+  # plot
+  ggplot(aes(x = i, y = pareto_k)) +
+  geom_hline(yintercept = c(.5, .7),
+             color = "white") +
+  geom_point(alpha = .5) +
+  scale_y_continuous(expression(Pareto~italic(k)), breaks = c(0, .5, .7)) +
+  theme(panel.grid = element_blank(),
+        axis.title.x = element_text(face = "italic", family = "Times")) +
+    facet_wrap(~ fit)
+```
+
+Oh man, those Student's $t$ models worked sweet! In a succession from `b2` through `b4`, each model looked better by `pareto_k`. All were way better than the typical Gaussian model, `b1`. While we're at it, we might compare those by their LOO values.
+
+```{r}
+loo_compare(loo_b1, loo_b2, loo_b3, loo_b4) %>% print(simplify = F)
+```
+
+In terms of the LOO, `b2` through `b4` were about the same, but all looked better than `b1`. In fairness, though, the standard errors for the difference scores were a bit on the wide side.
+If you're new to using information criteria to compare models, you might sit down and soak in [one of McElreath's lectures on the topic](https://www.youtube.com/watch?v=t0pRuy1_190&list=PLDcUM9US4XdM9_N6XUUFrhghGJ4K25bFc&index=8) or the [-@vehtariUsingLooPackage2020] vignette by Vehtari and Gabry, [*Using the loo package (version >= 2.0.0)*](https://cran.r-project.org/web/packages/loo/vignettes/loo2-example.html#plotting-pareto-k-diagnostics). For a more technical introduction, you might check out the references in the **loo** package's [reference manual](https://CRAN.R-project.org/package=loo).
+
+For one final LOO-related comparison, we can use the `brms::model_weights()` function to see how much relative weight we might put on each of those four models if we were to use a model averaging approach. Here we use the default method, which is model averaging via posterior predictive stacking.
+
+```{r mw, warning = F, message = F}
+model_weights(b1, b2, b3, b4)
+```
+
+If you're not a fan of scientific notation, just tack on `round(digits = 2)`. The stacking method suggests that we should place virtually all the weight on `b4`, the model in which we fixed our Student-$t$ $\nu$ parameter at 4. To learn more about model stacking, check out Yao, Vehtari, Simpson, and Gelman's [-@yaoUsingStackingAverage2018] paper, [*Using stacking to average Bayesian predictive distributions*](https://projecteuclid.org/euclid.ba/1516093227).
+
+### Let's compare a few Bayesian models.
+
+That's enough with coefficients, `pareto_k`, and the LOO. Let's get a sense of the implications of the models by comparing a few in plots. Here we use convenience functions from [Matthew Kay](https://twitter.com/mjskay)'s [-@R-tidybayes] [**tidybayes** package](http://mjskay.github.io/tidybayes) to streamline the data wrangling and plotting. The method came from a [kind twitter suggesion from Kay](https://twitter.com/mjskay/status/1091926564101599232).
+
+```{r, fig.width = 8, fig.height = 3, warning = F, message = F}
+library(tidybayes)
+
+# these are the values of x we'd like model-implied summaries for
+nd <- tibble(x = seq(from = -4, to = 4, length.out = 50))
+
+# here's another way to arrange the models
+list(b0 = b0, b1 = b1, b3 = b3) %>% 
+  # with help from `tidybayes::add_fitted_draws()`, here we use `fitted()` in bulk
+  map_dfr(add_fitted_draws, newdata = nd, .id = "model") %>% 
+  
+  # plot
+  ggplot(aes(x = x)) +
+  stat_lineribbon(aes(y = .value),
+                  .width = .95,
+                  color = "grey92", fill = "grey67") +
+  geom_point(data = d %>%
+               bind_rows(o, o) %>%
+               mutate(model = rep(c("b0", "b1", "b3"), each = 100)), 
+             aes(y = y, color = y > 3),
+             size = 1, alpha = 3/4) +
+  scale_color_viridis_d(option = "A", end = 4/7) +
+  coord_cartesian(xlim = c(-3, 3), 
+                  ylim = c(-3, 6)) +
+  ylab(NULL) +
+  theme(panel.grid = element_blank(),
+        legend.position = "none") +
+  facet_wrap(~ model)
+```
+
+For each subplot, the gray band is the 95% interval band and the overlapping light gray line is the posterior mean. Model `b0`, recall, is our baseline comparison model. This is of the well-behaved no-outlier data, `d`, using the good old Gaussian likelihood. Model `b1` is of the outlier data, `o`, but still using the non-robust Gaussian likelihood. Model `b3` uses a robust Student's $t$ likelihood with $\nu$ estimated with the fairly narrow `gamma(4, 1)` prior. For my money, `b3` did a pretty good job.
+
+```{r}
+sessionInfo()
+```
+
+## References
+
+```{r, fig.width = 3.5, fig.height = 3.25, eval = F, echo = F}
+tibble(x = seq(from = -6, to = 6, by = .01)) %>% 
+  expand(x, nu = c(1, 2.5, 5, 10, Inf)) %>% 
+  mutate(density = dt(x = x, df = nu),
+         nu      = factor(nu, levels = c("Inf", "10", "5", "2.5", "1"))) %>% 
+  
+  ggplot(aes(x = x, y = density, group = nu, color = nu)) +
+  geom_line(linewidth = 1) +
+  scale_color_viridis_d(expression(nu),
+                        direction = 1, option = "C", end = .85) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  coord_cartesian(xlim = c(-5, 5)) +
+  xlab(NULL) +
+  theme(legend.background = element_rect(fill = "grey95"),
+        legend.key = element_rect(fill = "transparent"),
+        legend.position = c(.88, .73),
+        panel.grid = element_blank())
+
+ggsave("t-densities-featured.jpg", width = 4, height = 3.5, units = "in")
+```
+
