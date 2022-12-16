@@ -1,7 +1,7 @@
 ---
 title: "Support"
 author: "A. Solomon Kurz"
-date: "2022-12-15"
+date: "2022-12-16"
 output:
   html_document:
     df_print: paged
@@ -14,7 +14,7 @@ show_title_as_headline: false
 
 ## Yes, you can support me
 
-Every so often, people ask how they might support the work I do with my tutorial [blog posts](https://solomonkurz.netlify.app/post/) and [ebooks](https://solomonkurz.netlify.app/bookdown/). Here are some options:
+Every so often, people ask how they might support the work I do with my tutorial [blog posts](https://solomonkurz.netlify.app/blog/) and [ebooks](https://solomonkurz.netlify.app/book/). Here are some options:
 
 * If you like my material, give it a shout out on Twitter! You can find me there at [https://twitter.com/SolomonKurz](https://twitter.com/SolomonKurz).
 
