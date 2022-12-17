@@ -15,9 +15,9 @@ tags:
 - tutorial
 lastmod: '2022-10-11T11:13:04-05:00'
 featured: no
-bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
-csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 ---
 
@@ -29,7 +29,7 @@ All the players know there are three major ways to handle missing data:
 -   multiple imputation, and
 -   one-step full-luxury[^1] Bayesian imputation.
 
-In an [earlier post](https://solomonkurz.netlify.app/post/2021-10-21-if-you-fit-a-model-with-multiply-imputed-data-you-can-still-plot-the-line/), we walked through method for plotting the fitted lines from models fit with multiply-imputed data. In this post, we’ll discuss another neglected topic: *How might one compute* **standardized regression coefficients** *from models fit with multiply-imputed data?*
+In an [earlier post](https://solomonkurz.netlify.app/blog/2021-10-21-if-you-fit-a-model-with-multiply-imputed-data-you-can-still-plot-the-line/), we walked through method for plotting the fitted lines from models fit with multiply-imputed data. In this post, we’ll discuss another neglected topic: *How might one compute* **standardized regression coefficients** *from models fit with multiply-imputed data?*
 
 ### I make assumptions.
 
@@ -180,7 +180,7 @@ summary(pooled2, conf.int = T)
 
 The standardized regression coefficient for `bmi` is `\(0.33\)`, `\(95\% \text{CI}\)` `\([-0.21, 0.86]\)`. As we only have one predictor, the standardized coefficient is in a correlation metric, which makes it easy to interpret the point estimate.
 
-Just for kicks, here’s how you might plot the pooled fitted line and its pooled 95% interval using the method from an [earlier post](https://solomonkurz.netlify.app/post/2021-10-21-if-you-fit-a-model-with-multiply-imputed-data-you-can-still-plot-the-line/).
+Just for kicks, here’s how you might plot the pooled fitted line and its pooled 95% interval using the method from an [earlier post](https://solomonkurz.netlify.app/blog/2021-10-21-if-you-fit-a-model-with-multiply-imputed-data-you-can-still-plot-the-line/).
 
 ``` r
 # define the total number of imputations
@@ -401,4 +401,4 @@ Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L. D., François, R., G
 
 </div>
 
-[^1]: Be warned that “full-luxury Bayesian …” isn’t a real term. It’s just a playful term Richard McElreath coined a while back. To hear him use it in action, check out his [nifty talk](https://youtu.be/KNPYUVmY3NM) on causal inference. One-step Bayesian imputation is a real thing, though. McElreath covered it in both editions of his text and I’ve even blogged about it [here](https://solomonkurz.netlify.app/post/2021-07-27-one-step-bayesian-imputation-when-you-have-dropout-in-your-rct/).
+[^1]: Be warned that “full-luxury Bayesian …” isn’t a real term. It’s just a playful term Richard McElreath coined a while back. To hear him use it in action, check out his [nifty talk](https://youtu.be/KNPYUVmY3NM) on causal inference. One-step Bayesian imputation is a real thing, though. McElreath covered it in both editions of his text and I’ve even blogged about it [here](https://solomonkurz.netlify.app/blog/2021-07-27-one-step-bayesian-imputation-when-you-have-dropout-in-your-rct/).
