@@ -15,7 +15,7 @@ tags:
 - tidyverse
 - tutorial
 lastmod: '2021-04-21T20:38:33-07:00'
-featured: no
+featured: noblog
 bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
 csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
@@ -28,7 +28,7 @@ Edited on December 11, 2022, to use the new `as_draws_df()` workflow.
 
 ## Orientation
 
-So far we’ve covered Bayesian power simulations from both a null hypothesis orientation (see [part I](https://solomonkurz.netlify.com/post/bayesian-power-analysis-part-i/)) and a parameter width perspective (see [part II](https://solomonkurz.netlify.com/post/bayesian-power-analysis-part-ii/)). In both instances, we kept things simple and stayed with Gaussian (i.e., normally distributed) data. But not all data follow that form, so it might do us well to expand our skill set a bit. In the next few posts, we’ll cover how we might perform power simulations with other kinds of data. In this post, we’ll focus on how to use the Poisson likelihood to model counts. In follow-up posts, we’ll explore how to model binary and Likert-type data.
+So far we’ve covered Bayesian power simulations from both a null hypothesis orientation (see [part I](https://solomonkurz.netlify.com/blog/bayesian-power-analysis-part-i/)) and a parameter width perspective (see [part II](https://solomonkurz.netlify.com/blog/bayesian-power-analysis-part-ii/)). In both instances, we kept things simple and stayed with Gaussian (i.e., normally distributed) data. But not all data follow that form, so it might do us well to expand our skill set a bit. In the next few posts, we’ll cover how we might perform power simulations with other kinds of data. In this post, we’ll focus on how to use the Poisson likelihood to model counts. In follow-up posts, we’ll explore how to model binary and Likert-type data.
 
 ## The Poisson distribution is handy for counts.
 
@@ -425,7 +425,7 @@ sim4 %>%
 
 Nice! If we want a mean width of 1, it looks like we’re a little *overpowered* with `\(n = 100\)`. The next step would be to up your iterations to 1,000 or so to run a properly-sized simulation.
 
-Now you’ve got a sense of how to work with the Poisson likelihood, [next time](https://solomonkurz.netlify.app/post/bayesian-power-analysis-part-iii-b/) we’ll play with binary data.
+Now you’ve got a sense of how to work with the Poisson likelihood, [next time](https://solomonkurz.netlify.app/blog/bayesian-power-analysis-part-iii-b/) we’ll play with binary data.
 
 ## Session info
 

@@ -577,7 +577,7 @@ Anyway, that's the essence of the **brms/tidyverse** workflow for Bayesian power
 7. Extract the parameter(s) of interest.
 8. Summarize.
 
-In addition, we played with a few approaches based on logistical concerns like memory. In the next post, [part II](https://solomonkurz.netlify.app/post/bayesian-power-analysis-part-ii/), we'll see how the precision-oriented approach to sample-size planning is a viable alternative to power focused on rejecting null hypotheses.
+In addition, we played with a few approaches based on logistical concerns like memory. In the next post, [part II](https://solomonkurz.netlify.app/blog/bayesian-power-analysis-part-ii/), we'll see how the precision-oriented approach to sample-size planning is a viable alternative to power focused on rejecting null hypotheses.
 
 ## I had help.
 

@@ -17,9 +17,9 @@ tags:
 - tutorial
 lastmod: '2021-04-21T21:12:25-07:00'
 featured: no
-bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
-csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 ---
 ```{r, echo = F}
@@ -42,7 +42,7 @@ Edited on December 11, 2022, to use the new `as_draws_df()` workflow.
 
 ## Orientation
 
-In the [last post](https://solomonkurz.netlify.com/post/bayesian-power-analysis-part-iii-a/), we covered how the Poisson distribution is handy for modeling count data. Binary data are even weirder than counts. They typically only take on two values: 0 and 1. Sometimes 0 is a stand-in for "no" and 1 for "yes" (e.g., *Are you an expert in Bayesian power analysis?* For me that would be `0`). You can also have data of this kind if you asked people whether they'd like to choose option A or B. With those kinds of data, you might arbitrarily code A as 0 and B as 1. Binary data also often stand in for trials where 0 = "fail" and 1 = "success." For example, if you answered "Yes" to the question *Are all data normally distributed?* we'd mark your answer down as a `0`.
+In the [last post](https://solomonkurz.netlify.com/blog/bayesian-power-analysis-part-iii-a/), we covered how the Poisson distribution is handy for modeling count data. Binary data are even weirder than counts. They typically only take on two values: 0 and 1. Sometimes 0 is a stand-in for "no" and 1 for "yes" (e.g., *Are you an expert in Bayesian power analysis?* For me that would be `0`). You can also have data of this kind if you asked people whether they'd like to choose option A or B. With those kinds of data, you might arbitrarily code A as 0 and B as 1. Binary data also often stand in for trials where 0 = "fail" and 1 = "success." For example, if you answered "Yes" to the question *Are all data normally distributed?* we'd mark your answer down as a `0`.
 
 Though 0's and 1's are popular, sometimes binary data appear in their aggregated form. Let's say I gave you 10 algebra questions and you got 7 of them right. Here's one way to encode those data.
 

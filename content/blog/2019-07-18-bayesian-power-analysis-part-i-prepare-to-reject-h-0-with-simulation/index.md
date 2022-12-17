@@ -15,9 +15,9 @@ tags:
 - tutorial
 lastmod: '2021-04-21T17:33:23-07:00'
 featured: no
-bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
-csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 ---
 
@@ -672,7 +672,7 @@ Anyway, that’s the essence of the **brms/tidyverse** workflow for Bayesian pow
 7.  Extract the parameter(s) of interest.
 8.  Summarize.
 
-In addition, we played with a few approaches based on logistical concerns like memory. In the next post, [part II](https://solomonkurz.netlify.app/post/bayesian-power-analysis-part-ii/), we’ll see how the precision-oriented approach to sample-size planning is a viable alternative to power focused on rejecting null hypotheses.
+In addition, we played with a few approaches based on logistical concerns like memory. In the next post, [part II](https://solomonkurz.netlify.app/blog/bayesian-power-analysis-part-ii/), we’ll see how the precision-oriented approach to sample-size planning is a viable alternative to power focused on rejecting null hypotheses.
 
 ## I had help.
 

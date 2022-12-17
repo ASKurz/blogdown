@@ -44,7 +44,7 @@ This post is a direct consequence of Adrian Baez-Ortega's great blog, "[Bayesian
 
 For this post, I'm presuming you are vaguely familiar with linear regression, know about the basic differences between frequentist and Bayesian approaches to fitting models, and have a sense that the issue of outlier values is a pickle worth contending with. All code in is [R](https://www.r-bloggers.com/why-use-r-five-reasons/), with a heavy use of the [tidyverse](http://style.tidyverse.org)--which you might learn a lot about [here, especially chapter 5](http://r4ds.had.co.nzhttp://r4ds.had.co.nz)--, and, of course, Bürkner's [brms](https://github.com/paul-buerkner/brms).
 
-If you'd like a warmup, consider checking out my related post, [Robust Linear Regression with Student's $t$-Distribution](https://solomonkurz.netlify.com/post/robust-linear-regression-with-the-robust-student-s-t-distribution/).
+If you'd like a warmup, consider checking out my related post, [Robust Linear Regression with Student's $t$-Distribution](https://solomonkurz.netlify.com/blog/robust-linear-regression-with-the-robust-student-s-t-distribution/).
 
 ## What's the deal?
 

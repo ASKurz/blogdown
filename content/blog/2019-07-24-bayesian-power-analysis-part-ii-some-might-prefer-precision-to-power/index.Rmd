@@ -53,9 +53,9 @@ When researchers decide on a sample size for an upcoming project, there are more
 
 ## Are Bayesians doomed to refer to $H_0$ [^1] with sample-size planning?
 
-If you read the first post in this series (click [here](https://solomonkurz.netlify.app/post/bayesian-power-analysis-part-i/) for a refresher), you may have found yourself thinking: *Sure, last time you avoided computing $p$-values with your 95% Bayesian credible intervals. But weren't you still operating like a NHSTesting frequentist with all that $H_0 / H_1$ talk?*
+If you read the first post in this series (click [here](https://solomonkurz.netlify.app/blog/bayesian-power-analysis-part-i/) for a refresher), you may have found yourself thinking: *Sure, last time you avoided computing $p$-values with your 95% Bayesian credible intervals. But weren't you still operating like a NHSTesting frequentist with all that $H_0 / H_1$ talk?*
 
-Solid criticism. We didn't even bother discussing all the type-I versus type-II error details. Yet they too were lurking in the background the way we just chose the typical .8 power benchmark. That's not to say that a $p$-value oriented approach isn't legitimate. It's certainly congruent with what most reviewers would expect [^2]. But this all seems at odds with a model-oriented Bayesian approach, which is what I generally prefer. Happily, we have other options to explore.
+Solid criticism. We didn't even bother discussing all the type-I versus type-II error details. Yet they too were lurking in the background the way we just chose the typical .8 power benchmark. That's not to say that a $p$-value oriented approach isn't legitimate. It's certainly congruent with what most reviewers would expect[^2]. But this all seems at odds with a model-oriented Bayesian approach, which is what I generally prefer. Happily, we have other options to explore.
 
 ## Let's just pick up where we left off.
 
@@ -419,7 +419,7 @@ Nope, we're not there yet. Perhaps $n = 200$ or $250$ is the ticket. This is an 
 
 Maybe you should write a dissertation on it.
 
-Regardless, get ready for [part III](https://solomonkurz.netlify.app/post/bayesian-power-analysis-part-iii-a/) where we'll liberate ourselves from the tyranny of the Gauss.
+Regardless, get ready for [part III](https://solomonkurz.netlify.app/blog/bayesian-power-analysis-part-iii-a/) where we'll liberate ourselves from the tyranny of the Gauss.
 
 ## Session info
 

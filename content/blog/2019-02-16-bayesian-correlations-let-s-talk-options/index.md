@@ -27,7 +27,7 @@ There’s more than one way to fit a Bayesian correlation in brms.
 
 ## Here’s the deal.
 
-In the last post, we considered how we might estimate correlations when our data contain influential outlier values. Our big insight was that if we use variants of Student’s `\(t\)`-distribution as the likelihood rather than the conventional normal distribution, our correlation estimates were less influenced by those outliers. And we mainly did that as Bayesians using the [brms package](https://github.com/paul-buerkner/brms). Click [here](https://solomonkurz.netlify.com/post/bayesian-robust-correlations-with-brms-and-why-you-should-love-student-s-t/) for a refresher.
+In the last post, we considered how we might estimate correlations when our data contain influential outlier values. Our big insight was that if we use variants of Student’s `\(t\)`-distribution as the likelihood rather than the conventional normal distribution, our correlation estimates were less influenced by those outliers. And we mainly did that as Bayesians using the [brms package](https://github.com/paul-buerkner/brms). Click [here](https://solomonkurz.netlify.com/blog/bayesian-robust-correlations-with-brms-and-why-you-should-love-student-s-t/) for a refresher.
 
 Since the brms package is designed to fit regression models, [it can be surprising](https://twitter.com/tjmahr/status/1094808459239981056) when you discover it’s handy for correlations, too. In short, you can fit them using a few tricks based on the [multivariate syntax](https://cran.r-project.org/web/packages/brms/vignettes/brms_multivariate.html).
 

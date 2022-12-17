@@ -138,7 +138,7 @@ Let’s review what we’ve covered so far. With Simpson’s paradox, we learned
 
 The ecological fallacy demonstrated something similar, but from a different angle. That literature showed us that the results from a between-person analysis will not necessarily inform us of within-person processes. The converse is true, too. Indeed, the ecological fallacy is something of a special case of Simpson’s paradox. With the ecological fallacy, the grouping variable is participant id which, when accounted for, yields a different level of analysis[^3].
 
-With both validity threats, the results of a given analysis can attenuate, go to zero, or even switch sign. With the Berkeley example in the [previous post](https://solomonkurz.netlify.com/post/individuals-are-not-small-groups-i-simpson-s-paradox/), the relation went to zero. With our simulated data inspired by Hamaker’s example, the effect size went from a large negative cross-sectional correlation to a bundle of small/medium *positive* within-person correlations. These are non-trivial changes.
+With both validity threats, the results of a given analysis can attenuate, go to zero, or even switch sign. With the Berkeley example in the [previous post](https://solomonkurz.netlify.com/blog/individuals-are-not-small-groups-i-simpson-s-paradox/), the relation went to zero. With our simulated data inspired by Hamaker’s example, the effect size went from a large negative cross-sectional correlation to a bundle of small/medium *positive* within-person correlations. These are non-trivial changes.
 
 If at this point you find yourself fatigued and your head hurts a little, don’t worry. You’re probably normal. In a series of experiments, [Fiedler, Walther, Freytag, and Nickel (2003)](http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.839.8878&rep=rep1&type=pdf) showed it’s quite normal to struggle with these concepts. For more practice, check out Kievit, Frankenhuis, Waldorp, and Borsboom’s nice (2013) paper, [*Simpson’s paradox in psychological science: a practical guide*](https://www.frontiersin.org/articles/10.3389/fpsyg.2013.00513). Kuppens and Pollet (2014) covered more examples of the ecological fallacy in their [*Mind the level: problems with two recent nation-level analyses in psychology*](https://www.frontiersin.org/articles/10.3389/fpsyg.2014.01110/full#h5). I’ve also worked out and posted the example of the ecological fallacy from Thorndike’s (1939) paper, which you can find [here](https://github.com/ASKurz/ecological_fallacy_Thorndike/tree/master).
 
@@ -256,7 +256,7 @@ sessionInfo()
 
 ## Footnotes
 
-[^1]: Do you need a refresher on Simpson’s paradox? Click [here](https://solomonkurz.netlify.com/post/individuals-are-not-small-groups-i-simpson-s-paradox/).
+[^1]: Do you need a refresher on Simpson’s paradox? Click [here](https://solomonkurz.netlify.com/blog/individuals-are-not-small-groups-i-simpson-s-paradox/).
 
 [^2]: The page numbers in this section might could use some clarifications. It’s a bit of a pain to locate a PDF of Robinson’s original 1950 paper. If you do a casual online search, it’s more likely you’ll come across [this 2009 reprint of the paper](https://academic.oup.com/ije/article/38/2/337/658252). To the best of my knowledge, the reprint is faithful. For all the Robinson quotes in this post, the page numbers are based on the 2009 reprint.
 
