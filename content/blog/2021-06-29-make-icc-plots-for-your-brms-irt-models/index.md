@@ -16,9 +16,9 @@ tags:
 - tutorial
 lastmod: '2021-06-29T11:22:57-05:00'
 featured: no
-bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
-csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 ---
 
@@ -818,7 +818,7 @@ Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L. D., François, R., G
 
 [^1]: I should disclose that although I have not read through Bonifay’s ([2019](#ref-bonifayMultidimensionalIRT2019)) text, he offered to send me a copy around the time I uploaded this post.
 
-[^2]: You can find a copy of these data on my GitHub [here](https://github.com/ASKurz/blogdown/tree/main/content/post/2021-06-29-make-icc-plots-for-your-brms-irt-models/data).
+[^2]: You can find a copy of these data on my GitHub [here](https://github.com/ASKurz/blogdown/tree/main/content/blog/2021-06-29-make-icc-plots-for-your-brms-irt-models/data).
 
 [^3]: Adopting the three-term multilevel structure–$\beta_0 + \theta_p + \xi_i$, where the latter two terms are `\(\operatorname{Normal}(0, \sigma_x)\)`–places this form of the 1PL model squarely within the generalized linear multilevel model (GLMM). McElreath ([2015, Chapter 12](#ref-mcelreathStatisticalRethinkingBayesian2015)) referred to this particular model type as a cross-classified model. Coming from another perspective, Kruschke ([2015, Chapter 19](#ref-kruschkeDoingBayesianData2015) and 20) described this as a kind of multilevel analysis of variance (ANOVA).
 

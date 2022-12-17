@@ -12,9 +12,9 @@ tags:
 - tutorial
 lastmod: '2021-05-11T09:35:30-05:00'
 featured: no
-bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
-csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 ---
 
@@ -370,4 +370,4 @@ Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L. D., François, R., G
 
 </div>
 
-[^1]: You can download the `ds.rda` file from my GitHub, [here](https://github.com/ASKurz/blogdown/blob/main/content/post/2021-05-11-yes-you-can-fit-an-exploratory-factor-analysis-with-lavaan/data/ds.rda).
+[^1]: You can download the `ds.rda` file from my GitHub, [here](https://github.com/ASKurz/blogdown/blob/main/content/blog/2021-05-11-yes-you-can-fit-an-exploratory-factor-analysis-with-lavaan/data/ds.rda).

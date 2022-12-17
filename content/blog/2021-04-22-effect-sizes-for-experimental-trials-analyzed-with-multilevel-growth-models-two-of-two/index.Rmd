@@ -17,9 +17,9 @@ tags:
 - tutorial
 lastmod: '2021-04-25T20:29:48-07:00'
 featured: no
-bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
-csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 ---
 
@@ -42,11 +42,11 @@ Edited on December 12, 2022, to use the new `as_draws_df()` workflow.
 
 ## Orientation
 
-This post is the second and final installment of a two-part series. In the [first post](https://solomonkurz.netlify.app/post/2021-01-26-effect-sizes-for-experimental-trials-analyzed-with-multilevel-growth-models-one-of-two/), we explored how one might compute an effect size for two-group experimental data with only $2$ time points. In this second post, we fulfill our goal to show how to generalize this framework to experimental data collected over $3+$ time points. The data and overall framework come from @feingoldEffectSizeForGMA2009.
+This post is the second and final installment of a two-part series. In the [first post](https://solomonkurz.netlify.app/blog/2021-01-26-effect-sizes-for-experimental-trials-analyzed-with-multilevel-growth-models-one-of-two/), we explored how one might compute an effect size for two-group experimental data with only $2$ time points. In this second post, we fulfill our goal to show how to generalize this framework to experimental data collected over $3+$ time points. The data and overall framework come from @feingoldEffectSizeForGMA2009.
 
 ### I still make assumptions.
 
-As with the [first post](https://solomonkurz.netlify.app/post/2021-01-26-effect-sizes-for-experimental-trials-analyzed-with-multilevel-growth-models-one-of-two/#i-make-assumptions.), I make a handful of assumptions about your background knowledge. Though I won't spell them out again, here, I should stress that you'll want to be familiar with multilevel models to get the most out of this post. To brush up, I recommend @raudenbushHLM2002, @singerAppliedLongitudinalData2003, or @hoffmanLongitudinalAnalysisModeling2015.
+As with the [first post](https://solomonkurz.netlify.app/blog/2021-01-26-effect-sizes-for-experimental-trials-analyzed-with-multilevel-growth-models-one-of-two/#i-make-assumptions.), I make a handful of assumptions about your background knowledge. Though I won't spell them out again, here, I should stress that you'll want to be familiar with multilevel models to get the most out of this post. To brush up, I recommend @raudenbushHLM2002, @singerAppliedLongitudinalData2003, or @hoffmanLongitudinalAnalysisModeling2015.
 
 As before, all code is in **R** [@R-base]. Here we load our primary **R** packages--[**brms**](https://github.com/paul-buerkner/brms) [@R-brms; @burknerBrmsPackageBayesian2017; @burknerAdvancedBayesianMultilevel2018], [**tidybayes**](https://mjskay.github.io/tidybayes/) [@R-tidybayes], and the [**tidyverse**](http://style.tidyverse.org) [@R-tidyverse; @wickhamWelcomeTidyverse2019]--and adjust the global plotting theme defaults.
 
@@ -476,6 +476,6 @@ as_draws_df(fit1) %>%
   scale_y_continuous(NULL, breaks = NULL) +
   xlab(expression(italic(d)[GMA-raw]~("standardized difference in change scores")))
 
-ggsave("featured.jpg", width = 3.6, height = 3.5, units = "in")
+ggsave("d-gma-raw-featured.jpg", width = 3.6, height = 3.5, units = "in")
 ```
 

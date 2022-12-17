@@ -14,9 +14,9 @@ tags:
 - tutorial
 lastmod: '2022-03-05T08:45:58-06:00'
 featured: no
-bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
-csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 
 disable_codefolding: false
@@ -26,7 +26,7 @@ codefolding_nobutton: false
 
 ## Preamble
 
-In [an earlier post](https://solomonkurz.netlify.app/post/2021-07-02-example-power-analysis-report/), I gave an example of what a power analysis report could look like for a multilevel model. At my day job, I was recently asked for a rush-job power analysis that required a multilevel model of a different kind and it seemed like a good opportunity to share another example. 
+In [an earlier post](https://solomonkurz.netlify.app/blog/2021-07-02-example-power-analysis-report/), I gave an example of what a power analysis report could look like for a multilevel model. At my day job, I was recently asked for a rush-job power analysis that required a multilevel model of a different kind and it seemed like a good opportunity to share another example. 
 
 For the sake of confidentiality, some of the original content will be omitted or slightly altered. But the overall workflow is about $95\%$ faithful to the original report I submitted to my boss. To understand this report, you should know:
 

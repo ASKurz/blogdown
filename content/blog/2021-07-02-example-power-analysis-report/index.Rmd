@@ -14,9 +14,9 @@ tags:
 - tutorial
 lastmod: '2021-07-02T11:15:08-05:00'
 featured: no
-bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
-csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 
 disable_codefolding: false
@@ -438,5 +438,5 @@ bind_rows(
         panel.grid.minor.y = element_blank()) +
   facet_wrap(~missing)
 
-ggsave("featured.jpg", width = 3.6, height = 3.5, units = "in")
+ggsave("power-curves-featured.jpg", width = 3.6, height = 3.5, units = "in")
 ```

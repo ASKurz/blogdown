@@ -15,9 +15,9 @@ tags:
 - tutorial
 lastmod: '2021-06-05T10:04:58-05:00'
 featured: no
-bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
-csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl
 link-citations: yes
 ---
 
@@ -87,7 +87,7 @@ The color palette in this post is inspired by [Frida Kahlo](https://en.wikipedia
 I'm not at liberty to share the original data. However, I have simulated a new data set that has the essential features of the original and I have saved the file on GitHub. You can load it like this.
 
 ```{r}
-load(url("https://github.com/ASKurz/blogdown/raw/main/content/post/2021-06-05-don-t-forget-your-inits/data/dat.rda?raw=true"))
+load(url("https://github.com/ASKurz/blogdown/raw/main/content/blog/2021-06-05-don-t-forget-your-inits/data/dat.rda?raw=true"))
 
 # what is this?
 glimpse(dat)
@@ -425,6 +425,6 @@ theme_set(
 #   theme(panel.background = element_rect(fill = "#ebe8dc", color = "transparent"),
 #         plot.background = element_rect(fill = "#f2f0e9", color = "transparent"))
 
-ggsave("featured.jpg", width = 3.6, height = 3.5, units = "in")
+ggsave("trace-plot-featured.jpg", width = 3.6, height = 3.5, units = "in")
 ```
 

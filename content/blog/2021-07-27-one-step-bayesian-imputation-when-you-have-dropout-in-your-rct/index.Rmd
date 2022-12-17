@@ -16,9 +16,9 @@ tags:
 - tutorial
 lastmod: '2021-07-27T11:32:52-05:00'
 featured: no
-bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
-csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 ---
 
@@ -154,7 +154,7 @@ We'll be analyzing the RCT data in two ways. First, we'll fit a model on the ver
 
 ### Fit the models.
 
-There are a lot of ways to analyze pre/post RCT data. To get a sense of the various strategies, see [this chapter](https://www.middleprofessor.com/files/applied-biostatistics_bookdown/_book/models-for-longitudinal-experiments-pre-post-designs.html) in Jeffrey Walker's free [-@walkerElementsOfStatisticalModeling2018] text and my [complimentary blog post](https://solomonkurz.netlify.app/post/2020-12-29-regression-models-for-2-timepoint-non-experimental-data/) on pre/post non-experimental data. In this post, we'll be taking the multivariate approach where we simultaneously model `pre` and `post` as bivariate normal, such that both the mean and standard deviation parameters for both vary depending on the experimental condition (`tx`). Importantly, the correlation between `pre` and `post` is captured in the correlation between the two residual standard deviation parameters.
+There are a lot of ways to analyze pre/post RCT data. To get a sense of the various strategies, see [this chapter](https://www.middleprofessor.com/files/applied-biostatistics_bookdown/_book/models-for-longitudinal-experiments-pre-post-designs.html) in Jeffrey Walker's free [-@walkerElementsOfStatisticalModeling2018] text and my [complimentary blog post](https://solomonkurz.netlify.app/blog/2020-12-29-regression-models-for-2-timepoint-non-experimental-data/) on pre/post non-experimental data. In this post, we'll be taking the multivariate approach where we simultaneously model `pre` and `post` as bivariate normal, such that both the mean and standard deviation parameters for both vary depending on the experimental condition (`tx`). Importantly, the correlation between `pre` and `post` is captured in the correlation between the two residual standard deviation parameters.
 
 Here's how to fit the model to the full data with **brms**.
 
@@ -400,6 +400,6 @@ posterior_summary(fit2) %>%
               ylim = c(1.5, 8.5)) +
   theme(text = element_text(size = 9))
 
-ggsave("featured.jpg", width = 3.6, height = 3.5, units = "in")
+ggsave("one-step-featured.jpg", width = 3.6, height = 3.5, units = "in")
 ```
 

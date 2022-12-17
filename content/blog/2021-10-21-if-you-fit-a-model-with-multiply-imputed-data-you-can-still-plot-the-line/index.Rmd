@@ -15,9 +15,9 @@ tags:
 - tutorial
 lastmod: '2021-10-21T16:12:29-05:00'
 featured: no
-bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
-csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 ---
 
@@ -365,7 +365,7 @@ sessionInfo()
 
 ## References
 
-[^1]: Be warned that "full-luxury Bayesian ..." isn't a real term. Rather, it's a playful descriptor coined by the great Richard McElreath. To hear him use it in action, check out his [nifty talk](https://www.youtube.com/watch?v=KNPYUVmY3NM) on causal inference. One-step Bayesian imputation is a real thing, though. McElreath covered it in both editions of his text and I've even blogged about it [here](https://solomonkurz.netlify.app/post/2021-07-27-one-step-bayesian-imputation-when-you-have-dropout-in-your-rct/).
+[^1]: Be warned that "full-luxury Bayesian ..." isn't a real term. Rather, it's a playful descriptor coined by the great Richard McElreath. To hear him use it in action, check out his [nifty talk](https://www.youtube.com/watch?v=KNPYUVmY3NM) on causal inference. One-step Bayesian imputation is a real thing, though. McElreath covered it in both editions of his text and I've even blogged about it [here](https://solomonkurz.netlify.app/blog/2021-07-27-one-step-bayesian-imputation-when-you-have-dropout-in-your-rct/).
 
 [^2]: When you do this on your own, you might instead name the `.imp` column as `m`, which goes nicely with Miles's notation. In this post and in some of my personal work, I used `.imp` because it lines up nicely with the output from some of the **mice** functions.
 
@@ -384,5 +384,6 @@ fitted_lines %>%
        y = "iqv") +
   theme_gray(base_size = 5.7)
 
-ggsave("featured.jpg", width = 3.6, height = 3.5, units = "in")
+ggsave("the-line-featured.jpg", width = 3.6, height = 3.5, units = "in")
 ```
+

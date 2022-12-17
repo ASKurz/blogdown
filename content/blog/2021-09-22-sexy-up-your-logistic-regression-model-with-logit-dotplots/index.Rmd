@@ -15,9 +15,9 @@ tags:
 - tutorial
 lastmod: '2021-09-22T09:40:23-05:00'
 featured: no
-bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
-csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 ---
 
@@ -303,5 +303,6 @@ p %>%
         legend.background = element_blank(),
         panel.grid = element_blank())
 
-ggsave("featured.jpg", width = 3.6, height = 3.5, units = "in")
+ggsave("logit-dotplot-featured.jpg", width = 3.6, height = 3.5, units = "in")
 ```
+

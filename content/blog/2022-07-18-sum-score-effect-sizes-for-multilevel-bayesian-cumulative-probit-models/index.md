@@ -19,15 +19,15 @@ tags:
 - tutorial
 lastmod: '2022-07-18T08:43:23-05:00'
 featured: no
-bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
-csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 ---
 
 ## What/why?
 
-This is a follow-up to my earlier post, [*Notes on the Bayesian cumulative probit*](https://solomonkurz.netlify.app/post/2021-12-29-notes-on-the-bayesian-cumulative-probit/). If you haven’t browsed through that post or if you aren’t at least familiar with Bayesian cumulative probit models, you’ll want to go there, first. Comparatively speaking, this post will be short and focused. The topic we’re addressing is: *After you fit a full multilevel Bayesian cumulative probit model of several Likert-type items from a multi-item questionnaire, how can you use the model to compute an effect size in the sum-score metric?*
+This is a follow-up to my earlier post, [*Notes on the Bayesian cumulative probit*](https://solomonkurz.netlify.app/blog/2021-12-29-notes-on-the-bayesian-cumulative-probit/). If you haven’t browsed through that post or if you aren’t at least familiar with Bayesian cumulative probit models, you’ll want to go there, first. Comparatively speaking, this post will be short and focused. The topic we’re addressing is: *After you fit a full multilevel Bayesian cumulative probit model of several Likert-type items from a multi-item questionnaire, how can you use the model to compute an effect size in the sum-score metric?*
 
 Needless to say, I’m assuming my readers are familiar with the Bayesian generalized linear mixed model, in general, and with ordinal models in particular. For a refresher on the latter, check out Bürkner & Vuorre ([2019](#ref-burknerOrdinalRegressionModels2019)) and Bürkner ([2020](#ref-burknerBayesianItemResponse2020)).
 
@@ -302,7 +302,7 @@ post %>%
 
 <img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-9-1.png" width="384" />
 
-This all has been fun, but we should discuss a few caveats. First, the `\(\beta_1\)` and `\(\eta_1\)` have to do with the latent grand means across persons and items. These have relations to sum scores, but they aren’t really sum scores and these kinds of effect sizes aren’t what we’re looking for in this post. Second, latent mean differences like with `\(\beta_1\)` map on to Cohen’s `\(d\)` effect sizes reasonably well when you are not using a full distributional model. That is, they work well when you don’t have a submodel for `\(\log(\alpha_{ij})\)`. But once you start fiddling with `\(\log(\alpha_{ij})\)`, the scales of the parameters become difficult to interpret. This is because `\(\log(\alpha_{ij})\)` doesn’t map directly onto the standard deviations of the criterion variable `rating`. They’re related, but in a complicated way that’s probably not the most intuitive for non-statisticians or experts in IRT. So this whole latent pooled standard deviation talk is fraught. For more on this, look through some of the plots we made from `fit8` in the [original blog post](https://solomonkurz.netlify.app/post/2021-12-29-notes-on-the-bayesian-cumulative-probit/).
+This all has been fun, but we should discuss a few caveats. First, the `\(\beta_1\)` and `\(\eta_1\)` have to do with the latent grand means across persons and items. These have relations to sum scores, but they aren’t really sum scores and these kinds of effect sizes aren’t what we’re looking for in this post. Second, latent mean differences like with `\(\beta_1\)` map on to Cohen’s `\(d\)` effect sizes reasonably well when you are not using a full distributional model. That is, they work well when you don’t have a submodel for `\(\log(\alpha_{ij})\)`. But once you start fiddling with `\(\log(\alpha_{ij})\)`, the scales of the parameters become difficult to interpret. This is because `\(\log(\alpha_{ij})\)` doesn’t map directly onto the standard deviations of the criterion variable `rating`. They’re related, but in a complicated way that’s probably not the most intuitive for non-statisticians or experts in IRT. So this whole latent pooled standard deviation talk is fraught. For more on this, look through some of the plots we made from `fit8` in the [original blog post](https://solomonkurz.netlify.app/blog/2021-12-29-notes-on-the-bayesian-cumulative-probit/).
 
 Okay, let’s get into our sum-score effect sizes.
 
@@ -414,7 +414,7 @@ d %>%
 
 <img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-12-1.png" width="768" />
 
-If you’re shaken by the differences in the posterior means and the sample means, keep in mind that the posteriors are based on a multilevel model, which imposed partial pooling across persons and items. The job of the model is to compute the population parameters, not reproduce the sample estimates. To brush up on why we like partial pooling, check out the classic ([1977](#ref-efronSteinParadoxStatistics1977)) paper by Efron and Morris, [*Stein’s paradox in statistics*](https://efron.ckirby.su.domains//other/Article1977.pdf), or my blog post on the topic, [*Stein’s Paradox and what partial pooling can do for you*](https://solomonkurz.netlify.app/post/2019-02-23-stein-s-paradox-and-what-partial-pooling-can-do-for-you/).
+If you’re shaken by the differences in the posterior means and the sample means, keep in mind that the posteriors are based on a multilevel model, which imposed partial pooling across persons and items. The job of the model is to compute the population parameters, not reproduce the sample estimates. To brush up on why we like partial pooling, check out the classic ([1977](#ref-efronSteinParadoxStatistics1977)) paper by Efron and Morris, [*Stein’s paradox in statistics*](https://efron.ckirby.su.domains//other/Article1977.pdf), or my blog post on the topic, [*Stein’s Paradox and what partial pooling can do for you*](https://solomonkurz.netlify.app/blog/2019-02-23-stein-s-paradox-and-what-partial-pooling-can-do-for-you/).
 
 Anyway, we only have to make one minor adjustment to our workflow to convert these results into a sum-score metric. In the first `group_by()` line, we just omit `item`.
 
@@ -500,15 +500,15 @@ The plot shows that for the 5-to-30-point neuroticism sum score, males average a
 
 ### Standardized mean differences.
 
-I’m generally a big fan of standardized mean differences, the most common of which are variants of Cohen’s `\(d\)`. People report Cohen’s `\(d\)`’s for sum score data all the time. However, I don’t think that’s wise, here. If you look back into Cohen’s ([1988](#ref-cohenStatisticalPowerAnalysis1988a)) text, he introduced `\(d\)` as an effect size for to group means, based on data drawn from populations with normally distributed data. He made this clear in the first couple pages of Chapter 2, *The t test for means*. On page 19, for example: “The tables have been designed to render very simple the procedure for power analysis in the case where two samples, each of **n** cases, have been randomly and independently drawn from normal populations” (**emphasis** in the original). A little further down on the same page: “In the formal development of the **t** distribution for the difference between two independent means, the assumption is made that the populations sampled are normally distributed and that they are of homogeneous (i.e., equal) variance” (**emphasis** in the original). Then on the very next page, Cohen introduced his `\(d\)` effect size for data of this kind.
+I’m generally a big fan of standardized mean differences, the most common of which are variants of Cohen’s `\(d\)`. People report Cohen’s `\(d\)`’s for sum score data all the time. However, I don’t think that’s wise, here. If you look back into Cohen’s ([1988](#ref-cohenStatisticalPowerAnalysis1988a)) text, he introduced `\(d\)` as an effect size for two group means, based on data drawn from populations with normally distributed data. He made this clear in the first couple pages of Chapter 2, *The t test for means*. On page 19, for example: “The tables have been designed to render very simple the procedure for power analysis in the case where two samples, each of **n** cases, have been randomly and independently drawn from normal populations” (**emphasis** in the original). A little further down on the same page: “In the formal development of the **t** distribution for the difference between two independent means, the assumption is made that the populations sampled are normally distributed and that they are of homogeneous (i.e., equal) variance” (**emphasis** in the original). Then on the very next page, Cohen introduced his `\(d\)` effect size for data of this kind.
 
 Here’s the issue: Sum-score data aren’t really normally distributed. There are a lot of ways to characterize Gaussian data. They’re continuous, unimodal, symmetric, bell-shaped, and not near any lower or upper boundaries[^1]. Given our finite sample size, it’s hard to determine how unimodal, symmetric, or bell-shaped the neuroticism sum scores might look in the population[^2]. But we know for sure that these sum-score data are not truly continuous and they have well-defined lower and upper boundaries. In fact, these characteristics are part of the reason we analyzed the data with a cumulative probit model to begin with. So if you are going to go to the trouble of analyzing your ordinal data with a cumulative probit model, I recommend you express the results with an effect size that was not explicitly designed for Gaussian data.
 
-In short, I think Cohen’s `\(d\)`’s are a bad fit for Likert-type items fit with cumulative probit models.
+In conclusion, I think Cohen’s `\(d\)`’s are a bad fit for Likert-type items fit with cumulative probit models.
 
 ### POMP differences.
 
-Given how we just spent a section discrediting Cohen’s `\(d\)`’s for sum-score data, it’s satisfying that Patricia Cohen, Jacob Cohen, and colleagues ([1999](#ref-cohen1999problem)) are also the group who have provided us with a slick alternative. We can express our mean differences in a POMP-score metric. The acronym POMP stands for the *percent of maximum possible*. Say you have some score variable `\(y\)` with a clear lower and upper limit. You can convert those data into a POMP metric with the formula
+Given how we just spent a section discrediting Cohen’s `\(d\)`’s for sum-score data, it’s satisfying that Patricia Cohen, Jacob Cohen, and colleagues ([1999](#ref-cohen1999problem)) are also the group who have provided us with a slick alternative. We can express our mean differences in a POMP-score metric. The acronym POMP stands for the *percent of maximum possible*. Say you have some score variable `\(y\)`, which varies across `\(i\)` cases, and has a clear lower and upper limit. You can convert those data into a POMP metric with the formula
 
 $$
 \text{POMP}_i = \frac{y_i - \min(y_i)}{\max(y_i) - \min(y_i)} \times 100.

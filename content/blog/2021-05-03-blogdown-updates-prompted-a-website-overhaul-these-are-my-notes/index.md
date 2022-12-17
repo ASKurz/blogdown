@@ -13,15 +13,15 @@ tags:
 - tutorial
 lastmod: '2021-04-26T11:27:11-07:00'
 featured: no
-bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
-csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 ---
 
 ## Purpose
 
-A few weeks ago, I was preparing to release the second blog post in a two-part series (you can find that post [here](https://solomonkurz.netlify.app/post/2021-04-22-effect-sizes-for-experimental-trials-analyzed-with-multilevel-growth-models-two-of-two/)). During the editing process, I had rendered the files into HTML and tried posting the draft to my website. Everything looked fine except that the figures wouldn’t render. I hadn’t seen this behavior before and I figured it had to do with some software update. When I checked, the [**blogdown** package](https://CRAN.R-project.org/package=blogdown) ([Xie et al., 2017](#ref-xieBlogdown2017), [2021](#ref-R-blogdown)) had indeed recently updated. I’d also noticed the great [Alison Hill](https://alison.rbind.io) had recently posted a few blogs on **blogdown**-related topics, so I figured it was time for a refresh.
+A few weeks ago, I was preparing to release the second blog post in a two-part series (you can find that post [here](https://solomonkurz.netlify.app/blog/2021-04-22-effect-sizes-for-experimental-trials-analyzed-with-multilevel-growth-models-two-of-two/)). During the editing process, I had rendered the files into HTML and tried posting the draft to my website. Everything looked fine except that the figures wouldn’t render. I hadn’t seen this behavior before and I figured it had to do with some software update. When I checked, the [**blogdown** package](https://CRAN.R-project.org/package=blogdown) ([Xie et al., 2017](#ref-xieBlogdown2017), [2021](#ref-R-blogdown)) had indeed recently updated. I’d also noticed the great [Alison Hill](https://alison.rbind.io) had recently posted a few blogs on **blogdown**-related topics, so I figured it was time for a refresh.
 
 The purpose of this post is to highlight some of the steps I took to rebuild my website and recover my figure-rendering game. At a minimum, I’m hoping this post will help me better understand how to set up my website the next time it needs an overhaul. Perhaps it will be of some help to you, too.
 
@@ -31,11 +31,11 @@ This post is not an exhaustive introduction to **blogdown**. For that, you have 
 
 ### This isn’t the only way.
 
-There are any number of ways one could make an academic website via **blogdown**. Hill provided one workflow in her post, [*Up & running with blogdown in 2021*](https://alison.rbind.io/post/new-year-new-blogdown/), upon which I’ll be drawing heavily throughout this post. Some of my steps will follow a different order from hers, based on what seemed right, for me.
+There are any number of ways one could make an academic website via **blogdown**. Hill provided one workflow in her post, [*Up & running with blogdown in 2021*](https://www.apreshill.com/blog/2020-12-new-year-new-blogdown/), upon which I’ll be drawing heavily throughout this post. Some of my steps will follow a different order from hers, based on what seemed right, for me.
 
 ## Foundations
 
-Hill organized her aforementioned blog post, [*Up & running with blogdown in 2021*](https://alison.rbind.io/post/new-year-new-blogdown/), as if one were building their **blogdown** website from scratch. After futzing around with different strategies, I recommend this approach even if you’ve had a **blogdown** website up and running for a while. If you haven’t updated your website recently, archive your old files and build the new one from the ground up. Here’s the first step:
+Hill organized her aforementioned blog post, [*Up & running with blogdown in 2021*](https://www.apreshill.com/blog/2020-12-new-year-new-blogdown/), as if one were building their **blogdown** website from scratch. After futzing around with different strategies, I recommend this approach even if you’ve had a **blogdown** website up and running for a while. If you haven’t updated your website recently, archive your old files and build the new one from the ground up. Here’s the first step:
 
 ### Step 1. GitHub.
 
@@ -43,7 +43,7 @@ Log on to your GitHub account and start a fresh repo. Name it something website-
 
 ### Step 2. RStudio projects.
 
-Make a fresh RStudio project[^2] to go along with your fresh GitHub repo. Within RStudio, you can do this by clicking through `File > New Project > Version Control > Git`. Next, you’ll want to paste in the URL from your GitHub repo. If you haven’t done something like this, before, go back online to your repo and click the green button near the top that’s labeled “Clone or download.” A URL will appear in there. That’s what you’ll be pasting into your new RStudio project, which will connect it to your GitHub repo. Hill discussed this [here](https://alison.rbind.io/post/new-year-new-blogdown/#step-1-create-repo).
+Make a fresh RStudio project[^2] to go along with your fresh GitHub repo. Within RStudio, you can do this by clicking through `File > New Project > Version Control > Git`. Next, you’ll want to paste in the URL from your GitHub repo. If you haven’t done something like this, before, go back online to your repo and click the green button near the top that’s labeled “Clone or download.” A URL will appear in there. That’s what you’ll be pasting into your new RStudio project, which will connect it to your GitHub repo. Hill discussed this [here](https://www.apreshill.com/blog/2020-12-new-year-new-blogdown/#step-1-create-repo).
 
 ## **blogdown** mini launch
 
@@ -53,7 +53,7 @@ If you haven’t already, install the current version of **blogdown** by executi
 
 ### Step 4. `.gitignore`.
 
-I don’t know that you have to do this right now, but a good early step is to make a `.gitignore` file. Following Hill ([here](https://alison.rbind.io/post/new-year-new-blogdown/#using-github)), you can do this by executing `file.edit(".gitignore")`. Then go ahead and enter this content to the file:
+I don’t know that you have to do this right now, but a good early step is to make a `.gitignore` file. Following Hill ([here](https://www.apreshill.com/blog/2020-12-new-year-new-blogdown/#using-github)), you can do this by executing `file.edit(".gitignore")`. Then go ahead and enter this content to the file:
 
 ``` r
 .Rproj.user
@@ -74,7 +74,7 @@ If you haven’t done so, yet, this would be a good time to commit your changes 
 
 ### Step 5. Sign up and deploy.
 
-Hill recommended you both build and host your **blogdown** website on Neflify (see [here](https://alison.rbind.io/post/new-year-new-blogdown/#step-1-create-repo)). I’m not going to argue. Go to <https://www.netlify.com/> and either log in or sign up using your GitHub account. Even if you already have a Netlify account, I recommend making a new Netlify site with `New site from Git > Continuous Deployment: GitHub`. You’ll then need to select your fresh GitHub repo, from above, to connect it to Netlify. This may require you to follow the prompts to actually navigate to GitHub, enable the connection, there, and then follow back to Netlify. Once you’re back in Netlify, leave settings at their defaults and select `Deploy Site`. You should be directed to a page with a header called *Production deploys* somewhere in the middle of the screen. After a minute of two, Netlify will finish deploying your site.
+Hill recommended you both build and host your **blogdown** website on Neflify (see [here](https://www.apreshill.com/blog/2020-12-new-year-new-blogdown/#step-1-create-repo)). I’m not going to argue. Go to <https://www.netlify.com/> and either log in or sign up using your GitHub account. Even if you already have a Netlify account, I recommend making a new Netlify site with `New site from Git > Continuous Deployment: GitHub`. You’ll then need to select your fresh GitHub repo, from above, to connect it to Netlify. This may require you to follow the prompts to actually navigate to GitHub, enable the connection, there, and then follow back to Netlify. Once you’re back in Netlify, leave settings at their defaults and select `Deploy Site`. You should be directed to a page with a header called *Production deploys* somewhere in the middle of the screen. After a minute of two, Netlify will finish deploying your site.
 
 ### Step 6. Customize your Netlify subdomain.
 
@@ -101,11 +101,11 @@ Next, check for a `netlify.toml` file in your root directory. You can also open 
   HUGO_VERSION = "0.82.0"
 ```
 
-If this seems scary, Hill discussed it in greater detail [here](https://alison.rbind.io/post/new-year-new-blogdown/#step-5-publish-site).
+If this seems scary, Hill discussed it in greater detail [here](https://www.apreshill.com/blog/2020-12-new-year-new-blogdown/#step-5-publish-site).
 
 ### Step 9. `.Rprofile`.
 
-Still following Hill ([here](https://alison.rbind.io/post/new-year-new-blogdown/#step-4-create-content)), make an `.Rprofile` file by executing `blogdown::config_Rprofile()`. Then customize some of the settings within `options()`, as desired. Mine now read:
+Still following Hill ([here](https://www.apreshill.com/blog/2020-12-new-year-new-blogdown/#step-4-create-content)), make an `.Rprofile` file by executing `blogdown::config_Rprofile()`. Then customize some of the settings within `options()`, as desired. Mine now read:
 
 ``` r
 options(
@@ -118,9 +118,9 @@ options(
   # fix Hugo version
   blogdown.hugo.version = "0.82.0",
   # These changes are based on Alison Hill's posts:
-  # https://alison.rbind.io/post/2019-02-21-hugo-page-bundles/#project-specific-rprofile
+  # https://www.apreshill.com/blog/2019-02-spoonful-bundles/
   # and 
-  # https://alison.rbind.io/post/new-year-new-blogdown/#step-4-create-content
+  # https://www.apreshill.com/blog/2020-12-new-year-new-blogdown/#step-4-create-content
   blogdown.author = "A. Solomon Kurz",
   blogdown.ext = ".Rmd",
   blogdown.subdir = "post",
@@ -280,9 +280,9 @@ links:
 
 ### Step 17: `content/post/`.
 
-Another of the bigger changes to **blogdown** is the support for Hugo Page Bundles. To get the low-down, read through Hill’s blog post, [*A spoonful of Hugo: Page bundles*](https://alison.rbind.io/post/2019-02-21-hugo-page-bundles/). In short, this system now has users arrange each blog post within its own `content/post/` subfolder.
+Another of the bigger changes to **blogdown** is the support for Hugo Page Bundles. To get the low-down, read through Hill’s blog post, [*A spoonful of Hugo: Page bundles*](https://www.apreshill.com/blog/2019-02-spoonful-bundles/). In short, this system now has users arrange each blog post within its own `content/post/` subfolder.
 
-A lot of the existing **blogdown** material (e.g., [here](https://alison.rbind.io/post/2019-02-19-hugo-archetypes/#tldr-a-teaspoon-of-archetypes)) includes recommendations to use the RStudio “New Post” addin to make new blog posts. Since I was importing/reformatting a bunch of older blog posts, I ended up liking the `blogdown::new_post()` function, instead. If you’ve been following along linearly, we already customized a few of the `new_post()` settings in the `.Rprofile` file, above.
+A lot of the existing **blogdown** material (e.g., [here](https://www.apreshill.com/blog/2019-02-spoonful-archetypes/)) includes recommendations to use the RStudio “New Post” addin to make new blog posts. Since I was importing/reformatting a bunch of older blog posts, I ended up liking the `blogdown::new_post()` function, instead. If you’ve been following along linearly, we already customized a few of the `new_post()` settings in the `.Rprofile` file, above.
 
 To give a sense of what this workflow looks like, here’s how I made the new page-bundle-style subfolder for my first ever **blogdown** blog post from back in 2018.
 
@@ -361,4 +361,4 @@ Xie, Y., Hill, A. P., & Thomas, A. (2017). *<span class="nocase">blogdown</span>
 
 [^5]: I know there are some strong opinions about naming conventions for files and folders, one of which is you should avoid white spaces. This has never been a problem, in my experience. You do you.
 
-[^6]: If you’re really curious, you can find the files for this post [here](https://github.com/ASKurz/blogdown/tree/main/content/post/2021-05-03-blogdown-updates-prompted-a-website-overhaul-these-are-my-notes). The `index.Rmd` file is probably the one you want.
+[^6]: If you’re really curious, you can find the files for this post [here](https://github.com/ASKurz/blogdown/tree/main/content/blog/2021-05-03-blogdown-updates-prompted-a-website-overhaul-these-are-my-notes). The `index.Rmd` file is probably the one you want.
