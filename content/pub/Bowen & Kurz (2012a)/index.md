@@ -8,7 +8,6 @@ excerpt:
 layout: single
 doi: https://doi.org/10.1002/jclp.20855
 featured: false
-publishDate: '2012-03-01'
 # `tags` are like keywords
 tags:
 - Mindfulness
