@@ -30,6 +30,10 @@ load("sims/sim.4.rda")
 load("sims/sim.8.rda")
 ```
 
+## Version 1.1.0
+
+Edited on January 2, 2023, to acknowledge the related simulation study by @oConnell2017methods. See footnote #3 for details.
+
 ## What?
 
 If you'd like to study the effectiveness of a clinical treatment, one of the simplest and most widely used approaches it to
@@ -42,7 +46,7 @@ c) randomly assign participants into
 d) treat the participants in the treatment condition, and
 e) measure the outcome variable again at the conclusion of treatment.
 
-You can describe this as a pre/post control group design, which in many settings we also call this a randomized controlled trial (RCT[^1]). Although this design cannot return valid causal estimates of the treatment effect at the participant level, it can return a valid causal estimate of the average treatment effect, in the population[^2]. In the methodological literature, the two most popular ways for estimating the average treatment effect are 
+You can describe this as a pre/post control group design, which in many settings we also call this a randomized controlled trial (RCT[^1]). Although this design cannot return valid causal estimates of the treatment effect at the participant level, it can return a valid causal estimate of the average treatment effect, in the population[^2]. In the methodological literature, the two most popular ways for estimating the average treatment effect are
 
 * the simple change-score model and
 * the so-called ANCOVA model.
@@ -256,7 +260,7 @@ Now our estimates for $\tau$ are listed in the `tx:time` rows of the `summary()`
 
 ## But which one is the best? Simulation study
 
-We might run a little simulation study to compare these four methods across several simulated data sets. To run the sim, we'll need to extend our `sim_data()` function to a `sim_fit()` function. The first parts of the `sim_fit()` function are the same as with `sim_data()`. But this time, the function internally makes both wide and long versions of the data, fits all four models to the data, and extracts the summary results for the four versions of $\tau$. 
+We might run a little simulation study[^3] to compare these four methods across several simulated data sets. To run the sim, we'll need to extend our `sim_data()` function to a `sim_fit()` function. The first parts of the `sim_fit()` function are the same as with `sim_data()`. But this time, the function internally makes both wide and long versions of the data, fits all four models to the data, and extracts the summary results for the four versions of $\tau$. 
 
 
 ```{r}
@@ -505,6 +509,9 @@ sessionInfo()
 [^1]: The term **RCT** can apply to a broader class of designs, such as those including more than two conditions, more than two assessment periods, and so on. For the sake of this blog post, we'll ignore those complications.
 
 [^2]: That whole "in the population" bit is a big ol' can of worms. In short, recruit participants who are similar to those who you'd like to generalize to. Otherwise, chaos may ensue.
+
+[^3]: A few months after publishing this blog post, I ran across a similar simulation study by @oConnell2017methods. Their study was larger and more professional, and they looked at a greater number of ANOVA and ANCOVA variants. However, whereas they did include results for the multilevel ANOVA, they did not consider the multilevel ANCOVA. Happily, the overall conclusions of this blog post line up well with O'Connell and colleagues, with the exception that they missed the opportunity to show the prowess of the multilevel ANCOVA approach.
+
 
 ```{r, eval = F, echo = F}
 bind_rows(

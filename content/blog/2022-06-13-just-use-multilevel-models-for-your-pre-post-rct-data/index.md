@@ -22,6 +22,10 @@ csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl
 link-citations: yes
 ---
 
+## Version 1.1.0
+
+Edited on January 2, 2023, to acknowledge the related simulation study by O’Connell et al. ([2017](#ref-oConnell2017methods)). See footnote \#3 for details.
+
 ## What?
 
 If you’d like to study the effectiveness of a clinical treatment, one of the simplest and most widely used approaches it to
@@ -375,7 +379,7 @@ Now our estimates for `\(\tau\)` are listed in the `tx:time` rows of the `summar
 
 ## But which one is the best? Simulation study
 
-We might run a little simulation study to compare these four methods across several simulated data sets. To run the sim, we’ll need to extend our `sim_data()` function to a `sim_fit()` function. The first parts of the `sim_fit()` function are the same as with `sim_data()`. But this time, the function internally makes both wide and long versions of the data, fits all four models to the data, and extracts the summary results for the four versions of `\(\tau\)`.
+We might run a little simulation study[^3] to compare these four methods across several simulated data sets. To run the sim, we’ll need to extend our `sim_data()` function to a `sim_fit()` function. The first parts of the `sim_fit()` function are the same as with `sim_data()`. But this time, the function internally makes both wide and long versions of the data, fits all four models to the data, and extracts the summary results for the four versions of `\(\tau\)`.
 
 ``` r
 sim_fit <- function(seed = 1, n = 100, tau = 1, rho = .5) {
@@ -714,7 +718,7 @@ sessionInfo()
     ## [55] labeling_0.4.2       rmarkdown_2.16       boot_1.3-28         
     ## [58] gtable_0.3.1         codetools_0.2-18     lmerTest_3.1-3      
     ## [61] DBI_1.1.3            R6_2.5.1             knitr_1.40          
-    ## [64] fastmap_1.1.0        utf8_1.2.2           insight_0.18.6      
+    ## [64] fastmap_1.1.0        utf8_1.2.2           insight_0.18.8      
     ## [67] stringi_1.7.8        parallel_4.2.0       Rcpp_1.0.9          
     ## [70] vctrs_0.5.0          tidyselect_1.1.2     xfun_0.35
 
@@ -830,6 +834,12 @@ McElreath, R. (2015). *Statistical rethinking: A Bayesian course with examples i
 
 </div>
 
+<div id="ref-oConnell2017methods" class="csl-entry">
+
+O’Connell, N. S., Dai, L., Jiang, Y., Speiser, J. L., Ward, R., Wei, W., Carroll, R., & Gebregziabher, M. (2017). Methods for analysis of pre-post data in clinical research: A comparison of five common methods. *Journal of Biometrics & Biostatistics*, *8*(1), 1–8. <https://doi.org/10.4172/2155-6180.1000334>
+
+</div>
+
 <div id="ref-R-base" class="csl-entry">
 
 R Core Team. (2022). *R: A language and environment for statistical computing*. R Foundation for Statistical Computing. <https://www.R-project.org/>
@@ -889,3 +899,5 @@ Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L. D., François, R., G
 [^1]: The term **RCT** can apply to a broader class of designs, such as those including more than two conditions, more than two assessment periods, and so on. For the sake of this blog post, we’ll ignore those complications.
 
 [^2]: That whole “in the population” bit is a big ol’ can of worms. In short, recruit participants who are similar to those who you’d like to generalize to. Otherwise, chaos may ensue.
+
+[^3]: A few months after publishing this blog post, I ran across a similar simulation study by O’Connell et al. ([2017](#ref-oConnell2017methods)). Their study was larger and more professional, and they looked at a greater number of ANOVA and ANCOVA variants. However, whereas they did include results for the multilevel ANOVA, they did not consider the multilevel ANCOVA. Happily, the overall conclusions of this blog post line up well with O’Connell and colleagues, with the exception that they missed the opportunity to show the prowess of the multilevel ANCOVA approach.
