@@ -1,7 +1,7 @@
 ---
 title: "Courses"
 author: "A. Solomon Kurz"
-date: "2022-12-15"
+date: "2023-01-03"
 output:
   html_document:
     df_print: paged
@@ -34,7 +34,7 @@ show_title_as_headline: false
 
 **Where**: Online
 
-**Goal**: The name and number for this course are a little misleading. This course is an extension of the introductory course, *Statistical Analysis* (PA 652). Herein the students learn about research design through the lens of their newly-acquired skills at the GLMM. We cover a broad range of research paradigms, such as between-person designs (i.e., the pre/post randomized controlled trial), within-person design (i.e., the multiple-baseline ABAB reversal), and mixed designs (i.e., mixed factorial reaction-time paradigms). Specialty topics include simulation-based power analysis and multilevel model effect sizes. All programming is done in the R computing language.
+**Goal**: The name and number for this course are a little misleading. This course is an extension of the introductory course, *Statistical Analysis* (PA 652). Herein the students learn about research design through the lens of their newly-acquired skills at the GLMM. We cover a broad range of research paradigms, such as between-person designs (e.g., the pre/post randomized controlled trial), within-person design (e.g., the multiple-baseline ABAB reversal), and mixed designs (e.g., mixed factorial reaction-time paradigms). Specialty topics include simulation-based power analysis and multilevel model effect sizes. All programming is done in the R computing language.
 
 **Website**: You can find the syllabus and other supporting materials on the course website at https://osf.io/wcm6r/
 
