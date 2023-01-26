@@ -1,7 +1,7 @@
 ---
 title: 'Development and validation of the State Moral Elevation Scale: Assessing state-level elevation across nonclinical and clinical samples'
 author: Adam P. McGuire, Candice L. Hayden, Rawda Tomoum, & A. Solomon Kurz
-date: '2020-12-01'
+date: '2022-04-21'
 featured: false
 # `tags` are like keywords
 tags:
