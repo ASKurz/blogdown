@@ -34,9 +34,9 @@ So far we’ve covered Bayesian power simulations from both a null hypothesis or
 
 In the social sciences, count data arise when we ask questions like:
 
--   How many sexual partners have you had?
--   How many pets do you have at home?
--   How many cigarettes did you smoke, yesterday?
+- How many sexual partners have you had?
+- How many pets do you have at home?
+- How many cigarettes did you smoke, yesterday?
 
 The values these data will take are discrete [^1] in that you’ve either slept with 9 or 10 people, but definitely not 9.5. The values cannot go below zero in that even if you quit smoking cold turkey 15 years ago and have been a health nut since, you still could not have smoked -3 cigarettes, yesterday. Zero is as low as it goes.
 
@@ -100,8 +100,8 @@ This will be our primary data type. Our next step is to determine how to express
 
 $$
 `\begin{align*}
-\text{drinks_per_week}_i         & \sim \operatorname{Poisson}(\lambda_i) \\
-\log(\lambda_i)   & = \beta_0 + \beta_1 \text{high}_i.
+\text{drinks per week}_i & \sim \operatorname{Poisson}(\lambda_i) \\
+\log(\lambda_i) & = \beta_0 + \beta_1 \text{high}_i.
 \end{align*}`
 $$
 
@@ -433,9 +433,9 @@ Now you’ve got a sense of how to work with the Poisson likelihood, [next time]
 sessionInfo()
 ```
 
-    ## R version 4.2.0 (2022-04-22)
+    ## R version 4.2.2 (2022-10-31)
     ## Platform: x86_64-apple-darwin17.0 (64-bit)
-    ## Running under: macOS Big Sur/Monterey 10.16
+    ## Running under: macOS Big Sur ... 10.16
     ## 
     ## Matrix products: default
     ## BLAS:   /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRblas.0.dylib
@@ -449,55 +449,55 @@ sessionInfo()
     ## 
     ## other attached packages:
     ##  [1] tidybayes_3.0.2 brms_2.18.0     Rcpp_1.0.9      forcats_0.5.1  
-    ##  [5] stringr_1.4.1   dplyr_1.0.10    purrr_0.3.4     readr_2.1.2    
+    ##  [5] stringr_1.4.1   dplyr_1.1.0     purrr_1.0.1     readr_2.1.2    
     ##  [9] tidyr_1.2.1     tibble_3.1.8    ggplot2_3.4.0   tidyverse_1.3.2
     ## 
     ## loaded via a namespace (and not attached):
     ##   [1] readxl_1.4.1         backports_1.4.1      plyr_1.8.7          
-    ##   [4] igraph_1.3.4         svUnit_1.0.6         splines_4.2.0       
+    ##   [4] igraph_1.3.4         svUnit_1.0.6         splines_4.2.2       
     ##   [7] crosstalk_1.2.0      TH.data_1.1-1        rstantools_2.2.0    
-    ##  [10] inline_0.3.19        digest_0.6.30        htmltools_0.5.3     
-    ##  [13] fansi_1.0.3          magrittr_2.0.3       checkmate_2.1.0     
+    ##  [10] inline_0.3.19        digest_0.6.31        htmltools_0.5.3     
+    ##  [13] fansi_1.0.4          magrittr_2.0.3       checkmate_2.1.0     
     ##  [16] googlesheets4_1.0.1  tzdb_0.3.0           modelr_0.1.8        
-    ##  [19] RcppParallel_5.1.5   matrixStats_0.62.0   xts_0.12.1          
-    ##  [22] sandwich_3.0-2       prettyunits_1.1.1    colorspace_2.0-3    
-    ##  [25] rvest_1.0.2          ggdist_3.2.0         haven_2.5.1         
+    ##  [19] RcppParallel_5.1.5   matrixStats_0.63.0   xts_0.12.1          
+    ##  [22] sandwich_3.0-2       prettyunits_1.1.1    colorspace_2.1-0    
+    ##  [25] rvest_1.0.2          ggdist_3.2.1.9000    haven_2.5.1         
     ##  [28] xfun_0.35            callr_3.7.3          crayon_1.5.2        
-    ##  [31] jsonlite_1.8.3       lme4_1.1-31          survival_3.4-0      
+    ##  [31] jsonlite_1.8.4       lme4_1.1-31          survival_3.4-0      
     ##  [34] zoo_1.8-10           glue_1.6.2           gtable_0.3.1        
     ##  [37] gargle_1.2.0         emmeans_1.8.0        distributional_0.3.1
-    ##  [40] pkgbuild_1.3.1       rstan_2.21.7         abind_1.4-5         
+    ##  [40] pkgbuild_1.3.1       rstan_2.21.8         abind_1.4-5         
     ##  [43] scales_1.2.1         mvtnorm_1.1-3        DBI_1.1.3           
-    ##  [46] miniUI_0.1.1.1       xtable_1.8-4         stats4_4.2.0        
+    ##  [46] miniUI_0.1.1.1       xtable_1.8-4         stats4_4.2.2        
     ##  [49] StanHeaders_2.21.0-7 DT_0.24              htmlwidgets_1.5.4   
     ##  [52] httr_1.4.4           threejs_0.3.3        arrayhelpers_1.1-0  
     ##  [55] posterior_1.3.1      ellipsis_0.3.2       pkgconfig_2.0.3     
     ##  [58] loo_2.5.1            farver_2.1.1         sass_0.4.2          
     ##  [61] dbplyr_2.2.1         utf8_1.2.2           labeling_0.4.2      
-    ##  [64] tidyselect_1.1.2     rlang_1.0.6          reshape2_1.4.4      
+    ##  [64] tidyselect_1.2.0     rlang_1.0.6          reshape2_1.4.4      
     ##  [67] later_1.3.0          munsell_0.5.0        cellranger_1.1.0    
-    ##  [70] tools_4.2.0          cachem_1.0.6         cli_3.4.1           
-    ##  [73] generics_0.1.3       broom_1.0.1          ggridges_0.5.3      
-    ##  [76] evaluate_0.18        fastmap_1.1.0        yaml_2.3.5          
-    ##  [79] processx_3.8.0       knitr_1.40           fs_1.5.2            
-    ##  [82] nlme_3.1-159         mime_0.12            projpred_2.2.1      
-    ##  [85] xml2_1.3.3           compiler_4.2.0       bayesplot_1.9.0     
-    ##  [88] shinythemes_1.2.0    rstudioapi_0.13      gamm4_0.2-6         
-    ##  [91] reprex_2.0.2         bslib_0.4.0          stringi_1.7.8       
-    ##  [94] highr_0.9            ps_1.7.2             blogdown_1.15       
-    ##  [97] Brobdingnag_1.2-8    lattice_0.20-45      Matrix_1.4-1        
-    ## [100] nloptr_2.0.3         markdown_1.1         shinyjs_2.1.0       
-    ## [103] tensorA_0.36.2       vctrs_0.5.0          pillar_1.8.1        
-    ## [106] lifecycle_1.0.3      jquerylib_0.1.4      bridgesampling_1.1-2
-    ## [109] estimability_1.4.1   httpuv_1.6.5         R6_2.5.1            
-    ## [112] bookdown_0.28        promises_1.2.0.1     gridExtra_2.3       
-    ## [115] codetools_0.2-18     boot_1.3-28          colourpicker_1.1.1  
-    ## [118] MASS_7.3-58.1        gtools_3.9.3         assertthat_0.2.1    
-    ## [121] withr_2.5.0          shinystan_2.6.0      multcomp_1.4-20     
-    ## [124] mgcv_1.8-40          parallel_4.2.0       hms_1.1.1           
-    ## [127] grid_4.2.0           coda_0.19-4          minqa_1.2.5         
-    ## [130] rmarkdown_2.16       googledrive_2.0.0    shiny_1.7.2         
-    ## [133] lubridate_1.8.0      base64enc_0.1-3      dygraphs_1.1.1.6
+    ##  [70] tools_4.2.2          cachem_1.0.6         cli_3.6.0           
+    ##  [73] generics_0.1.3       broom_1.0.2          evaluate_0.18       
+    ##  [76] fastmap_1.1.0        yaml_2.3.5           processx_3.8.0      
+    ##  [79] knitr_1.40           fs_1.5.2             nlme_3.1-160        
+    ##  [82] mime_0.12            projpred_2.2.1       xml2_1.3.3          
+    ##  [85] compiler_4.2.2       bayesplot_1.10.0     shinythemes_1.2.0   
+    ##  [88] rstudioapi_0.13      gamm4_0.2-6          reprex_2.0.2        
+    ##  [91] bslib_0.4.0          stringi_1.7.8        highr_0.9           
+    ##  [94] ps_1.7.2             blogdown_1.15        Brobdingnag_1.2-8   
+    ##  [97] lattice_0.20-45      Matrix_1.5-1         nloptr_2.0.3        
+    ## [100] markdown_1.1         shinyjs_2.1.0        tensorA_0.36.2      
+    ## [103] vctrs_0.5.2          pillar_1.8.1         lifecycle_1.0.3     
+    ## [106] jquerylib_0.1.4      bridgesampling_1.1-2 estimability_1.4.1  
+    ## [109] httpuv_1.6.5         R6_2.5.1             bookdown_0.28       
+    ## [112] promises_1.2.0.1     gridExtra_2.3        codetools_0.2-18    
+    ## [115] boot_1.3-28          colourpicker_1.1.1   MASS_7.3-58.1       
+    ## [118] gtools_3.9.4         assertthat_0.2.1     withr_2.5.0         
+    ## [121] shinystan_2.6.0      multcomp_1.4-20      mgcv_1.8-41         
+    ## [124] parallel_4.2.2       hms_1.1.1            grid_4.2.2          
+    ## [127] coda_0.19-4          minqa_1.2.5          rmarkdown_2.16      
+    ## [130] googledrive_2.0.0    shiny_1.7.2          lubridate_1.8.0     
+    ## [133] base64enc_0.1-3      dygraphs_1.1.1.6
 
 ## References
 

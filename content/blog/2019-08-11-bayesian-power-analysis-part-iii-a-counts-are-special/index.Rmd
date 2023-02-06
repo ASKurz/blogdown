@@ -112,8 +112,8 @@ This will be our primary data type. Our next step is to determine how to express
 
 $$
 \begin{align*}
-\text{drinks_per_week}_i         & \sim \operatorname{Poisson}(\lambda_i) \\
-\log(\lambda_i)   & = \beta_0 + \beta_1 \text{high}_i.
+\text{drinks per week}_i & \sim \operatorname{Poisson}(\lambda_i) \\
+\log(\lambda_i) & = \beta_0 + \beta_1 \text{high}_i.
 \end{align*}
 $$
 
