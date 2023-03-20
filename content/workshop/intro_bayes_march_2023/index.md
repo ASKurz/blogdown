@@ -59,5 +59,5 @@ This course will draw from several introductory textbooks, such as:
 
 ## Supporting materials
 
-I am looking forward to this workshop and I hope to post supporting materials, soon.
+You can find supporting materials from the workshop on the OSF at https://osf.io/bfvs4/.
 
