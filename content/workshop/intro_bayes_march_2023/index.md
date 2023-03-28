@@ -25,7 +25,7 @@ location: Online
 show_post_time: false
 ---
 
-:warning: This workshop is officially **sold out**. I am told there is a waiting list, about which you can learn more by contacting info@physalia-courses.org.
+:warning: This workshop has already come and gone. You can find some of the original marketing descriptions, along with a link to the online supporting materials, below.
 
 
 ## Overview
