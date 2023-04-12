@@ -352,9 +352,9 @@ bind_rows(tidy(ols1, conf.int = TRUE), tidy(ols2, conf.int = TRUE)) %>%
   ylab(NULL)
 ```
 
-Even though the point estimates differ a lot between the ANOVA and ANCOVA models, the 95% interval for the ANOVA model completely overlaps the interval for the ANCOVA model. Both the ANOVA and ANCOVA models are known to produce unbiased estimates of the population parameters, but the ANCOVA model tends to produce estimates that are more precise [e.g., @oConnell2017methods]. Thus if you have a high-quality baseline covariate laying around, it's a good idea to throw it into the model.[^7]
+Even though the point estimates differ a lot[^7] between the ANOVA and ANCOVA models, the 95% interval for the ANOVA model completely overlaps the interval for the ANCOVA model. Both the ANOVA and ANCOVA models are known to produce unbiased estimates of the population parameters, but the ANCOVA model tends to produce estimates that are more precise [e.g., @oConnell2017methods]. Thus if you have a high-quality baseline covariate laying around, it's a good idea to throw it into the model.[^8]
 
-## But why (and other questions)?[^8]
+## But why (and other questions)?[^9]
 
 If you haven't seen this before, you might wonder why adding covariates tends to make the $\beta_1$ coefficient more precise. A common answer is the additional covariates "explain" more of the residual variance. However, I encourage y'all to hold this explanation lightly. This way of thinking will not generalize well to models using other likelihood functions, and one of the big goals of this blog series is showing a framework that will generalize to other likelihoods.
 
@@ -459,9 +459,11 @@ sessionInfo()
 
 [^6]: There are some contexts in which this is not the case. For example, if you're running a medical trial for which the primary outcome is mortality, all participants will necessarily be alive at baseline. So an important caveat is baseline measures tend to have strong correlations with post-intervention measures when they're of a continuous variable. Indeed, the distinction between continuous and binary variables is an important part of the story, which we'll start to explore in the third post of this series.
 
-[^7]: Including baseline covariates is actually more than a "good idea." If you're running computer task experiments with undergrads, it probably doesn't matter much. But if you're running a clinical trial where lives are on the line, you want to use analytic strategies which are as unbiased and as precise as possible. When you're in the study-planning phase, the ANCOVA method can help you design a well-powered study with fewer participants, which could mean you'd be putting fewer participants lives at risk. I owe this insight to the great [Darren Dahly](https://twitter.com/statsepi).
+[^7]: I should clarify that though my point is these two point estimates are *numerically* different from one another, they aren't necessarily *statistically-significantly* different from one another. Since they're both estimators of the same population parameter, it would be weird if they were. I should acknowledge this point came from a DM exchange between Vincent Arel-Bundock and myself (2023-04-12). As a side point, we will rarely, if ever, use the statistical-significance framework in this blog series. I'm an effect-size man.
 
-[^8]: I know I just said in the introduction that we wouldn't be answering a lot of *Why* questions. But really, this is one of the few exceptions, and even here I'm not fully covering the *Why*. *Why* is for the statisticians and methodologists to worry about. We applied folks are here to get things done.
+[^8]: Including baseline covariates is actually more than a "good idea." If you're running computer task experiments with undergrads, it probably doesn't matter much. But if you're running a clinical trial where lives are on the line, you want to use analytic strategies which are as unbiased and as precise as possible. When you're in the study-planning phase, the ANCOVA method can help you design a well-powered study with fewer participants, which could mean you'd be putting fewer participants lives at risk. I owe this insight to the great [Darren Dahly](https://twitter.com/statsepi).
+
+[^9]: I know I just said in the introduction that we wouldn't be answering a lot of *Why* questions. But really, this is one of the few exceptions, and even here I'm not fully covering the *Why*. *Why* is for the statisticians and methodologists to worry about. We applied folks are here to get things done.
 
 
 ```{r, eval = F, echo = F}
