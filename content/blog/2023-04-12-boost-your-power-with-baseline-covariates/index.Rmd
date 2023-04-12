@@ -9,6 +9,7 @@ tags:
   - ANOVA
   - causal inference
   - GLM
+  - potential outcomes
   - power
   - R
   - RCT
