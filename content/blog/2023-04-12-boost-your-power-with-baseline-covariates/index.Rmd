@@ -86,7 +86,7 @@ theme_set(theme_gray(base_size = 12) +
 * Though we will cover some statistical theory, we will not get into technical issues like formal proofs. In other words, we won't answer a lot of questions beginning with *Why*. Our focus is on *What* and *How*.
 * We will not be covering DAG's.
 * Throughout this series, my primary estimand will be the average treatment effect (ATE), though we will pay the occasional lip service to the conditional average treatment effect (CATE). No hate on the CATE, though; I just like to keep things simple when I'm learning a new framework.
-  - Don't worry if don't know what I'm talking about. You will very soon.
+  - Don't worry if you don't know what I'm talking about. You will very soon.
 
 ## We need data
 
