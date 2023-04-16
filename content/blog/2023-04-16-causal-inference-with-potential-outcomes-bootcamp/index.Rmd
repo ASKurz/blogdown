@@ -379,7 +379,7 @@ And also like with the ANOVA-type `ols1`, this method for computing the $\tau_\t
 summary(ols2)
 ```
 
-When you fit an OLS-type ANCOVA model with the conventional identity link, $\mathbb{E}(y_i^1 \mid \bar c) - \mathbb{E}(y_i^0 \mid \bar c)$ will be the same as the $\beta$ coefficient for the treatment dummy. They're both estimators of the estimand $\tau_\text{ATE}$.
+When you fit an OLS-type ANCOVA model with the conventional identity link, $\mathbb{E}(y_i^1 \mid \bar c) - \mathbb{E}(y_i^0 \mid \bar c)$ will be the same as the $\beta$ coefficient for the treatment dummy. They're both estimators of our focal estimand $\tau_\text{ATE}$.
 
 #### Compute $\mathbb E (y_i^1 - y_i^0 \mid c_i)$ from `ols2`.
 
