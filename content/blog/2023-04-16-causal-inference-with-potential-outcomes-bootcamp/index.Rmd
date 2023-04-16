@@ -32,13 +32,13 @@ link-citations: yes
 options(width = 110)
 ```
 
-One of the nice things about the simple OLS models we fit in the last post is they're easy to interpret. The various $\beta$ parameters were valid estimates of the population effects for one treatment group relative to the wait-list control[^1]. However, this nice property won't hold in many cases where the nature of our dependent variables and/or research design requires us to fit other kinds of models from the broader generalized linear mixed model (GLMM) framework. Another issue at stake is if you've spent most of your statistical analysis career using the OLS framework, there's a good chance there are concepts that are undifferentiated in your mind. As is turns out, some of these concepts are important when we want to make valid causal inferences. Our task in this post is to start differentiating the undifferentiated, by introducing some of the big concepts from the *potential outcomes* framework for causal inference.
+One of the nice things about the simple OLS models we fit in the last post is they're easy to interpret. The various $\beta$ parameters were valid estimates of the population effects for one treatment group relative to the wait-list control.[^1] However, this nice property won't hold in many cases where the nature of our dependent variables and/or research design requires us to fit other kinds of models from the broader generalized linear mixed model (GLMM) framework. Another issue at stake is if you've spent most of your statistical analysis career using the OLS framework, there's a good chance there are concepts that are undifferentiated in your mind. As is turns out, some of these concepts are important when we want to make valid causal inferences. Our task in this post is to start differentiating the undifferentiated, by introducing some of the big concepts from the *potential outcomes* framework for causal inference.
 
 ## Reload and refit
 
 ### `horan1971` data.
 
-In post, we'll be continuing on with our `horan1971` data set form the last post. These data, recall, were transposed from the values displayed in Table 2 from @horan1971coverant. I've saved them as an external `.rda` file in a `/data` subfolder on GitHub ([here](https://github.com/ASKurz/blogdown/tree/main/content/blog/2023-04-12-boost-your-power-with-baseline-covariates/data)). If you don't want to download a data file from my GitHub, you can just copy the code from the [last post](https://solomonkurz.netlify.app/blog/2023-04-12-boost-your-power-with-baseline-covariates/).
+In post, we'll be continuing on with our `horan1971` data set form the last post. These data, recall, were transposed from the values displayed in Table 2 from @horan1971coverant. I've saved them as an external `.rda` file on GitHub ([here](https://github.com/ASKurz/blogdown/tree/main/content/blog/2023-04-12-boost-your-power-with-baseline-covariates/data)). If you don't want to download a data file from my GitHub, you can just copy the code from the [last post](https://solomonkurz.netlify.app/blog/2023-04-12-boost-your-power-with-baseline-covariates/).
 
 ```{r, warning = F, message = F}
 # packages
@@ -168,11 +168,11 @@ I have made such mistakes, and my hope is this and the material to come will hel
 blogdown::shortcode('tweet', user = "rlmcelreath", id = '1582368904529137672')
 ```
 
-Anyway, next we'll learn how to actually compute $\tau_\text{ATE}$ within the context of our OLS models. This will be the be the estimate of our estimand.
+Anyway, next we'll learn how to actually compute $\tau_\text{ATE}$ within the context of our OLS models. This will be the estimate of our estimand.
 
 #### Compute $\mathbb E (y_i^1) - \mathbb E (y_i^0)$ from `ols1`.
 
-Sometimes the authors of introductory causal inference textbooks have readers practice computing these values by hand, which can have its pedagogical value. But in your role as a professional scientist, you'll be computing $\tau_\text{ATE}$ within the context of a regression model, so you can properly express the uncertainty of your estimate with 95% intervals, a standard error, or some other measure of uncertainty. To that end, we can compute $\mathbb E (y_i^1)$ and $\mathbb E (y_i^0)$ by inserting our `ols1` model into the base **R** `predict()` function.
+Sometimes the authors of introductory causal inference textbooks have readers practice computing these values by hand, which can have its pedagogical value. But in your role as a professional scientist, you'll be computing $\tau_\text{ATE}$ within the context of a regression model so you can properly express the uncertainty of your estimate with 95% intervals, a standard error, or some other measure of uncertainty. To that end, we can compute $\mathbb E (y_i^1)$ and $\mathbb E (y_i^0)$ by inserting our `ols1` model into the base **R** `predict()` function.
 
 ```{r}
 nd <- tibble(experimental = 0:1)
@@ -203,11 +203,11 @@ Now we have a nice standard error and 95% interval for the estimate of our estim
 summary(ols1)
 ```
 
-Notice that the summary for our $\beta_1$ parameter is the same as the $\tau_\text{ATE}$ from above. When you have a simple OLS-type Gaussian model without a fancy link function, the $\tau_\text{ATE}$ will be the same as the $\beta$ coefficient for the treatment dummy. As we will see in the next post, this will not generalize to other kinds GLM's.
+Notice that the summary for our $\beta_1$ parameter is the same as the estimate for $\tau_\text{ATE}$ from above. When you have a simple OLS-type Gaussian model without a fancy link function, the estimate for $\tau_\text{ATE}$ will be the same as the $\hat \beta$ coefficient for the treatment dummy. As we will see in the next post, this will not generalize to other kinds GLM's.
 
 #### Compute $\mathbb E (y_i^1 - y_i^0)$ from `ols1`.
 
-It's time for me to confess my rhetoric above was a little misleading. As it turns out, you can in fact compute $\mathbb E (y_i^1 - y_i^0)$ from your regression models, even with 50% of the values missing. The key is to compute *counterfactual* estimates $\hat y_i^1$ and $\hat y_i^0$ from the model.[^5] Before we can do that, we'll first need to redefine our `nd` predictor data.
+It's time for me to confess my rhetoric above was a little misleading. As it turns out, you can in fact compute an estimate for $\mathbb E (y_i^1 - y_i^0)$ from your regression models, even with 50% of the values missing. The key is to compute *counterfactual* estimates $\hat y_i^1$ and $\hat y_i^0$ from the model.[^5] Before we can do that, we'll first need to redefine our `nd` predictor data.
 
 ```{r}
 nd <- horan1971 %>% 
