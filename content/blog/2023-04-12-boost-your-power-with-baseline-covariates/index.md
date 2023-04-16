@@ -548,7 +548,7 @@ In this post, some of the main points we covered were:
 - Both approach are unbiased estimators of the population parameters.
 - The ANCOVA approach is often more efficient, which is to say it often results is smaller standard errors and narrower confidence intervals.
 
-For many of my readers, I imagine most of the material in this post was a review. But this material is designed to set the stage for the posts to come, and I hope at least some of the subsequent material will be more informative. Speaking of which, in the next post we’ll learn about the *potential-outcomes* framework, and how we might analyze this data from a causal-inference perspective.
+For many of my readers, I imagine most of the material in this post was a review. But this material is designed to set the stage for the posts to come, and I hope at least some of the subsequent material will be more informative. Speaking of which, in the [next post](https://solomonkurz.netlify.app/blog/2023-04-16-causal-inference-with-potential-outcomes-bootcamp/) we’ll learn about the *potential-outcomes* framework, and how we might analyze this data from a causal-inference perspective.
 
 ## Thank the reviewers
 
