@@ -33,7 +33,7 @@ I'm writing this series because even though I learned a lot about data analysis 
 Here's the working table of contents for this series:
 
 1. Boost your power with baseline covariates
-2. Causal inference with potential outcomes bootcamp (ETA: April 2023)
+2. Causal inference with potential outcomes bootcamp (link [here](https://solomonkurz.netlify.app/blog/2023-04-16-causal-inference-with-potential-outcomes-bootcamp/))
 3. Causal inference with logistic regression (ETA: April 2023)
 4. Causal inference with Bayesian models (ETA: May 2023)
 5. Causal inference with count regression (ETA: May 2023)
