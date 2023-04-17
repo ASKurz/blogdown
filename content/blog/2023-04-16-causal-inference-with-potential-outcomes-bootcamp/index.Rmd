@@ -482,7 +482,7 @@ p3 + p4 + plot_annotation(title = "Person-level estimates based on the ANCOVA mo
 
 To my eye, a few things emerge when comparing these ANCOVA-based plots to their ANOVA counterparts from above. First, we now see how the `prec` covariate in the ANCOVA model changes the counterfactual predictions for the participants, and how each person's predictions can vary widely from those for the other participants. Yet even though the individual predictions vary, the differences between $(\hat y_i^0)$ and $(\hat y_i^1)$ are the *same* across all participants, which is still depicted by the identical $\hat \tau_i$ estimates in the right plot. Also, notice how the 95% intervals are much narrower in both plots, when compared to their ANOVA counterparts from above. This is why we like strongly-predictive baseline covariates. They shrink the standard errors and the 95% interval ranges.
 
-But anyways, recall our focal estimand $\tau_\text{ATE}$ is estimated via $\mathbb E (\hat y_i^1 - \hat y_i^0 \mid c_i)$, which means we need to compute the average of those contrasts in a way that produces a standard error. As with the simpler ANOVA-type workflow we used with `ols1`, we can simply tack on a `summary()` line, which will compute delta-method based standard errors.
+But anyways, recall our focal estimand $\tau_\text{ATE}$ is estimated via $\mathbb E (\hat y_i^1 - \hat y_i^0 \mid c_i)$, which means we need to compute the average of those contrasts in a way that produces a standard error. As with the simpler ANOVA-type workflow we used with `ols1`, we can simply tack on a `summary()` line, which will compute delta-method based standard errors.[^8]
 
 ```{r}
 comparisons(ols2, variables = "experimental") %>% 
@@ -548,6 +548,9 @@ sessionInfo()
 [^6]: I'm still getting my footing in this literature, so please forgive any mistakes in my documentation. To my knowledge, *g-computation* has its origins in the lengthy technical work by @robins1986new, an epidemiologist interested in causal inference with observational data. To my inexpert eye, the practice of *standardization* has a long history among epidemiologist and demographers. I believe *marginal standardization* has its proximal origins in the [-@lane1982analysis] paper by statisticians Lane and Nelder. Fun fact: Nelder was the principle author of, you know, the *Generalized Linear Model* [@nelder1972generalized]. No big deal.
 
 [^7]: In addition to the sample mean, you could also use the mode [see @muller2014estimating], or some other value of theoretical interest. The mode can be a particularly good option when working with categorical covariates, and we'll cover this possibility in a future post. You could even use different strategies for different covariates in your covariate set.
+
+[^8]: It's a big deal how **marginaleffects** so easily returns standard errors and their derivatives (e.g., 95% CI's, $p$-values) for the $\mathbb E (\hat y_i^1 - \hat y_i^0 \mid c_i)$ via the *standardization*/*g-computation* approach. Even pretty recent frequentist tutorials have relied on bootstrapping for standard errors and 95% intervals [e.g., @hernan2020CausalInference; @wang2017gcomputation]. Bootstrapping methods are great in a pinch, but this is so much better. If you'd like to learn more, Arel-Bundock's [-@arelBundock2023CausalInference] vignette shows a comparison of the results from his `avg_comparisons()` function to those from bootstrapping for one of the examples in Hernán & Robins's [-@hernan2020CausalInference] textbook.
+
 
 ```{r, eval = F, echo = F}
 tibble(x = 0, y = 0, label = "tau[ATE]") %>% 
