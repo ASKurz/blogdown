@@ -503,6 +503,10 @@ As Arel-Bundock pointed out his [-@arelBundock2023CausalInference] vignette, [*C
 
 are all the same thing. They're all equal to our estimand, the average treatment effect. We can extend this further to point out that the three estimators we used with our ANOVA-type model `ols1` were also estimators of the average treatment effect. But the three methods we just used for our ANCOVA-type model `ols2` all benefit from the increased precision (i.e., power) that comes from including a high-quality baseline covariate in the model.
 
+## But what about...?
+
+When you want to estimate the ATE with covariates, our *standardization*/*g-computation* workflow isn't the only workflow in town. Some of the noteworthy alternatives include inverse probability weighting and targeted maximum likelihood estimation. To fill my causal-inference needs, I'm looking for an approach with (a) good statistical properties (e.g., unbiased estimates), that (b) I can use as either a frequentist or a Bayesian, and will (c) apply to any number of models fit within the generalized liner mixed model framework and beyond (e.g., fully distributional models). To my eye, the *standardization*/*g-computation* seems to fit that bill. No shade on the other methods, though. For a recent simulation study on the topic, check out @chatton2020gcomputation.
+
 ## Recap
 
 In this post, some of the main points we covered were:
