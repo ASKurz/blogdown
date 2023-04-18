@@ -505,7 +505,7 @@ are all the same thing. They're all equal to our estimand, the average treatment
 
 ## But what about...?
 
-When you want to estimate the ATE with covariates, our *standardization*/*g-computation* workflow isn't the only workflow in town. Some of the noteworthy alternatives include inverse probability weighting and targeted maximum likelihood estimation. To fill my causal-inference needs, I'm looking for an approach with (a) good statistical properties (e.g., unbiased estimates), that (b) I can use as either a frequentist or a Bayesian, and will (c) apply to any number of models fit within the generalized linear mixed model framework and beyond (e.g., fully distributional models). At the moment, the *standardization*/*g-computation* approach seems to fit that bill. No shade on the other methods, though. For a recent simulation study on the topic, check out @chatton2020gcomputation.
+When you want to estimate the ATE with covariates, our *standardization*/*g-computation* workflow isn't the only workflow in town. Some of the noteworthy alternatives include inverse probability weighting and targeted maximum likelihood estimation. To fill my causal-inference needs, I'm looking for an approach with (a) good statistical properties (e.g., unbiased estimates), that (b) I can use as either a frequentist or a Bayesian, and will (c) apply to any number of models fit within the generalized linear mixed model framework and beyond (e.g., fully distributional models). At the moment, the *standardization*/*g-computation* approach seems to fit that bill, and we'll get a better sense of this in later posts in this series. If you'd like to see a comparison of these various methods, check out the simulation study by @chatton2020gcomputation.
 
 ## Recap
 
