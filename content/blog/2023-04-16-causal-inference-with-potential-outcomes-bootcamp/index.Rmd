@@ -563,6 +563,27 @@ tibble(x = 0, y = 0, label = "tau[ATE]") %>%
   theme_void() +
   theme(plot.background = element_rect(color = "white", fill = see::okabeito_colors("orange"))) # "#fff7cc"
 
+# ggsave("tau-ate-featured.jpg", width = 3.5, height = 3.5, units = "in")
+```
+
+
+```{r, eval = F, echo = F}
+(p3 +
+   scale_color_viridis_d(NULL, option = "mako", begin = .6, end = .9,
+                         labels = scales::parse_format()) +
+   ylab(NULL)) +
+  (p4 +
+     geom_vline(xintercept = 0, color = "gray33") +
+     geom_interval(aes(xmin = conf.low, xmax = conf.high),
+                   size = 1/5, color = "white")) + 
+  plot_annotation(title = "Person-level estimates from the ANCOVA") &
+   ggdark::dark_theme_gray(base_size = 10.2) +
+   theme(panel.grid = element_blank(),
+         plot.margin = margin(l = 2, r = 2, t = 5, b = 5),
+         plot.title = element_text(size = 12.6),
+         legend.position = c(.88, .82),
+         legend.background = element_blank())
+
 ggsave("tau-ate-featured.jpg", width = 3.5, height = 3.5, units = "in")
 ```
 
