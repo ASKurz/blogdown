@@ -568,6 +568,7 @@ tibble(x = 0, y = 0, label = "tau[ATE]") %>%
 
 
 ```{r, eval = F, echo = F}
+# ggdark alternative
 (p3 +
    scale_color_viridis_d(NULL, option = "mako", begin = .6, end = .9,
                          labels = scales::parse_format()) +
