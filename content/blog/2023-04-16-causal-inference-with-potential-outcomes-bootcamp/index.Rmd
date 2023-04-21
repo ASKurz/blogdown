@@ -203,7 +203,7 @@ Now we have a nice standard error and 95% interval for the estimate of our estim
 summary(ols1)
 ```
 
-Notice that the summary for our $\beta_1$ parameter is the same as the estimate for $\tau_\text{ATE}$ from above. When you have a simple OLS-type Gaussian model without a fancy link function, the estimate for $\tau_\text{ATE}$ will be the same as the $\hat \beta$ coefficient for the treatment dummy. As we will see in the next post, this will not generalize to other kinds GLM's.
+Notice that the summary for our $\beta_1$ parameter is the same as the estimate for $\tau_\text{ATE}$ from above. When you have a simple OLS-type Gaussian model without a fancy link function, the estimate for $\tau_\text{ATE}$ will be the same as the $\hat \beta$ coefficient for the treatment dummy. As we will see in the next post, this will not generalize to other kinds generalized linear models (GLM's).
 
 #### Compute $\mathbb E (y_i^1 - y_i^0)$ from `ols1`.
 
@@ -549,7 +549,7 @@ sessionInfo()
 
 [^5]: Don Rubin isn't a huge fan of equating *counterfactuals* with *potential outcomes* [see @rubin2005causal, p. 325]. To my mind, this is the kind of nuanced distinction that may be of interest to philosophers or causal inference scholars, but has little importance for the kinds of applied statistical methods we're highlighting in this series.
 
-[^6]: I'm still getting my footing in this literature, so please forgive any mistakes in my documentation. To my knowledge, *g-computation* has its origins in the lengthy technical work by @robins1986new, an epidemiologist interested in causal inference with observational data. To my inexpert eye, the practice of *standardization* has a long history among epidemiologist and demographers. I believe *marginal standardization* has its proximal origins in the [-@lane1982analysis] paper by statisticians Lane and Nelder. Fun fact: Nelder was the principle author of, you know, the *Generalized Linear Model* [@nelder1972generalized]. No big deal.
+[^6]: I'm still getting my footing in this literature, so please forgive any mistakes in my documentation. To my knowledge, *g-computation* has its origins in the lengthy technical work by @robins1986new, an epidemiologist interested in causal inference with observational data. The practice of *standardization* (which does not mean computing $z$ scores in this context) has a long history among epidemiologist and demographers. For a historical and methodological overview of *standardization* for computing death rates within epidemiology, see @keiding1987method. I believe statisticians Lane and Nelder [-@lane1982analysis] were the first to propose *standardization* as a post-processing step for ANCOVA-type GLM's fit to data from experiments. Fun fact: Nelder was the principle author of, you know, the *Generalized Linear Model* [@nelder1972generalized]. No big deal.
 
 [^7]: In addition to the sample mean, you could also use the mode [see @muller2014estimating], or some other value of theoretical interest. The mode can be a particularly good option when working with categorical covariates, and we'll cover this possibility in a future post. You could even use different strategies for different covariates in your covariate set.
 
