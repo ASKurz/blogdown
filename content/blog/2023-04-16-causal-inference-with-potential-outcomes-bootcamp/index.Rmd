@@ -12,10 +12,10 @@ tags:
   - causal inference
   - g-computation
   - GLM
-  - marginal standardization
   - potential outcomes
   - R
   - RCT
+  - standardization
   - tidyverse
   - tutorial
 draft: false
