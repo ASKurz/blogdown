@@ -173,7 +173,7 @@ $$
 \end{align*}
 $$
 
-where $\operatorname{logit}(.)$ indicates we're using the conventional logit link, which is from where we get the term "logistic regression." With this model, the experimental treatment dummy `tx` is the sole predictor of $p_i$ (on the log-odds scale). Then we'll fit an ANCOVA-type version of the model including all the covariates:
+where $\operatorname{logit}(.)$ indicates we're using the conventional logit link, which is from where we get the term "logistic regression." With this model, the experimental treatment dummy `tx` is the sole predictor of $p_i$, on the log-odds scale. Then we'll fit an ANCOVA-type version of the model including all the covariates:
 
 $$
 \begin{align*}
@@ -275,7 +275,7 @@ where, for the moment, we're excluding covariates from the framework. As it turn
 
 $$
 \begin{align*}
-\mathbb E (y_i^1) & = {\color{blueviolet}{\Pr (y_i^1 = 1)}},\ \text{and} \\
+\mathbb E (y_i^1) & = {\color{blueviolet}{\Pr (y_i^1 = 1)}}\ \text{and} \\
 \mathbb E (y_i^0) & = {\color{blueviolet}{\Pr (y_i^0 = 1)}},
 \end{align*}
 $$
@@ -288,7 +288,7 @@ To take the notation even further, we typically use $p$ in place of $\Pr()$ when
 
 $$
 \begin{align*}
-\mathbb E (y_i^1) & = \Pr (y_i^1 = 1) = {\color{blueviolet}{p^1}},\ \text{and} \\
+\mathbb E (y_i^1) & = \Pr (y_i^1 = 1) = {\color{blueviolet}{p^1}}\ \text{and} \\
 \mathbb E (y_i^0) & = \Pr (y_i^0 = 1) = {\color{blueviolet}{p^0}},
 \end{align*}
 $$
@@ -394,7 +394,7 @@ The `fit` column contains the $\hat p_i$ values, rather than $\hat y_i$ values. 
 
 $$\tau_\text{ATE} = \mathbb E (y_i^1 - y_i^0) = {\color{blueviolet}{\mathbb E (p_i^1 - p_i^0)}}.$$
 
-Here's how to compute the point estimate for $\tau_\text{ATE}$ via $\mathbb E (p_i^1 - p_i^0)$ with `predict()`.
+Here's how to compute the point estimate for $\tau_\text{ATE}$ via $\mathbb E (p_i^1 - p_i^0)$ with the `predict()` function.
 
 ```{r}
 predict(glm1, 
@@ -549,7 +549,7 @@ where *TEMM* is an acronym for *treatment effect at the mean and/or mode*. We'll
 
 $$\tau_\text{CATE} = \operatorname{\mathbb{E}}(y_i^1 \mid \mathbf C = \mathbf c, \mathbf D = \mathbf d) - \operatorname{\mathbb{E}}(y_i^0 \mid \mathbf C = \mathbf c, \mathbf D = \mathbf d),$$
 
-where $\mathbf C = \mathbf c$ is meant to convey you have chosen particular values $\mathbf c$ for the variables in the $\mathbf C$ vector, and $\mathbf D = \mathbf d$ is meant to convey you have chosen particular values $\mathbf d$ for the variables in the $\mathbf D$ vector. In addition to means or modes, these values could be any which are of particular interest to researchers and their audiences. We'll being this theory down to earth in just a bit.
+where $\mathbf C = \mathbf c$ is meant to convey you have chosen particular values $\mathbf c$ for the variables in the $\mathbf C$ vector, and $\mathbf D = \mathbf d$ is meant to convey you have chosen particular values $\mathbf d$ for the variables in the $\mathbf D$ vector. In addition to means or modes, these values could be any which are of particular interest to researchers and their audiences.
 
 Within the context of a logistic regression model, we further observe
 
@@ -596,7 +596,7 @@ $$
 \end{align*}
 $$
 
-This holds for logistic regression models regardless of whether you have discrete covariates. But enough with theory. Let's move into application.
+This holds for logistic regression models regardless of whether you have discrete covariates. But enough with theory. Let's bring this all to life with some application.
 
 ### $\beta_1$ in the logistic regression ANCOVA.
 
@@ -956,7 +956,7 @@ sessionInfo()
 
 [^1]: Yes, you geeks, I know we could also use the Bernoulli distribution. But the binomial is much more popular and if we're going to rely on the nice base **R** `glm()` function, we'll be setting `family = binomial`. There is no option for `family = bernoulli`.
 
-[^2]: It looks like the data have been saved in two differently-named files. If you click on the link I provided ([https://doi.org/10.1371/journal.pmed.1002479.s001](https://doi.org/10.1371/journal.pmed.1002479.s001), you'll download a file called `pmed.1002479.s001.xls`. If you instead click on the DOI link for the article, ([https://doi.org/10.1371/journal.pmed.1002479](https://doi.org/10.1371/journal.pmed.1002479)) and scroll down to the [Supporting information](https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1002479#sec020) section, you'll see a little subsection called *S1 Data*. It used to be the case that the `.xls`. file in that section was called `S1Data.xls`, which is what I originally downloaded several months ago. That old `S1Data.xls` file has the same data in the apparently newer `pmed.1002479.s001.xls` file. I've checked. But now at the time of this writing (2023-04-19), it appears I can only download a file called `pmed.1002479.s001.xls`. I'm sorry for any confusion. It appears this is just part of the process of journals figuring out how to support open materials in the long term. The long and forgettable name `pmed.1002479.s001.xls` is clearly connected to the DOI number, whereas the shorter name `S1Data.xls` has no such connection, and I can see why the former would be preferred by the decision makers at the journal.
+[^2]: It looks like the data have been saved in two differently-named files. If you click on the link I provided ([https://doi.org/10.1371/journal.pmed.1002479.s001](https://doi.org/10.1371/journal.pmed.1002479.s001)), you'll download a file called `pmed.1002479.s001.xls`. If you instead click on the DOI link for the article, ([https://doi.org/10.1371/journal.pmed.1002479](https://doi.org/10.1371/journal.pmed.1002479)) and scroll down to the [Supporting information](https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1002479#sec020) section, you'll see a little subsection called *S1 Data*. It used to be the case that the `.xls`. file in that section was called `S1Data.xls`, which is what I originally downloaded several months ago. That old `S1Data.xls` file has the same data in the apparently newer `pmed.1002479.s001.xls` file. I've checked. But now at the time of this writing (2023-04-19), it appears I can only download a file called `pmed.1002479.s001.xls`. I'm sorry for any confusion. It appears this is just part of the process of journals figuring out how to support open materials in the long term. The long and forgettable name `pmed.1002479.s001.xls` is clearly connected to the DOI number, whereas the shorter name `S1Data.xls` has no such connection, and I can see why the former would be preferred by the decision makers at the journal.
 
 [^3]: I suppose you could even argue it's a censored count. But since we'll be using it as a predictor, I'm not sure that argument would be of much help.
 
