@@ -985,7 +985,7 @@ comparisons(glm2, variables = "tx") %>%
   tidybayes::geom_dots(layout = "swarm", 
                        fill = "magenta4", color = "magenta4") +
   scale_y_continuous(NULL, breaks = NULL) +
-  labs(title = "The individual treatment effect distribution",
+  labs(title = "The individual contrast distribution",
        x = expression(hat(tau)[italic(i)]~("i.e., "*hat(italic(p))[italic(i)]^1-hat(italic(p))[italic(i)]^0))) +
   theme_gray(base_size = 11.7, base_family = "serif") +
   theme(panel.background = element_rect(fill = "#ffe5ea"),
