@@ -34,7 +34,7 @@ Here’s the working table of contents for this series:
 
 1.  Boost your power with baseline covariates
 2.  Causal inference with potential outcomes bootcamp (link [here](https://solomonkurz.netlify.app/blog/2023-04-16-causal-inference-with-potential-outcomes-bootcamp/))
-3.  Causal inference with logistic regression (ETA: April 2023)
+3.  Causal inference with logistic regression (link [here](https://solomonkurz.netlify.app/blog/2023-04-24-causal-inference-with-logistic-regression/))
 4.  Causal inference with Bayesian models (ETA: May 2023)
 5.  Causal inference with count regression (ETA: May 2023)
 6.  Causal inference with gamma regression (ETA: May 2023)
@@ -585,22 +585,22 @@ sessionInfo()
     ## 
     ## other attached packages:
     ##  [1] broom_1.0.4     lubridate_1.9.2 forcats_1.0.0   stringr_1.5.0  
-    ##  [5] dplyr_1.1.0     purrr_1.0.1     readr_2.1.4     tidyr_1.3.0    
-    ##  [9] tibble_3.2.0    ggplot2_3.4.1   tidyverse_2.0.0
+    ##  [5] dplyr_1.1.2     purrr_1.0.1     readr_2.1.4     tidyr_1.3.0    
+    ##  [9] tibble_3.2.1    ggplot2_3.4.2   tidyverse_2.0.0
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] highr_0.9         bslib_0.4.0       compiler_4.2.3    pillar_1.8.1     
+    ##  [1] highr_0.10        bslib_0.4.2       compiler_4.2.3    pillar_1.9.0     
     ##  [5] jquerylib_0.1.4   tools_4.2.3       digest_0.6.31     viridisLite_0.4.1
-    ##  [9] timechange_0.2.0  jsonlite_1.8.4    evaluate_0.18     lifecycle_1.0.3  
-    ## [13] gtable_0.3.2      pkgconfig_2.0.3   rlang_1.1.0       cli_3.6.0        
-    ## [17] rstudioapi_0.14   yaml_2.3.5        blogdown_1.16     xfun_0.37        
-    ## [21] fastmap_1.1.0     withr_2.5.0       knitr_1.42        hms_1.1.2        
-    ## [25] generics_0.1.3    sass_0.4.2        vctrs_0.6.0       grid_4.2.3       
+    ##  [9] timechange_0.2.0  jsonlite_1.8.4    evaluate_0.20     lifecycle_1.0.3  
+    ## [13] gtable_0.3.3      pkgconfig_2.0.3   rlang_1.1.0       cli_3.6.1        
+    ## [17] rstudioapi_0.14   yaml_2.3.7        blogdown_1.16     xfun_0.39        
+    ## [21] fastmap_1.1.1     withr_2.5.0       knitr_1.42        hms_1.1.3        
+    ## [25] generics_0.1.3    sass_0.4.5        vctrs_0.6.2       grid_4.2.3       
     ## [29] tidyselect_1.2.0  glue_1.6.2        R6_2.5.1          fansi_1.0.4      
-    ## [33] rmarkdown_2.20    bookdown_0.28     farver_2.1.1      tzdb_0.3.0       
-    ## [37] magrittr_2.0.3    backports_1.4.1   ellipsis_0.3.2    scales_1.2.1     
-    ## [41] htmltools_0.5.3   colorspace_2.1-0  labeling_0.4.2    utf8_1.2.3       
-    ## [45] stringi_1.7.8     munsell_0.5.0     cachem_1.0.6
+    ## [33] rmarkdown_2.21    bookdown_0.28     farver_2.1.1      tzdb_0.3.0       
+    ## [37] magrittr_2.0.3    ellipsis_0.3.2    backports_1.4.1   scales_1.2.1     
+    ## [41] htmltools_0.5.5   colorspace_2.1-0  labeling_0.4.2    utf8_1.2.3       
+    ## [45] stringi_1.7.12    munsell_0.5.0     cachem_1.0.7
 
 ## References
 
@@ -608,7 +608,7 @@ sessionInfo()
 
 <div id="ref-R-marginaleffects" class="csl-entry">
 
-Arel-Bundock, V. (2023). *<span class="nocase">marginaleffects</span>: Predictions, comparisons, slopes, marginal means, and hypothesis tests* \[Manual\]. [https://vincentarelbundock.github.io/ marginaleffects/ https://github.com/vincentarelbundock/ marginaleffects](https://vincentarelbundock.github.io/ marginaleffects/ https://github.com/vincentarelbundock/ marginaleffects)
+Arel-Bundock, V. (2023). *<span class="nocase">marginaleffects</span>: Predictions, Comparisons, Slopes, Marginal Means, and Hypothesis Tests* \[Manual\]. [https://vincentarelbundock.github.io/ marginaleffects/ https://github.com/vincentarelbundock/ marginaleffects](https://vincentarelbundock.github.io/ marginaleffects/ https://github.com/vincentarelbundock/ marginaleffects)
 
 </div>
 
