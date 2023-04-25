@@ -344,7 +344,7 @@ $$
 \end{align*}`
 $$
 
-where `\(\beta_2\)` is the coefficient for our baseline covariate `pre`. Now if you’ve taken a good introductory course on linear regression, you’ll know simply adding `pre` to the model will have an adverse consequence for the intercept `\(\beta_0\)`. This is because `pre` is how heavy the participants were at baseline, which tended to be around 155 pounds or so, on average.
+where `\(\beta_2\)` is the coefficient for our baseline covariate `pre`. Now if you’ve taken a good introductory course on linear regression, you’ll know simply adding `pre` to the model will have an adverse consequence for the intercept `\(\beta_0\)`. This is because `pre` is how heavy the participants were at baseline, which tended to be around 155 pounds or so.
 
 ``` r
 horan1971 %>% 
@@ -358,7 +358,7 @@ horan1971 %>%
     ##      <dbl>  <dbl>   <dbl>
     ## 1     155.   17.5     123
 
-Thus, the intercept `\(\beta_0\)` is now the expected value for those in the wait-list control condition, when they weigh 0 pounds. But none of our adult participants weigh zero pounds, or even near zero pounds. So to make the intercept more meaningful, we can fit an alternative version of the model with the mean-centered of the covariate `prec`,
+Thus, the intercept `\(\beta_0\)` is now the expected value for those in the wait-list control condition, when they weigh 0 pounds. But none of our adult participants weigh zero pounds, or even close. So to make the intercept more meaningful, we can fit an alternative version of the model with the mean-centered of the covariate `prec`,
 
 $$
 `\begin{align*}
