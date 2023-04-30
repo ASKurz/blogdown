@@ -929,7 +929,7 @@ In this post, some of the main points we covered were:
   - *in*crease the standard errors for the $\beta_1$ coefficient, and
   - *de*crease the standard errors for the average treatment effect, $\tau_\text{ATE}$.
 
-In the next post, we'll explore how our causal inference methods work within an applied Bayesian statistics framework. We'll practice with both simple Gaussian models, and logistic regression models, too. Until then, happy modeling, friends!
+In the [next post](https://solomonkurz.netlify.app/blog/2023-04-30-causal-inference-with-bayesian-models/), we'll explore how our causal inference methods work within an applied Bayesian statistics framework. We'll practice with both simple Gaussian models, and logistic regression models, too. Until then, happy modeling, friends!
 
 ## Thank a friend
 

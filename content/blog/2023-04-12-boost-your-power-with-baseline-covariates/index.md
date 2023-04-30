@@ -35,7 +35,7 @@ Here’s the working table of contents for this series:
 1.  Boost your power with baseline covariates
 2.  Causal inference with potential outcomes bootcamp (link [here](https://solomonkurz.netlify.app/blog/2023-04-16-causal-inference-with-potential-outcomes-bootcamp/))
 3.  Causal inference with logistic regression (link [here](https://solomonkurz.netlify.app/blog/2023-04-24-causal-inference-with-logistic-regression/))
-4.  Causal inference with Bayesian models (ETA: May 2023)
+4.  Causal inference with Bayesian models (link [here](https://solomonkurz.netlify.app/blog/2023-04-30-causal-inference-with-bayesian-models/))
 5.  Causal inference with count regression (ETA: May 2023)
 6.  Causal inference with gamma regression (ETA: May 2023)
 7.  Causal inference with ordinal regression (ETA: May 2023)
@@ -62,7 +62,7 @@ Though I don’t expect familiarity with contemporary causal inference from the 
 
 #### **R**.
 
-All code will be in **R** ([R Core Team, 2022](#ref-R-base)). Data wrangling and plotting will rely heavily on the **tidyverse** ([Wickham et al., 2019](#ref-wickhamWelcomeTidyverse2019); [Wickham, 2022](#ref-R-tidyverse)) and **ggdist** ([Kay, 2021](#ref-R-ggdist)). Bayesian models will be fit with **brms** ([Bürkner, 2017](#ref-burknerBrmsPackageBayesian2017), [2018](#ref-burknerAdvancedBayesianMultilevel2018), [2022](#ref-R-brms)). We will post process our models with help packages such as **broom** ([Robinson et al., 2022](#ref-R-broom)), **marginaleffects** ([Arel-Bundock, 2023](#ref-R-marginaleffects)), and **tidybayes**([Kay, 2022](#ref-R-tidybayes)).
+All code will be in **R** ([R Core Team, 2022](#ref-R-base)). Data wrangling and plotting will rely heavily on the **tidyverse** ([Wickham et al., 2019](#ref-wickhamWelcomeTidyverse2019); [Wickham, 2022](#ref-R-tidyverse)) and **ggdist** ([Kay, 2021](#ref-R-ggdist)). Bayesian models will be fit with **brms** ([Bürkner, 2017](#ref-burknerBrmsPackageBayesian2017), [2018](#ref-burknerAdvancedBayesianMultilevel2018), [2022](#ref-R-brms)). We will post process our models with help packages such as **broom** ([Robinson et al., 2022](#ref-R-broom)), **marginaleffects** ([Arel-Bundock, 2023](#ref-R-marginaleffects)), and **tidybayes**([Kay, 2023](#ref-R-tidybayes)).
 
 Load the primary **R** packages and adjust the global plotting theme.
 
@@ -692,7 +692,7 @@ Kay, M. (2021). *<span class="nocase">ggdist</span>: Visualizations of distribut
 
 <div id="ref-R-tidybayes" class="csl-entry">
 
-Kay, M. (2022). *<span class="nocase">tidybayes</span>: Tidy data and ’geoms’ for Bayesian models*. <https://CRAN.R-project.org/package=tidybayes>
+Kay, M. (2023). *<span class="nocase">tidybayes</span>: Tidy data and ’geoms’ for Bayesian models*. <https://CRAN.R-project.org/package=tidybayes>
 
 </div>
 
