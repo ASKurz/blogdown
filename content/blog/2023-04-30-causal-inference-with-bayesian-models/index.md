@@ -96,7 +96,7 @@ prior(exponential(0.067), class = sd) %>%
   parse_dist() %>% 
   
   ggplot(aes(y = 0, dist = .dist, args = .args)) +
-  stat_dist_halfeye(point_interval = mean_qi, .width = .95) +
+  stat_halfeye(point_interval = mean_qi, .width = .95) +
   scale_x_continuous(expression(italic(p)(sigma)), breaks = c(0, 15, 50, 100)) +
   scale_y_continuous(NULL, breaks = NULL) +
   labs(title = "Exponential(0.067)",
@@ -127,8 +127,8 @@ prior(normal(0.75, 0.25), class = sd) %>%
   parse_dist() %>% 
   
   ggplot(aes(y = 0, dist = .dist, args = .args)) +
-  stat_dist_halfeye(point_interval = mean_qi, .width = .95,
-                    p_limits = c(.0001, .9999)) +
+  stat_halfeye(point_interval = mean_qi, .width = .95,
+               p_limits = c(.0001, .9999)) +
   scale_y_continuous(NULL, breaks = NULL) +
   coord_cartesian(xlim = c(0, 1.5)) +
   labs(title = "Normal(0.75, 0.25)",
@@ -796,6 +796,22 @@ nd %>%
 
 If you haven’t used it before, the `add_epred_draws()` function from **tidybayes** works similarly to `fitted()`. But it returns the output in a long and tidy format, which can sometimes make for much thriftier code. Though that wasn’t particularly true in this case, it will be for others.
 
+If you only want the posterior summary for the ATE, and you don’t particularly care about `\(\hat p^1\)` and `\(\hat p^0\)`, you can reduce our **tidybayes**-based workflow with help from the handy `compare_levels()` function.
+
+``` r
+nd %>% 
+  add_epred_draws(fit3) %>% 
+  compare_levels(.epred, by = tx) %>% 
+  transmute(ate = .epred) %>% 
+  brms_summary()
+```
+
+    ## # A tibble: 1 × 6
+    ## # Groups:   tx [1]
+    ##   tx    variable  mean     sd `2.5%` `97.5%`
+    ##   <chr> <chr>    <dbl>  <dbl>  <dbl>   <dbl>
+    ## 1 1 - 0 ate      0.175 0.0445 0.0872   0.260
+
 As to the `predictions()` function from the **marginaleffects** package, it works much the same as before.
 
 ``` r
@@ -1128,7 +1144,7 @@ fitted(fit4,
   coord_cartesian(xlim = c(-0.1, 0.4))
 ```
 
-<img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-48-1.png" width="768" />
+<img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-49-1.png" width="768" />
 
 If you compare this plot with the original maximum-likelihood version from the [last post](https://solomonkurz.netlify.app/blog/2023-04-24-causal-inference-with-logistic-regression/#compute-mathbb-e-p_i1---p_i0-mid-mathbf-c_i-mathbf-d_i-from-glm2), you’ll note our priors have reigned some of the posteriors in a bit, particularly the `\(p_i^1 - p_i^0\)` contrasts with the lowest rank. I don’t know that one solution is more correct than the other, but priors do change the model.
 
@@ -1151,7 +1167,7 @@ nd %>%
        x = expression(hat(tau)[ATE]))
 ```
 
-<img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-49-1.png" width="576" />
+<img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-50-1.png" width="576" />
 
 ## Recap
 
