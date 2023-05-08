@@ -15,7 +15,7 @@ tags:
   - count
   - g-computation
   - GLM
-  - negative binonial
+  - negative binomial
   - Poisson
   - potential outcomes
   - R
