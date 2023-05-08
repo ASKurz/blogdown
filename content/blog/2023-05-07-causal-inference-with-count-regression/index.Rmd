@@ -273,7 +273,7 @@ bind_rows(tidy(fit1), tidy(fit2), tidy(fit3), tidy(fit4)) %>%
   flextable()
 ```
 
-We should note that the standard errors in that table are all based on conventional maximum likelihood estimation, which are typically fine defaults, to my eye. However, that equidispersion assumption for the Poisson models can result in very small standard errors, relative to those from their negative-binomial alternatives. Sometimes researchers prefer using so-called *robust* standard errors, instead. We can compute those with help from the `coeftest()` function from the **lmtest** package [@R-lmtest; @lmtest2002]. By setting `vcov = vcovHC`, we are requesting the so-called HC3 *sandwich* standard errors, via the **sandwich** package [@R-sandwich; @zeileis2020various; @zeileis2004econometric; @zeileis2006object]. Here's how all this works for our Poisson ANOVA model `fit1`, within the context of the `tidy()` function.
+We should note that the standard errors in that table are all based on conventional maximum likelihood (ML) estimation, which are typically fine defaults, to my eye. However, that equidispersion assumption for the Poisson models can result in very small standard errors, relative to those from their negative-binomial alternatives. Sometimes researchers prefer using so-called *robust* standard errors, instead. We can compute those with help from the `coeftest()` function from the **lmtest** package [@R-lmtest; @lmtest2002]. By setting `vcov = vcovHC`, we are requesting the so-called HC3 *sandwich* standard errors, via the **sandwich** package [@R-sandwich; @zeileis2020various; @zeileis2004econometric; @zeileis2006object]. Here's how all this works for our Poisson ANOVA model `fit1`, within the context of the `tidy()` function.
 
 ```{r}
 coeftest(fit1, vcov = vcovHC) %>% 
@@ -365,9 +365,9 @@ When we have unbounded count data, it's still the case that
 
 $$\tau_\text{ATE} = \mathbb E (y_i^1 - y_i^0).$$
 
-Somewhat similar to what we saw with logistic regression models, we have some technical quirks to consider. Unbounded count data can take on positive integer values, sometimes denoted $\mathbb N_0$ (*natural* numbers starting from zero). Therefore their contrasts, such as $y_i^1 - y_i^0$ can in principle take on any integer value, positive or negative, sometimes denoted $\mathbb Z$. When you take the mean for several positive integer values, you get a positive real number, sometimes denoted $\mathbb R^+$. But when you either take the mean of the mean of several positive-integer contrasts, or make a contrast of two integer averages, you can in principle get any real number, sometimes denoted $\mathbb R$.
+Somewhat similar to what we saw with logistic regression models, we have some technical quirks to consider. Unbounded count data can take on positive integer values, sometimes denoted $\mathbb N_0$ (*natural* numbers starting from zero). Therefore their contrasts, such as $y_i^1 - y_i^0$, can in principle take on any integer value, positive or negative, sometimes denoted $\mathbb Z$. When you take the mean for several positive integer values, you get a positive real number, sometimes denoted $\mathbb R^+$. But when you either take the mean of the mean of several positive-integer contrasts, or make a contrast of two integer averages, you can in principle get any real number, sometimes denoted $\mathbb R$.
 
-Our Poisson framework returns linear models for $\log(\lambda_i)$, and our negative-binomial framework returns linear models for $\log(\mu_i)$. After exponentiation, both $\lambda_i$ and $\mu_i$ can take on positive real numbers, and their contrasts can take on positive or negative real numbers. For example, see what happens when we use `predict()` for the Poisson ANOVA, `fit1`.
+Our Poisson framework returns linear models for $\log(\lambda_i)$, and our negative-binomial framework returns linear models for $\log(\mu_i)$. After exponentiation, both $\lambda_i$ and $\mu_i$ can take on positive real numbers $(\mathbb R^+)$, and their contrasts can take on positive or negative real numbers $(\mathbb R)$. For example, see what happens when we use `predict()` for the Poisson ANOVA, `fit1`.
 
 ```{r}
 nd <- ep4 %>% 
@@ -449,7 +449,7 @@ bind_rows(
   facet_grid(se ~ model)
 ```
 
-Unsurprisingly, the ANOVA-based point estimates are the same for all patients. Yet the estimates for the ANCOVA model showed great diversity among the patients. As to the 95% CI's, they were markedly wider when based on the sandwich standard errors, suggesting the Poisson models did not adequately account for the overdispersion in the data. Now look at the negative-binomial versions of the figure.
+Unsurprisingly, the ANOVA-based point estimates are the same for all participants. Yet the estimates for the ANCOVA model showed great diversity among the participants. As to the 95% CI's, they were markedly wider when based on the sandwich standard errors, suggesting the Poisson models did not adequately account for the overdispersion in the data. Now look at the negative-binomial versions of the figure.
 
 ```{r, fig.width = 8, fig.height = 6.5}
 # compute and wrangle
@@ -670,7 +670,7 @@ and to express this equation in terms of the negative-binomial ANCOVA
 
 $$\tau_\text{CATE} = ({\color{blueviolet}{\mu^1}} \mid \mathbf C = \mathbf c, \mathbf D = \mathbf d) - ({\color{blueviolet}{\mu^0}} \mid \mathbf C = \mathbf c, \mathbf D = \mathbf d).$$
 
-As a consequence, you need to use the standardization/g-computation method if you want to estimate the ATE from a count ANCOVA model. But if you wanted a CATE, this method will work just fine. For example, way we wanted the CATE for a person with an average number of baseline seizure counts (about 23.4) and age (about 27.7), we would set both covariate values to zero and make the computation with `predictions()`. Here's what that looks like for our Poisson ANCOVA model, using the sandwich standard errors.
+As a consequence, you need to use the standardization/g-computation method if you want to estimate the ATE from a count ANCOVA model. But if you actually wanted a CATE, this method will work just fine. For example, way we wanted the CATE for a person with an average number of baseline seizure counts (about 23.4) and age (about 27.7), we would set both covariate values to zero and make the computation with `predictions()`. Here's what that looks like for our Poisson ANCOVA model, using the sandwich standard errors.
 
 ```{r}
 # update the prediction grid
@@ -786,7 +786,7 @@ Both model summaries look fine, to me. If it wasn't clear to you, the `shape` li
 
 #### Can the $\beta$ posteriors give us the ATE?
 
-I don't want to spend a lot of time fooling with $\beta$ posteriors themselves, in this post, but the overall framework applies here, just like it did for our frequentist models. We can compute the ATE from a count ANOVA model with the formula
+I don't want to spend a lot of time fooling with $\beta$ posteriors themselves, in this post, but the overall framework applies much like it did for our frequentist models. We can compute the ATE from a count ANOVA model with the formula
 
 $$\exp(\beta_0 + \beta_1) - \exp(\beta_0).$$
 
@@ -916,7 +916,7 @@ options(marginaleffects_posterior_center = mean)
 avg_comparisons(brm1, variables = list(Trt = 0:1))
 ```
 
-Whether you prefer a `fitted()`-, `as_draws_df()`-, or `avg_comparisons()`-based workflow, this is all just standardization/g-computation methodology as applied to MCMC-based Bayesian models. This process works exactly that same if you'd like to instead use the standardization/g-computation approach for a Bayesian count ANCOVA model. As a quick example, here's the `add_epred_draws()`-based code for our Bayesian Poisson ANCOVA `brm2`.
+Whether you prefer a `fitted()`-, `as_draws_df()`-, or `avg_comparisons()`-based workflow, this is all just standardization/g-computation methodology as applied to MCMC-based Bayesian models. This process works exactly the same if you'd like to instead use the standardization/g-computation approach for a Bayesian count ANCOVA model. As a quick example, here's the `add_epred_draws()`-based code for our Bayesian Poisson ANCOVA `brm2`.
 
 ```{r}
 nd %>% 
