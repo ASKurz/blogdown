@@ -36,7 +36,7 @@ Here’s the working table of contents for this series:
 2.  Causal inference with potential outcomes bootcamp (link [here](https://solomonkurz.netlify.app/blog/2023-04-16-causal-inference-with-potential-outcomes-bootcamp/))
 3.  Causal inference with logistic regression (link [here](https://solomonkurz.netlify.app/blog/2023-04-24-causal-inference-with-logistic-regression/))
 4.  Causal inference with Bayesian models (link [here](https://solomonkurz.netlify.app/blog/2023-04-30-causal-inference-with-bayesian-models/))
-5.  Causal inference with count regression (ETA: May 2023)
+5.  Causal inference with count regression (link [here](https://solomonkurz.netlify.app/blog/2023-05-07-causal-inference-with-count-regression/))
 6.  Causal inference with gamma regression (ETA: May 2023)
 7.  Causal inference with ordinal regression (ETA: May 2023)
 8.  Causal inference with an analysis of heterogeneous covariance (ETA: June 2023)

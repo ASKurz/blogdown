@@ -1179,7 +1179,7 @@ In this post, some of the main points we covered were:
   - an `as_draws_df()`-based approach, or
   - a `predictions()`/`avg_comparisons()`-based approach.
 
-In the next post, we’ll explore how our causal inference methods work with Poisson and negative-binomial models.
+In the [next post](https://solomonkurz.netlify.app/blog/2023-05-07-causal-inference-with-count-regression/), we’ll explore how our causal inference methods work with Poisson and negative-binomial models.
 
 ## Thank a friend
 
