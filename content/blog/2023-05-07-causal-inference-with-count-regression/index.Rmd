@@ -1000,9 +1000,17 @@ predictions(brm2, newdata = nd, by = "Trt", hypothesis = "revpairwise")
 
 I'll leave it up to the interested reader to practice the same with a `fitted()` or `add_epred_draws()` workflow. Though our code here used our Bayesian Poisson ANCOVA, it would have worked the same way with a Bayesian negative-binomial ANCOVA.
 
-#### What about those "robust" *SE*'s?
+## Lingering issues
+
+### What about those "robust" *SE*'s for Bayesian models?
 
 The whole *robust* sandwich standard error issue mainly applies to frequentist models. Some are starting to propose similar methods for Bayesian models [e.g., @szpiro2010model], but I am not aware those solutions are available with **brms** (see [this](https://discourse.mc-stan.org/t/model-robust-regression-and-a-bayesian-sandwich-estimator/28882) discussion). If you don't like the assumptions inherent in your likelihood function, think hard about alternative likelihoods. If you're aware of another Bayesian alternative, tell me all about it in the comments section, below.
+
+### Can we trust the negative binomial?
+
+There's some concern over whether the negative-binomial model can show bias under certain conditions, which leads into a technical issue I've avoided up until this point. There are two major ways to parameterize the negative-binomial model. The canonical version is often called NB1, and the more popular version is called NB2. For a nice historical overview on the two versions, see Chapter 1 in @hilbeNegativeBinomialRegression2011. Whether with the `MASS::glm.nb()` function or the `brms::brm()` function, all the negative-binomial models in this blog post used the NB2 parameterization. In a nice simulation study, @blackburn2015relative showed the NB1 approach can return markedly biased $\beta$ coefficients when the variance in the sample data doesn't perfectly match the model. The NB2 approach can show parameter bias in some conditions, but the magnitude of the bias was generally pretty small (to my eye), and it performed pretty well overall. These kinds of concerns have led some to prefer so-called quasi-likelihood approaches, which are not to my taste and will not be further explored in this blog series. But if you're curious, you can learn about quasi-likelihood approaches in Chapter 9 of @mccullagh1989generalized.
+
+I'd like to thank the great [Noah Greifer](https://ngreifer.github.io/) for dragging me kicking and screaming into this topic.
 
 ## Recap
 
