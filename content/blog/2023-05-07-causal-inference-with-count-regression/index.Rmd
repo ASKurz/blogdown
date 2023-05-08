@@ -50,7 +50,7 @@ In the [third post](https://solomonkurz.netlify.app/blog/2023-04-24-causal-infer
 
 ## We need data
 
-We'll be working with a subset of the `epilepsy` data from the **brms** package. Based on the **brms** documentation (execute `?epilepsy`), the data have their proximal origins in an [-@thall1990some] *Biometrics* paper by Thall and Vail. However, Thall and Vail cited an earlier paper by @leppik1985double as the ultimate origin.[^1] Here we load our primary packages, adjust the global plotting theme, load the `epilepsy` data, and take a peek.
+We'll be working with a subset of the `epilepsy` data from the **brms** package. Based on the **brms** documentation (execute `?epilepsy`), the data have their proximal origins in a [-@thall1990some] *Biometrics* paper by Thall and Vail. However, Thall and Vail cited an earlier paper by @leppik1985double as the ultimate origin.[^1] Here we load our primary packages, adjust the global plotting theme, load the `epilepsy` data, and take a peek.
 
 ```{r, warning = F, message = F}
 # packages
@@ -77,7 +77,7 @@ data(package = "brms", epilepsy)
 glimpse(epilepsy)
 ```
 
-The primary outcome variable in the data is `count`, which is the number of epileptic seizures each person had had since their last visit. After their initial baseline assessment, participants came back every two weeks for assessments, which are denoted by the factor variable `visit`. After baseline assessment, participants were randomized into treatment groups in which they received either the anti-convulsant drug [progabide](https://en.wikipedia.org/wiki/Progabide) (`Trt == 1`) or a placebo (`Trt == 0`). To get a sense of the data, here are the seizures counts over the four assessment points, by treatment group.
+The original study was designed to see how well the anti-convulsant drug [progabide](https://en.wikipedia.org/wiki/Progabide) reduced epileptic seizures in persons who experienced simple or complex partial seizures. After a baseline assessment, participants were randomized into treatment groups in which they received either progabide (`Trt == 1`) or a placebo (`Trt == 0`). The primary outcome variable in the data is `count`, which is the number of epileptic seizures each participant had had since their last visit. Following their baseline assessments, participants came back every two weeks for assessments, which are denoted by the factor variable `visit`. To get a sense of the data, here are the seizures counts over the four assessment points, by treatment group.
 
 ```{r, fig.width = 6, fig.height = 3.25}
 epilepsy %>% 
@@ -121,7 +121,9 @@ It'd be cool to play around modeling the data from all four time points,[^2] but
 
 ```{r}
 ep4 <- epilepsy %>% 
+  # subset
   filter(visit == 4) %>% 
+  # add two transformed variables
   mutate(lcBase = log(Base) - mean(log(Base)),
          lcAge = log(Age) - mean(log(Age)))
 
@@ -134,7 +136,7 @@ ep4 %>%
   count(Trt)
 ```
 
-The `glimpse()` output helps clarify there were 59 unique participants in this study. If you use the `count()` function, you'll find $n = 28$ are in the placebo condition, and the remaining $n = 31$ got the active treatment. The data, both `epilepsy` and `ep4`, also contain information from the baseline assessment. The `Base` column has the epileptic seizure counts during the 8-week period before the baseline assessment. Bear in mind the counts in the `count` column were for a 2-week period, which means we'd expect the values in `Base` to be at least 4 times larger than those in `count`. But since they're all seizure counts, we'd still expect the two variables to have a strong positive correlation. The other baseline covariate in the data, which was also considered by @thall1990some, is age measured in years (`Age`). The **brms** package also includes standardized version of these variables in the `zBase` and `zAge` columns. Thall and Vail, however, used log-transformed versions of these variables, which is what we'll do in this blog post. Thus, our new variable `lcBase` is the log-transformed and mean-centered version of `Base`, and `lcAge` is the log-transformed and mean-centered version of `Age`.
+The `glimpse()` output helps clarify there were 59 unique participants in this study. If you use the `count()` function, you'll find $n = 28$ are in the placebo condition, and the remaining $n = 31$ got the active treatment. The data also contain information from the baseline assessment in the `Base` column, which has the epileptic seizure counts during the 8-week period before the baseline assessment. Bear in mind the counts in the `count` column were for a 2-week period, which means we'd expect the values in `Base` to be at least 4 times larger than those in `count`. But since they're all seizure counts, it seems like we'd still expect the two variables to have a strong positive correlation. The other baseline covariate in the data, which was also considered by @thall1990some, is age measured in years (`Age`). The data from the **brms** package includes standardized version of these variables in the `zBase` and `zAge` columns. Thall and Vail, however, used log-transformed versions of these variables, which is what we'll do in this blog post. Thus, our new variable `lcBase` is the log-transformed and mean-centered version of `Base`, and `lcAge` is the log-transformed and mean-centered version of `Age`.
 
 Since it can be difficult to think in terms of the mean values of log-transformed variables, here are what the means of those log-transformed values are, when exponentiated back into their original metric.[^3]
 
@@ -163,7 +165,7 @@ ep4 %>%
   ggtitle("All variables on the log scale")
 ```
 
-Because several of the `count` values were zero, transforming them to the log scale resulted in $-\infty$ values. `ggpairs()` dropped those values from the scatter plots and histograms, but otherwise returned the plots for the other values. However, those $-\infty$ values kept us from computing the Pearson's correlations between `log(count)` and the other two variables. If you're willing to settle for listwise removal of those values, here are the Person's correlation estimates for the remaining cases.
+Because several of the `count` values were zero, transforming them to the log scale resulted in $-\infty$ values. `ggpairs()` dropped those values from the scatter plots and histograms, but otherwise returned the plots for the other values. However, those $-\infty$ values kept us from computing the Pearson's correlations between `log(count)` and the other two variables. If you're willing to settle for listwise removal of those values, here are the Pearson's correlation estimates for the remaining cases.
 
 ```{r}
 ep4 %>% 
@@ -175,9 +177,7 @@ ep4 %>%
 
 ## Model framework
 
-Our focal variable `count` is an unbounded count. Technically all count variables are bounded in that their lower limit is always zero.[^4] By *unbounded* count, I mean there is no clearly-defined upper limit such as with binomial data. When you have unbounded counts, the two most popular likelihoods are the Poisson and the negative-binomial. The Poisson likelihood is parsimonious in that it contains a single parameter $\lambda$, which is both the mean and the variance. As such, the Poisson likelihood assumes the variance scales perfectly with the mean, which is often called the *equidispersion* assumption. If you look back above at the sample statistics, you'll notice the variances for `count` were a lot larger than the means at all time points and for both conditions, which doesn't bode well for that equidispersion assumption.[^5] Happily, the negative-binomial likelihood provides an alternative where its second parameter $\phi$ accounts for additional variance above what we'd expect from the Poisson. For the sake of practice, in this blog post we'll analyze these data from both frequentist and Bayesian perspectives, and also with the Poisson and negative-binomial likelihoods.
-
-To complicate matters even further, we'll also analyze the data with ANOVA- and ANCOVA-type frameworks. Butting all three binaries together, we'll end up fitting and post-processing 6 models in total:
+Our well-named focal variable `count` is an unbounded count. Technically all count variables are bounded in that their lower limit is always zero.[^4] By *unbounded* count, I mean there is no clearly-defined upper limit such as with binomial data. When you have unbounded counts, the two most popular likelihoods are the Poisson and the negative-binomial. The Poisson likelihood is parsimonious in that it contains a single parameter $\lambda$, which is both the mean and the variance. As such, the Poisson likelihood assumes the variance scales perfectly with the mean, which is often called the *equidispersion* assumption. If you look back above at the sample statistics, you'll notice the variances for `count` were a lot larger than the means at all time points and for both conditions, which doesn't bode well for that equidispersion assumption.[^5] Happily, the negative-binomial likelihood provides an alternative where its second parameter $\phi$ accounts for additional variance above what we'd expect from the Poisson. For the sake of practice, in this blog post we'll analyze these data from both frequentist and Bayesian perspectives, and also with the Poisson and negative-binomial likelihoods. To complicate matters even further, we'll also analyze the data with ANOVA- and ANCOVA-type frameworks. Putting all three binaries together, we'll end up fitting and post-processing 6 models in total:
 
 ```{r}
 tibble(
@@ -190,7 +190,9 @@ tibble(
   autofit()
 ```
 
-For the sake of space, well only fit two Bayesian models. My hope is by the time we're in that section, you'll get the gist of what's going on. For the frequentist models, we'll also discuss the issue of *robust* standard errors, which won't apply to our Bayesian models. We start as frequentists.
+For the sake of space, well only fit two Bayesian models. My hope is by the time we're in that section, you'll get the gist of what's going on. For the frequentist models, we'll also discuss the issue of *robust* standard errors, which won't apply to our Bayesian models.
+
+We start as frequentists.
 
 ### Frequentist models.
 
@@ -282,11 +284,11 @@ If you compare those standard errors to the values in the first two rows of the 
 
 ```{r, fig.width = 10, fig.height = 3.25}
 bind_rows(
-  # conventional SE's
+  # conventional ML SE's
   tibble(name = str_c("fit", 1:4),
          model = rep(c("ANOVA", "ANCOVA"), each = 2), 
          likelihood = rep(c("Poisson", "NB"), times = 2),
-         se = "conventional") %>% 
+         se = "ML") %>% 
     mutate(fit = map(name, get)) %>% 
     mutate(tidy = map(fit, tidy, conf.int = TRUE)),
   # sandwich SE's
@@ -334,7 +336,7 @@ exp(coef(fit1)[1] + coef(fit1)[2]) - exp(coef(fit1)[1])  # Poisson ANOVA
 exp(coef(fit2)[1] + coef(fit2)[2]) - exp(coef(fit2)[1])  # negative-binomial ANOVA 
 ```
 
-The Poisson and negative-binomial ANOCVA-type models, however, give us no such way to compute the ATE. We can, however, compute some form of the *conditional* average treatment effect (CATE). For example, given how both of the covariates in our ANCOVA models are mean centered, we can simply use the equation from above,
+Sadly, the Poisson and negative-binomial ANO*C*VA-type models give us no such way to compute the ATE. We can, however, compute some form of the *conditional* average treatment effect (CATE). For example, given how both of the covariates in our ANCOVA models are mean centered, we can simply use the equation from above,
 
 $$\exp(\beta_0 + \beta_1) - \exp(\beta_0),$$
 
@@ -363,7 +365,9 @@ When we have unbounded count data, it's still the case that
 
 $$\tau_\text{ATE} = \mathbb E (y_i^1 - y_i^0).$$
 
-However, our Poisson framework returns linear models for $\log(\lambda_i)$, and our negative-binomial framework returns linear models for $\log(\mu_i)$. For example, see what happens when we use `predict()` for the Poisson ANOVA, `fit1`.
+Somewhat similar to what we saw with logistic regression models, we have some technical quirks to consider. Unbounded count data can take on positive integer values, sometimes denoted $\mathbb N_0$ (*natural* numbers starting from zero). Therefore their contrasts, such as $y_i^1 - y_i^0$ can in principle take on any integer value, positive or negative, sometimes denoted $\mathbb Z$. When you take the mean for several positive integer values, you get a positive real number, sometimes denoted $\mathbb R^+$. But when you either take the mean of the mean of several positive-integer contrasts, or make a contrast of two integer averages, you can in principle get any real number, sometimes denoted $\mathbb R$.
+
+Our Poisson framework returns linear models for $\log(\lambda_i)$, and our negative-binomial framework returns linear models for $\log(\mu_i)$. After exponentiation, both $\lambda_i$ and $\mu_i$ can take on positive real numbers, and their contrasts can take on positive or negative real numbers. For example, see what happens when we use `predict()` for the Poisson ANOVA, `fit1`.
 
 ```{r}
 nd <- ep4 %>% 
@@ -383,7 +387,7 @@ predict(fit1,
   head()
 ```
 
-The `fit` column contains the $\hat \lambda_i$ values, rather than $\hat y_i$ values. However, it turns out that when you take the average of the contrast of these values, you still get an estimate of the ATE [see Section 18.4 of @greeneEconometricAnalysis2018]. Thus within the context of our Poisson ANOVA model,
+The `fit` column contains the $\hat \lambda_i$ values, rather than $\hat y_i$ values we like to think of when making causal inferences. This won't be a problem, though. It turns out that when you take the average of the contrast of these values, you still get an estimate of the ATE [see Section 18.4 of @greeneEconometricAnalysis2018]. Thus within the context of our Poisson ANOVA model,
 
 $$\tau_\text{ATE} = \mathbb E (y_i^1 - y_i^0) = {\color{blueviolet}{\mathbb E (\lambda_i^1 - \lambda_i^0)}}.$$
 
@@ -1046,7 +1050,7 @@ sessionInfo()
 
 [^3]: Careful readers will note those sample statistics end up closer to the medians, rather than the means, of the original un-transformed variables. Logs are tricky, friends.
 
-[^4]: Okay, technically you can have a censored or truncated count, which complicates how you think about the lower limit. In this post, we're not focusing on those issues. Thus, our lower limit is the conventional value zero.
+[^4]: Okay, technically you can have a censored or truncated count, which complicates how you think about the lower limit. In this post, we're not focusing on those issues. Thus, our lower limit is the conventional value zero. But if you ever find yourself in a position where you have to contend with those issues, **brms** can handle both censored and truncated data.
 
 [^5]: Clever readers will note our quick-and-dirty sample-statistic analysis is a lot like checking for equidispersion without controlling for the baseline covariates `Base` and `Age`. Maybe it'd be okay to presume equidispersion after conditioning on the baseline covariates. See how tricky this all gets?
 
