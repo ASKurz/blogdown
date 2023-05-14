@@ -1082,6 +1082,12 @@ Horan, J. J., & Johnson, R. G. (1971). Coverant conditioning through a self-mana
 
 </div>
 
+<div id="ref-R-moments" class="csl-entry">
+
+Komsta, L., & Novomestky, F. (2022). *Moments: Moments, cumulants, skewness, kurtosis and related tests* \[Manual\]. <https://CRAN.R-project.org/package=moments>
+
+</div>
+
 <div id="ref-malehi2015statistical" class="csl-entry">
 
 Malehi, A. S., Pourmotahari, F., & Angali, K. A. (2015). Statistical models for the analysis of skewed healthcare cost data: A simulation study. *Health Economics Review*, *5*(1), 1–16. <https://doi.org/10.1186/s13561-015-0045-7>
@@ -1100,12 +1106,6 @@ Nelder, J. A., & Wedderburn, R. W. (1972). Generalized linear models. *Journal o
 
 </div>
 
-<div id="ref-R-psych" class="csl-entry">
-
-Revelle, W. (2022). *<span class="nocase">psych</span>: Procedures for psychological, psychometric, and personality research*. <https://CRAN.R-project.org/package=psych>
-
-</div>
-
 </div>
 
 [^1]: It isn’t totally under-used, though. Some researchers have found gamma regression (with the log link) useful for modeling healthcare cost data ([Basu et al., 2004](#ref-basu2004comparing); [Malehi et al., 2015](#ref-malehi2015statistical))
@@ -1114,7 +1114,7 @@ Revelle, W. (2022). *<span class="nocase">psych</span>: Procedures for psycholog
 
 [^3]: The language of “quirks” is my own. The inverse link has the technical limitation that it will not insure on its own that the model will not return negative predictions, which is an insight you can find in the technical literature (e.g., [McCullagh & Nelder, 1989](#ref-mccullagh1989generalized)). In addition, I have personally found the inverse link can cause estimation difficulties with both frequentist (`glm()`) and Bayesian (`brm()`) software. The log link *just works*, friends. Use the log link for gamma.
 
-[^4]: You don’t have to believe me. Check it for yourself. You might do a visual check with a histogram or density plot. Or you could compute the sample skewness statistic with the `skew()` function from the **psych** package ([Revelle, 2022](#ref-R-psych)).
+[^4]: You don’t have to believe me. Check it for yourself. You might do a visual check with a histogram or density plot. Or you could compute the sample skewness statistic with the `skewness()` function from the **moments** package ([Komsta & Novomestky, 2022](#ref-R-moments)), which is what we’ll use in one of our posterior-predictive checks later on in the post.
 
 [^5]: *Why would I assume the mean and variance would be the same?* you ask. Well, you might not. But bear in mind that the popular likelihood for unbounded counts, the Poisson, assumes the mean and variance are the same. Granted, the Poisson likelihood often underestimates the variance in real-world sample data, and we might not expect our positive-real skewed continuous data will behave like unbounded counts. But you have to start somewhere, friends. Why not appeal to one of the devils you already know?
 
