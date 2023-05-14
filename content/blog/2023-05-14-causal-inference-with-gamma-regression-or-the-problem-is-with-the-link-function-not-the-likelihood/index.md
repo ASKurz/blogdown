@@ -901,7 +901,7 @@ print(brm1)  # Bayes via HMC
     ## and Tail_ESS are effective sample size measures, and Rhat is the potential
     ## scale reduction factor on split chains (at convergence, Rhat = 1).
 
-The results for the `\(\beta\)` parameters are very similar.
+The results for the `\(\beta\)` parameters are very similar.[^7]
 
 Since we’re in Bayesian mode, we might do a posterior-predictive check to make sure the model does an okay job simulating data that resemble the sample data.
 
@@ -940,7 +940,7 @@ p3 <- pp_check(brm1, type = "stat_grouped", group = "experimental", stat = "skew
 
 <img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-33-1.png" width="576" />
 
-Our model did a great job with the means and SD’s, and a decent job with the skew.[^7]
+Our model did a great job with the means and SD’s, and a decent job with the skew.[^8]
 
 With our Bayesian gamma ANCOVA with the log link, the easiest way to compute our posterior for the ATE is with the `avg_comparisons()` function from **marginaleffects**.
 
@@ -1120,4 +1120,6 @@ Nelder, J. A., & Wedderburn, R. W. (1972). Generalized linear models. *Journal o
 
 [^6]: Within the context of a fixed `\(\mu\)`, you might think of `\(\alpha\)` as a *concentration* parameter. The higher the `\(\alpha\)`, the more concentrated the distribution gets around the mean.
 
-[^7]: I’ll admit, we did *okay* with the skew, but it seems like there’s room for improvement, particularly for the control condition. If you’re curious, try fitting a second Bayesian gamma model where you allow the log of the shape parameter `\((\log \alpha_i)\)` to vary by `experimental` and `prelc`. I think you’ll see that fuller version of the model does a better job capturing the skew. We’re not quite ready for distributional models in this blog series, but check out Bürkner’s ([2023](#ref-Bürkner2023Distributional)) vignette, *Estimating distributional models with brms*, if you’re ready to skip ahead.
+[^7]: Sharpe-eyed readers may have noticed that whereas the `glm()`-based version of the model returned an estimate for a “dispersion” parameter, the `brm()`-based model returned a posterior summary for a “shape” parameter. You may also have noticed that the estimate for the former is very small, and that the posterior mean for the latter is very large. *What gives?* The `glm()` function parameterizes the gamma likelihood in terms of the mean `\(\mu\)` and *dispersion* `\(\phi\)`, and the dispersion is just the inverse of the shape. That is `\(\phi = 1 / \alpha\)`.
+
+[^8]: I’ll admit, we did *okay* with the skew, but it seems like there’s room for improvement, particularly for the control condition. If you’re curious, try fitting a second Bayesian gamma model where you allow the log of the shape parameter `\((\log \alpha_i)\)` to vary by `experimental` and `prelc`. I think you’ll see that fuller version of the model does a better job capturing the skew. We’re not quite ready for distributional models in this blog series, but check out Bürkner’s ([2023](#ref-Bürkner2023Distributional)) vignette, *Estimating distributional models with brms*, if you’re ready to skip ahead.
