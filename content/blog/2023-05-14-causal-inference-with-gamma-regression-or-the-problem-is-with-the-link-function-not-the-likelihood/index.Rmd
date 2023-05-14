@@ -826,7 +826,7 @@ bind_rows(
   scale_color_viridis_d("link: ", option = "D", begin = 0.25, end = 0.55, direction = 1) +
   scale_x_continuous(expression(hat(tau)[ATE]), expand = expansion(add = 4)) +
   labs(title = "ATE by likelihood and link function",
-       subtitle = "For ANCOVA models, the challenge comes from the\nlink function, not with the likelihood.",
+       subtitle = "For ANCOVA models, the challenge comes from\nthe link function, not from the likelihood.",
        y = NULL) +
   theme_linedraw() +
   theme(axis.text.y = element_text(hjust = 0),
