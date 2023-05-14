@@ -787,7 +787,7 @@ sessionInfo()
 
 [^3]: The language of "quirks" is my own. The inverse link has the technical limitation that it will not insure on its own that the model will not return negative predictions, which is an insight you can find in the technical literature [e.g., @mccullagh1989generalized]. In addition, I have personally found the inverse link can cause estimation difficulties with both frequentist (`glm()`) and Bayesian (`brm()`) software. The log link *just works*, friends. Use the log link for gamma.
 
-[^4]: You don't have to believe me. Check it for yourself. You might do a visual check with a histogram or density plot. Or you could compute the sample skewness statistic with the `skew()` function from the **psych** package [@R-psych].
+[^4]: You don't have to believe me. Check it for yourself. You might do a visual check with a histogram or density plot. Or you could compute the sample skewness statistic with the `skewness()` function from the **moments** package [@R-moments], which is what we'll use in one of our posterior-predictive checks later on in the post.
 
 [^5]: *Why would I assume the mean and variance would be the same?* you ask. Well, you might not. But bear in mind that the popular likelihood for unbounded counts, the Poisson, assumes the mean and variance are the same. Granted, the Poisson likelihood often underestimates the variance in real-world sample data, and we might not expect our positive-real skewed continuous data will behave like unbounded counts. But you have to start somewhere, friends. Why not appeal to one of the devils you already know?
 
