@@ -179,7 +179,7 @@ coyne2022 %>%
     ## 4     4
     ## 5     5
 
-This this item, 1 maps to *strongly agree* and 5 maps to *strongly disagree* for the question: “I would be comfortable sharing food with someone living with HIV.” Okay. We’re ready to describe and fit our models.
+For the `post` variable, 1 maps to *strongly agree* and 5 maps to *strongly disagree* for the question: “I would be comfortable sharing food with someone living with HIV.” Okay. We’re ready to describe and fit our models.
 
 ## Models
 
