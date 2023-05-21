@@ -38,9 +38,11 @@ Here’s the working table of contents for this series:
 4.  Causal inference with Bayesian models (link [here](https://solomonkurz.netlify.app/blog/2023-04-30-causal-inference-with-bayesian-models/))
 5.  Causal inference with count regression (link [here](https://solomonkurz.netlify.app/blog/2023-05-07-causal-inference-with-count-regression/))
 6.  Causal inference with gamma regression (link [here](https://solomonkurz.netlify.app/blog/2023-05-14-causal-inference-with-gamma-regression-or-the-problem-is-with-the-link-function-not-the-likelihood/))
-7.  Causal inference with ordinal regression (ETA: May 2023)
-8.  Causal inference with an analysis of heterogeneous covariance (ETA: June 2023)
-9.  Causal inference with distributional models (ETA: June 2023)
+7.  Causal inference with ordinal regression (link [here](https://solomonkurz.netlify.app/blog/2023-05-21-causal-inference-with-ordinal-regression/))
+8.  Causal inference with change scores (ETA: June 2023)
+9.  Causal inference with beta regression (ETA: June 2023)
+10. Causal inference with an analysis of heterogeneous covariance (ETA: July 2023)
+11. Causal inference with distributional models (ETA: July 2023)
 
 In this first post, we’ll review a long-established insight from the RCT literature: Baseline covariates help us compare our experimental conditions.[^2]
 
@@ -569,16 +571,19 @@ Do note the final editorial decisions were my own, and I do not think it would b
 sessionInfo()
 ```
 
-    ## R version 4.2.3 (2023-03-15)
-    ## Platform: x86_64-apple-darwin17.0 (64-bit)
-    ## Running under: macOS Big Sur ... 10.16
+    ## R version 4.3.0 (2023-04-21)
+    ## Platform: x86_64-apple-darwin20 (64-bit)
+    ## Running under: macOS Monterey 12.4
     ## 
     ## Matrix products: default
-    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRblas.0.dylib
-    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRlapack.dylib
+    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.3-x86_64/Resources/lib/libRblas.0.dylib 
+    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.3-x86_64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
     ## 
     ## locale:
     ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+    ## 
+    ## time zone: America/Chicago
+    ## tzcode source: internal
     ## 
     ## attached base packages:
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
@@ -589,18 +594,18 @@ sessionInfo()
     ##  [9] tibble_3.2.1    ggplot2_3.4.2   tidyverse_2.0.0
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] highr_0.10        bslib_0.4.2       compiler_4.2.3    pillar_1.9.0     
-    ##  [5] jquerylib_0.1.4   tools_4.2.3       digest_0.6.31     viridisLite_0.4.1
-    ##  [9] timechange_0.2.0  jsonlite_1.8.4    evaluate_0.20     lifecycle_1.0.3  
-    ## [13] gtable_0.3.3      pkgconfig_2.0.3   rlang_1.1.0       cli_3.6.1        
-    ## [17] rstudioapi_0.14   yaml_2.3.7        blogdown_1.16     xfun_0.39        
-    ## [21] fastmap_1.1.1     withr_2.5.0       knitr_1.42        hms_1.1.3        
-    ## [25] generics_0.1.3    sass_0.4.5        vctrs_0.6.2       grid_4.2.3       
-    ## [29] tidyselect_1.2.0  glue_1.6.2        R6_2.5.1          fansi_1.0.4      
-    ## [33] rmarkdown_2.21    bookdown_0.28     farver_2.1.1      tzdb_0.3.0       
-    ## [37] magrittr_2.0.3    ellipsis_0.3.2    backports_1.4.1   scales_1.2.1     
-    ## [41] htmltools_0.5.5   colorspace_2.1-0  labeling_0.4.2    utf8_1.2.3       
-    ## [45] stringi_1.7.12    munsell_0.5.0     cachem_1.0.7
+    ##  [1] sass_0.4.6        utf8_1.2.3        generics_0.1.3    blogdown_1.17    
+    ##  [5] stringi_1.7.12    hms_1.1.3         digest_0.6.31     magrittr_2.0.3   
+    ##  [9] evaluate_0.21     grid_4.3.0        timechange_0.2.0  bookdown_0.34    
+    ## [13] fastmap_1.1.1     jsonlite_1.8.4    backports_1.4.1   fansi_1.0.4      
+    ## [17] viridisLite_0.4.2 scales_1.2.1      jquerylib_0.1.4   cli_3.6.1        
+    ## [21] rlang_1.1.1       ellipsis_0.3.2    munsell_0.5.0     withr_2.5.0      
+    ## [25] cachem_1.0.8      yaml_2.3.7        tools_4.3.0       tzdb_0.4.0       
+    ## [29] colorspace_2.1-0  vctrs_0.6.2       R6_2.5.1          lifecycle_1.0.3  
+    ## [33] pkgconfig_2.0.3   pillar_1.9.0      bslib_0.4.2       gtable_0.3.3     
+    ## [37] glue_1.6.2        highr_0.10        xfun_0.39         tidyselect_1.2.0 
+    ## [41] rstudioapi_0.14   knitr_1.42        farver_2.1.1      htmltools_0.5.5  
+    ## [45] rmarkdown_2.21    labeling_0.4.2    compiler_4.3.0
 
 ## References
 

@@ -38,9 +38,11 @@ Here's the working table of contents for this series:
 4. Causal inference with Bayesian models (link [here](https://solomonkurz.netlify.app/blog/2023-04-30-causal-inference-with-bayesian-models/))
 5. Causal inference with count regression (link [here](https://solomonkurz.netlify.app/blog/2023-05-07-causal-inference-with-count-regression/))
 6. Causal inference with gamma regression (link [here](https://solomonkurz.netlify.app/blog/2023-05-14-causal-inference-with-gamma-regression-or-the-problem-is-with-the-link-function-not-the-likelihood/))
-7. Causal inference with ordinal regression (ETA: May 2023)
-8. Causal inference with an analysis of heterogeneous covariance (ETA: June 2023)
-9. Causal inference with distributional models (ETA: June 2023)
+7. Causal inference with ordinal regression (link [here](https://solomonkurz.netlify.app/blog/2023-05-21-causal-inference-with-ordinal-regression/))
+8. Causal inference with change scores (ETA: June 2023)
+9. Causal inference with beta regression (ETA: June 2023)
+10. Causal inference with an analysis of heterogeneous covariance (ETA: July 2023)
+11. Causal inference with distributional models (ETA: July 2023)
 
 In this first post, we'll review a long-established insight from the RCT literature: Baseline covariates help us compare our experimental conditions.[^2]
 

@@ -761,7 +761,7 @@ In this post, some of the main points we covered were:
 * When you use the identity link for either the Gaussian or the gamma ANCOVA, the $\beta_1$ parameter, the $\mathbb E (y_i^1 - y_i^0 \mid c_i)$ method, and the $\mathbb E (y_i^1 \mid \bar c) - \mathbb E (y_i^0 \mid \bar c)$ method are all valid estimators of $\tau_\text{ATE}$.
 * When you use the log link for either the Gaussian or the gamma ANCOVA, only the $\mathbb E (y_i^1 - y_i^0 \mid c_i)$ method can return a valid estimate for $\tau_\text{ATE}$.
 
-In the next post, we'll explore how our causal inference methods work with ordinal regression models.
+In the [next post](https://solomonkurz.netlify.app/blog/2023-05-21-causal-inference-with-ordinal-regression/), we'll explore how our causal inference methods work with ordinal regression models.
 
 ## Thank the reviewer
 
