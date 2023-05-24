@@ -533,7 +533,7 @@ Now we're ready to see how we might use our baseline covariates to better estima
 
 $$\tau_\text{ATE} = \mathbb E (y_i^1 - y_i^0 \mid \mathbf C_i, \mathbf D_i).$$
 
-In words, this means the average treatment effect in the population is the same as the average of each participant's individual treatment effect, computed conditional on their continuous covariates $\mathbf C_i$ and discrete covariates $\mathbf D_i$. This, again, is sometimes called *standardization* or *g-computation*. Within the context of a logistic regression model, we further observe
+In words, this means the average treatment effect in the population is the same as the average of each participant's individual treatment effect, computed conditional on their continuous covariates $\mathbf C_i$ and discrete covariates $\mathbf D_i$. This, again, is sometimes called *standardization* or *g-computation*.[^11] Within the context of a logistic regression model, we further observe
 
 $$
 \tau_\text{ATE} = \mathbb E (y_i^1 - y_i^0 \mid \mathbf C_i, \mathbf D_i) = {\color{blueviolet}{\mathbb E (p_i^1 - p_i^0 \mid \mathbf C_i, \mathbf D_i)}},
@@ -541,7 +541,7 @@ $$
 
 where $p_i^1$ and $p_i^0$ are the counterfactual probabilities for each of the $i$ cases, estimated in light of their covariate values. 
 
-Whether we have continuous covariates, discrete covariates, or a combination of both, the standardization method works the same. However, this is no longer the case when using the difference in population means approach, the covariate-adjusted version of $\mathbb E (y_i^1) - \mathbb E (y_i^0)$. One complication is we might not be able to mean-center the discrete covariates in our $\mathbf D$ vector. Sometimes people will mean center dummy variables, which can lead to awkward interpretive issues.[^11] But even this approach will not generalize well to multi-categorical nominal variables, like ethnicity. Another solution is to set discrete covariates at their modes [see @muller2014estimating], which we'll denote $\mathbf D^m$. This gives us a new estimand:
+Whether we have continuous covariates, discrete covariates, or a combination of both, the standardization method works the same. However, this is no longer the case when using the difference in population means approach, the covariate-adjusted version of $\mathbb E (y_i^1) - \mathbb E (y_i^0)$. One complication is we might not be able to mean-center the discrete covariates in our $\mathbf D$ vector. Sometimes people will mean center dummy variables, which can lead to awkward interpretive issues.[^12] But even this approach will not generalize well to multi-categorical nominal variables, like ethnicity. Another solution is to set discrete covariates at their modes [see @muller2014estimating], which we'll denote $\mathbf D^m$. This gives us a new estimand:
 
 $$\tau_\text{TEMM} = \operatorname{\mathbb{E}} \left (y_i^1 \mid \mathbf{\bar C}, \mathbf D^m \right) - \operatorname{\mathbb{E}} \left (y_i^0 \mid \mathbf{\bar C}, \mathbf D^m \right),$$
 
@@ -974,7 +974,9 @@ sessionInfo()
 
 [^10]: Note that the standard deviation, here, isn't quite the same thing as a standard error. We'd need to do something more akin to bootstrapping, for that. However, this kind of a workflow does have some things in common with the Monte-Carlo-based Bayesian methods we'll be practicing later in this series.
 
-[^11]: For example, say you have a dummy variable called `male`, which is a zero for women and a one for men. One way to interpret a model using the centered version of `male` is it returns the contrast weighted by the proportion of women/men in the sample or population. Another interpretation is this returns the contrast for someone who is in the middle of the female-male spectrum--which is what? Intersex? Non-binary? Transgender? It might be possible to interpret such a computation with skill and care, but such an approach might also leave one's audience confused or offended.
+[^11]: If you'd like more pedagogy for and practice with the standardization approach, wade through Section 14.4 in @gelmanRegressionOtherStories2020. The authors didn't use the language of *standardization* in that section, and they weren't focusing on causal inference, either. You might find it helpful how they showcased the concept so differently.
+
+[^12]: For example, say you have a dummy variable called `male`, which is a zero for women and a one for men. One way to interpret a model using the centered version of `male` is it returns the contrast weighted by the proportion of women/men in the sample or population. Another interpretation is this returns the contrast for someone who is in the middle of the female-male spectrum--which is what? Intersex? Non-binary? Transgender? It might be possible to interpret such a computation with skill and care, but such an approach might also leave one's audience confused or offended.
 
 
 ```{r, fig.width = 4, fig.height = 4, echo = F, eval = F}
