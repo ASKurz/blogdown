@@ -1,7 +1,7 @@
 ---
 title: "Books"
 author: "A. Solomon Kurz"
-date: "2023-01-26"
+date: "2023-06-12"
 output:
   html_document:
     df_print: paged
@@ -20,7 +20,7 @@ I make periodic updates to these books, which are reflected in their version num
 
 Here's the list:
 
-## *Applied Longitudinal Data Analysis in brms and the tidyverse*, version 0.0.2
+## *Applied Longitudinal Data Analysis in brms and the tidyverse*, version 0.0.3
 
 This is a translation of the examples and figures from Singer and Willett's classic *Applied longitudinal data analysis: Modeling change and event occurrence*. 
 * You can find my ebook at https://bookdown.org/content/4253/
