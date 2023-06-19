@@ -1318,7 +1318,7 @@ In this post, some of the main points we covered were:
     - might be more easily understood by normal humans.
   * Even though we extensively explored these estimands with cumulative probit models, the overall pattern of results is the same for cumulative logit models.
 
-Okay, I'm exhausted, which means it's time to switch gears. In the next post, we'll talk about change scores and how they fit into our potential outcomes causal inference framework. If you haven't noticed, some people get up into their feelings when the conversation turns to change scores. Beware.
+Okay, I'm exhausted, which means it's time to switch gears. In the [next post](https://solomonkurz.netlify.app/blog/2023-06-19-causal-inference-with-change-scores/), we'll talk about change scores and how they fit into our potential outcomes causal inference framework. If you haven't noticed, some people get up into their feelings when the conversation turns to change scores. Beware.
 
 ## Thank the reviewer
 

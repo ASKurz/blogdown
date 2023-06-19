@@ -1722,7 +1722,7 @@ In this post, some of the main points we covered were:
   - might be more easily understood by normal humans.
 - Even though we extensively explored these estimands with cumulative probit models, the overall pattern of results is the same for cumulative logit models.
 
-Okay, I’m exhausted, which means it’s time to switch gears. In the next post, we’ll talk about change scores and how they fit into our potential outcomes causal inference framework. If you haven’t noticed, some people get up into their feelings when the conversation turns to change scores. Beware.
+Okay, I’m exhausted, which means it’s time to switch gears. In the [next post](https://solomonkurz.netlify.app/blog/2023-06-19-causal-inference-with-change-scores/), we’ll talk about change scores and how they fit into our potential outcomes causal inference framework. If you haven’t noticed, some people get up into their feelings when the conversation turns to change scores. Beware.
 
 ## Thank the reviewer
 
@@ -1741,12 +1741,12 @@ sessionInfo()
 ```
 
     ## R version 4.3.0 (2023-04-21)
-    ## Platform: x86_64-apple-darwin20 (64-bit)
-    ## Running under: macOS Monterey 12.4
+    ## Platform: aarch64-apple-darwin20 (64-bit)
+    ## Running under: macOS Ventura 13.4
     ## 
     ## Matrix products: default
-    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.3-x86_64/Resources/lib/libRblas.0.dylib 
-    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.3-x86_64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
+    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
+    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
     ## 
     ## locale:
     ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
@@ -1764,31 +1764,31 @@ sessionInfo()
     ## [13] tibble_3.2.1           ggplot2_3.4.2          tidyverse_2.0.0       
     ## 
     ## loaded via a namespace (and not attached):
-    ##   [1] tensorA_0.36.2       rstudioapi_0.14      jsonlite_1.8.4       magrittr_2.0.3       TH.data_1.1-2       
-    ##   [6] estimability_1.4.1   farver_2.1.1         nloptr_2.0.3         rmarkdown_2.21       vctrs_0.6.2         
+    ##   [1] tensorA_0.36.2       rstudioapi_0.14      jsonlite_1.8.5       magrittr_2.0.3       TH.data_1.1-2       
+    ##   [6] estimability_1.4.1   farver_2.1.1         nloptr_2.0.3         rmarkdown_2.22       vctrs_0.6.2         
     ##  [11] minqa_1.2.5          base64enc_0.1-3      blogdown_1.17        htmltools_0.5.5      haven_2.5.2         
-    ##  [16] distributional_0.3.2 sass_0.4.6           StanHeaders_2.26.25  bslib_0.4.2          htmlwidgets_1.6.2   
+    ##  [16] distributional_0.3.2 sass_0.4.6           StanHeaders_2.26.27  bslib_0.5.0          htmlwidgets_1.6.2   
     ##  [21] plyr_1.8.8           sandwich_3.0-2       emmeans_1.8.6        zoo_1.8-12           cachem_1.0.8        
-    ##  [26] igraph_1.4.2         mime_0.12            lifecycle_1.0.3      pkgconfig_2.0.3      colourpicker_1.2.0  
-    ##  [31] Matrix_1.5-4         R6_2.5.1             fastmap_1.1.1        collapse_1.9.5       shiny_1.7.4         
-    ##  [36] digest_0.6.31        colorspace_2.1-0     ps_1.7.5             crosstalk_1.2.0      projpred_2.5.0      
+    ##  [26] igraph_1.4.3         mime_0.12            lifecycle_1.0.3      pkgconfig_2.0.3      colourpicker_1.2.0  
+    ##  [31] Matrix_1.5-4         R6_2.5.1             fastmap_1.1.1        collapse_1.9.6       shiny_1.7.4         
+    ##  [36] digest_0.6.31        colorspace_2.1-0     ps_1.7.5             crosstalk_1.2.0      projpred_2.6.0      
     ##  [41] labeling_0.4.2       fansi_1.0.4          timechange_0.2.0     abind_1.4-5          mgcv_1.8-42         
     ##  [46] compiler_4.3.0       withr_2.5.0          backports_1.4.1      inline_0.3.19        shinystan_2.6.0     
-    ##  [51] gamm4_0.2-6          highr_0.10           pkgbuild_1.4.0       MASS_7.3-58.4        gtools_3.9.4        
+    ##  [51] gamm4_0.2-6          highr_0.10           pkgbuild_1.4.1       MASS_7.3-58.4        gtools_3.9.4        
     ##  [56] loo_2.6.0            tools_4.3.0          httpuv_1.6.11        threejs_0.3.3        glue_1.6.2          
     ##  [61] callr_3.7.3          nlme_3.1-162         promises_1.2.0.1     grid_4.3.0           checkmate_2.2.0     
     ##  [66] reshape2_1.4.4       generics_0.1.3       gtable_0.3.3         tzdb_0.4.0           data.table_1.14.8   
     ##  [71] hms_1.1.3            utf8_1.2.3           pillar_1.9.0         ggdist_3.3.0         markdown_1.7        
     ##  [76] posterior_1.4.1      later_1.3.1          splines_4.3.0        lattice_0.21-8       survival_3.5-5      
-    ##  [81] tidyselect_1.2.0     miniUI_0.1.1.1       knitr_1.42           arrayhelpers_1.1-0   gridExtra_2.3       
-    ##  [86] bookdown_0.34        stats4_4.3.0         xfun_0.39            bridgesampling_1.1-2 matrixStats_0.63.0  
-    ##  [91] DT_0.27              rstan_2.21.8         stringi_1.7.12       yaml_2.3.7           boot_1.3-28.1       
+    ##  [81] tidyselect_1.2.0     miniUI_0.1.1.1       knitr_1.43           arrayhelpers_1.1-0   gridExtra_2.3       
+    ##  [86] bookdown_0.34        stats4_4.3.0         xfun_0.39            bridgesampling_1.1-2 matrixStats_1.0.0   
+    ##  [91] DT_0.28              rstan_2.21.8         stringi_1.7.12       yaml_2.3.7           boot_1.3-28.1       
     ##  [96] evaluate_0.21        codetools_0.2-19     emo_0.0.0.9000       cli_3.6.1            RcppParallel_5.1.7  
     ## [101] shinythemes_1.2.0    xtable_1.8-4         munsell_0.5.0        processx_3.8.1       jquerylib_0.1.4     
     ## [106] coda_0.19-4          svUnit_1.0.6         parallel_4.3.0       rstantools_2.3.1     ellipsis_0.3.2      
     ## [111] assertthat_0.2.1     prettyunits_1.1.1    dygraphs_1.1.1.6     bayesplot_1.10.0     Brobdingnag_1.2-9   
-    ## [116] lme4_1.1-33          viridisLite_0.4.2    mvtnorm_1.1-3        scales_1.2.1         xts_0.13.1          
-    ## [121] insight_0.19.1       crayon_1.5.2         rlang_1.1.1          multcomp_1.4-23      shinyjs_2.1.0
+    ## [116] lme4_1.1-33          viridisLite_0.4.2    mvtnorm_1.2-2        scales_1.2.1         xts_0.13.1          
+    ## [121] insight_0.19.2       crayon_1.5.2         rlang_1.1.1          multcomp_1.4-24      shinyjs_2.1.0
 
 ## References
 

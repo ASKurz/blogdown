@@ -39,7 +39,7 @@ Here’s the working table of contents for this series:
 5.  Causal inference with count regression (link [here](https://solomonkurz.netlify.app/blog/2023-05-07-causal-inference-with-count-regression/))
 6.  Causal inference with gamma regression (link [here](https://solomonkurz.netlify.app/blog/2023-05-14-causal-inference-with-gamma-regression-or-the-problem-is-with-the-link-function-not-the-likelihood/))
 7.  Causal inference with ordinal regression (link [here](https://solomonkurz.netlify.app/blog/2023-05-21-causal-inference-with-ordinal-regression/))
-8.  Causal inference with change scores (ETA: June 2023)
+8.  Causal inference with change scores (link [here](https://solomonkurz.netlify.app/blog/2023-06-19-causal-inference-with-change-scores/))
 9.  Causal inference with beta regression (ETA: June 2023)
 10. Causal inference with an analysis of heterogeneous covariance (ETA: July 2023)
 11. Causal inference with distributional models (ETA: July 2023)
@@ -56,7 +56,7 @@ You should have a basic grounding in group-based experimental design. Given my b
 
 #### Regression.
 
-You’ll want to be familiar with single-level regression, from the perspective of the GLM. For frequentist resources, I recommend the texts by Ismay & Kim ([2022](#ref-ismay2022StatisticalInference)) and Roback & Legler ([2021](#ref-roback2021beyond)). For the Bayesians in the room, I recommend the texts by Gelman and colleagues ([2020](#ref-gelmanRegressionOtherStories2020)), Kruschke ([2015](#ref-kruschkeDoingBayesianData2015)), or McElreath ([2020](#ref-mcelreathStatisticalRethinkingBayesian2020), [2015](#ref-mcelreathStatisticalRethinkingBayesian2015)).
+You’ll want to be familiar with single-level regression, from the perspective of the GLM. For frequentist resources, I recommend the texts by Ismay & Kim ([2022](#ref-ismay2022StatisticalInference)) and Roback & Legler ([2021](#ref-roback2021beyond)). For the Bayesians in the room, I recommend the texts by Gelman and colleagues ([2020](#ref-gelmanRegressionOtherStories2020)), Kruschke ([2015](#ref-kruschkeDoingBayesianData2015)), or McElreath ([2015](#ref-mcelreathStatisticalRethinkingBayesian2015), [2020](#ref-mcelreathStatisticalRethinkingBayesian2020)).
 
 #### Causal inference.
 
@@ -572,12 +572,12 @@ sessionInfo()
 ```
 
     ## R version 4.3.0 (2023-04-21)
-    ## Platform: x86_64-apple-darwin20 (64-bit)
-    ## Running under: macOS Monterey 12.4
+    ## Platform: aarch64-apple-darwin20 (64-bit)
+    ## Running under: macOS Ventura 13.4
     ## 
     ## Matrix products: default
-    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.3-x86_64/Resources/lib/libRblas.0.dylib 
-    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.3-x86_64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
+    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
+    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
     ## 
     ## locale:
     ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
@@ -589,7 +589,7 @@ sessionInfo()
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ##  [1] broom_1.0.4     lubridate_1.9.2 forcats_1.0.0   stringr_1.5.0  
+    ##  [1] broom_1.0.5     lubridate_1.9.2 forcats_1.0.0   stringr_1.5.0  
     ##  [5] dplyr_1.1.2     purrr_1.0.1     readr_2.1.4     tidyr_1.3.0    
     ##  [9] tibble_3.2.1    ggplot2_3.4.2   tidyverse_2.0.0
     ## 
@@ -597,15 +597,15 @@ sessionInfo()
     ##  [1] sass_0.4.6        utf8_1.2.3        generics_0.1.3    blogdown_1.17    
     ##  [5] stringi_1.7.12    hms_1.1.3         digest_0.6.31     magrittr_2.0.3   
     ##  [9] evaluate_0.21     grid_4.3.0        timechange_0.2.0  bookdown_0.34    
-    ## [13] fastmap_1.1.1     jsonlite_1.8.4    backports_1.4.1   fansi_1.0.4      
+    ## [13] fastmap_1.1.1     jsonlite_1.8.5    backports_1.4.1   fansi_1.0.4      
     ## [17] viridisLite_0.4.2 scales_1.2.1      jquerylib_0.1.4   cli_3.6.1        
     ## [21] rlang_1.1.1       ellipsis_0.3.2    munsell_0.5.0     withr_2.5.0      
     ## [25] cachem_1.0.8      yaml_2.3.7        tools_4.3.0       tzdb_0.4.0       
     ## [29] colorspace_2.1-0  vctrs_0.6.2       R6_2.5.1          lifecycle_1.0.3  
-    ## [33] pkgconfig_2.0.3   pillar_1.9.0      bslib_0.4.2       gtable_0.3.3     
+    ## [33] pkgconfig_2.0.3   pillar_1.9.0      bslib_0.5.0       gtable_0.3.3     
     ## [37] glue_1.6.2        highr_0.10        xfun_0.39         tidyselect_1.2.0 
-    ## [41] rstudioapi_0.14   knitr_1.42        farver_2.1.1      htmltools_0.5.5  
-    ## [45] rmarkdown_2.21    labeling_0.4.2    compiler_4.3.0
+    ## [41] rstudioapi_0.14   knitr_1.43        farver_2.1.1      htmltools_0.5.5  
+    ## [45] rmarkdown_2.22    labeling_0.4.2    compiler_4.3.0
 
 ## References
 
@@ -719,15 +719,15 @@ Maxwell, S. E. (2010). Introduction to the special section on Campbell’s and R
 
 </div>
 
-<div id="ref-mcelreathStatisticalRethinkingBayesian2020" class="csl-entry">
-
-McElreath, R. (2020). *Statistical rethinking: A Bayesian course with examples in R and Stan* (Second Edition). CRC Press. <https://xcelab.net/rm/statistical-rethinking/>
-
-</div>
-
 <div id="ref-mcelreathStatisticalRethinkingBayesian2015" class="csl-entry">
 
 McElreath, R. (2015). *Statistical rethinking: A Bayesian course with examples in R and Stan*. CRC press. <https://xcelab.net/rm/statistical-rethinking/>
+
+</div>
+
+<div id="ref-mcelreathStatisticalRethinkingBayesian2020" class="csl-entry">
+
+McElreath, R. (2020). *Statistical rethinking: A Bayesian course with examples in R and Stan* (Second Edition). CRC Press. <https://xcelab.net/rm/statistical-rethinking/>
 
 </div>
 
