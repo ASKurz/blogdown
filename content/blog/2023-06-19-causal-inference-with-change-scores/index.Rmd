@@ -219,7 +219,7 @@ coef(fit4)[3] %>% as.double()      # beta[2] for ANCOVA-change
 coef(fit2)[3] %>% as.double() - 1  # beta[2] for ANCOVA-post minus 1
 ```
 
-This isn't a fluke, and it has also been observed by scholars within the methodological literature [e.g., @clifton2019correlation; @laird1983further]. Note that the precision with which we've estimated those $\hat \beta_2$'s is the same in the two ANCOVA models, too; they have the same standard error.
+This isn't a fluke, and it has also been observed by scholars within the methodological literature [e.g., @clifton2019correlation; @laird1983further]. Note that the precision with which we've estimated those $\hat \beta_2$ values is the same in the two ANCOVA models, too; they have the same standard error.
 
 ```{r}
 vcov(fit4)[3, 3] %>% sqrt()  # ANCOVA-change
@@ -621,8 +621,8 @@ In this post, some of the main points we covered were:
   - ANOVA-change,
   - ANCOVA-post, and
   - ANCOVA-change.
-* For all those four models, the $\hat beta$ value for the experimental condition is an unbiased estimator of the average treatment effect, $\tau_\text{ATE}$. However, the ANCOVA models give you greater precision, or statistical power.
-* In a conventional Gaussian model, the $\hat beta$ value for the experimental condition, along with its standard error, is identical in ANCOVA-post and ANCOVA-change.
+* For all those four models, the $\hat \beta$ value for the experimental condition is an unbiased estimator of the average treatment effect, $\tau_\text{ATE}$. However, the ANCOVA models give you greater precision, or statistical power.
+* In a conventional Gaussian model, the $\hat \beta$ value for the experimental condition, along with its standard error, is identical in ANCOVA-post and ANCOVA-change.
 * The ANOVA-change model does not control for pretreatment baseline, and it does not protect against regression to the mean (RTM).
 * The correlation between baseline pretreatment scores and change scores is a pure statistical artifact, and it has no substantive meaning.
 * Rubin's potential outcomes framework is not usually expressed in terms of change scores, but it does allow for them, and Rubin has explicitly written about causal inference with change scores in several papers, though usually in the language of "gain scores."
