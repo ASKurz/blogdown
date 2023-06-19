@@ -118,15 +118,13 @@ There are some missing values in the 1-year follow-up, $n = 6\ (13.3\%)$ for tho
 Often times in the methods literature, you'll see authors contrast the change-score models with ANCOVA's [e.g., @vickers2001analysing]. This simple dichotomy obscures how one can model a change score with or without controlling for the baseline values of `pre`, and one can use either `post` or `change` as the criterion variable in an ANCOVA. Thus we can actually make a $2 \times 2$ grid of the modeling choices available to use with our three variables `pre`, `post`, and `change` [@oConnell2017methods].[^3]
 
 ```{r, fig.width = 5.5, fig.height = 2.25}
-tibble(model = rep(c("ANOVA", "ANCOVA"), each = 2),
-       dv = rep(c("post", "change"), times = 2),
+tibble(dv = rep(c("post", "change"), times = 2),
+       model = rep(c("ANOVA", "ANCOVA"), each = 2),
        formula = c("post ~ tx", "change ~ tx", "post ~ tx + pre", "change ~ tx + pre")) %>% 
   
   ggplot(aes(x = dv, y = model, label = formula)) +
   geom_tile(aes(fill = formula),
-            show.legend = F,
-            alpha = 0.75,
-            linewidth = 0) +
+            alpha = 0.75, linewidth = 0, show.legend = F) +
   geom_text(size = 5) +
   scale_fill_viridis_d(begin = .4) +
   scale_x_discrete("outcome variable", position = "top", expand = c(0, 0)) +
@@ -135,7 +133,7 @@ tibble(model = rep(c("ANOVA", "ANCOVA"), each = 2),
   theme(axis.text.y = element_text(hjust = 0))
 ```
 
-So even though people are often referring to the model in the upper left quadrant when they talk about a *change-score model*, that's actually what you might call an *ANOVA-change*. This helps clarify you can model a change score with an ANOVA or an ANCOVA. Even though people are often referring to the model in the lower right quadrant when they talk about an *ANCOVA*, that's what we might call an *ANCOVA-post*. That helps clarify you can model posttreatment scores or change scores in an ANCOVA.
+So even though people are often referring to the model in the upper left quadrant when they talk about a *change-score* model, that's actually what you might call an *ANOVA-change*. This helps clarify you can model a change score with an ANOVA or an ANCOVA. Even though people are often referring to the model in the lower right quadrant when they talk about an *ANCOVA*, that's what we might call an *ANCOVA-post*. That helps clarify you can model posttreatment scores or change scores in an ANCOVA.
 
 Here's how to fit all four models with OLS via the good old `lm()` function.
 
@@ -201,9 +199,9 @@ betas %>%
   flextable()
 ```
 
-It will help if we interpret these results in light of the simulation study by @oConnell2017methods. Even though we see minor numeric differences, the $\hat \beta_1$ values for all four models may all be interpreted as valid point estimates of the average treatment effect $\tau_\text{ATE}$. From a statistical power perspective--or otherwise put, from the perspective of precision as expressed by the size of the standard error--, the ANOVA-change model tends to show a little more power than the ANOVA-post model, particularly as the correlation between `pre` and `post` approaches 1. As the correlation between `pre` and `post` was about .62, it should be no surprise that the standard error for the ANOVA-change model (0.0245) is indeed noticeably smaller than the standard error for the alternative ANOVA-post model (0.0352). However, both ANCOVA versions of the model showed the smallest standard errors, which was also consistent with O'Connell's simulation study.
+It will help if we interpret these results in light of the simulation study by @oConnell2017methods. Even though we see minor numeric differences, the $\hat \beta_1$ values for all four models may all be interpreted as valid point estimates of the average treatment effect $\tau_\text{ATE}$. From a statistical power perspective--or otherwise put, from the perspective of precision as expressed by the size of the standard error--, the ANOVA-change model tends to show a little more power than the ANOVA-post model, particularly as the correlation between `pre` and `post` approaches 1. As the correlation between `pre` and `post` was about .62, it should be no surprise that the standard error for the ANOVA-change model (0.0245) is indeed noticeably smaller than the standard error for the alternative ANOVA-post model (0.0352). However, both ANCOVA versions of the model showed the smallest standard errors, which was also consistent with the simulation study by O'Connell and friends.
 
-If you look close, you'll see the point estimates and standard errors for both ANCOVA versions of the model are identical. That's not a fluke. Whether it's from ANCOVA-post or ANCOVA-change, $\hat \tau_\text{ATE}$ should always be the same when using OLS. O'Connell observed this in his [-@oConnell2017methods] simulation study, as have others in the methodological literature [e.g., @laird1983further]. Thus from an estimator perspective, there is no advantage to using ANCOVA-post versus ANCOVA-change when using OLS for simple pre/post RCT's.
+If you look close, you'll see the point estimates and standard errors for both ANCOVA versions of the model are identical. That's not a fluke. Whether it's from ANCOVA-post or ANCOVA-change, $\hat \tau_\text{ATE}$ should always be the same when using OLS. O'Connell and colleagues observed this in their [-@oConnell2017methods] simulation study, as have others in the methodological literature [e.g., @laird1983further]. Thus from an estimator perspective, there is no advantage to using ANCOVA-post versus ANCOVA-change when using OLS for simple pre/post RCT's.
 
 Now let's take a look at the results for the $\beta_2$ parameter from the two ANCOVA models.
 
@@ -217,15 +215,15 @@ betas %>%
 What may not be immediately obvious is the point estimate for ANCOVA-change is the same as the point estimate for ANCOVA-post minus 1. Let's see that in code.
 
 ```{r}
-as.double(coef(fit4)[3])      # beta[2] for ANCOVA-change
-as.double(coef(fit2)[3]) - 1  # beta[2] for ANCOVA-post minus 1
+coef(fit4)[3] %>% as.double()      # beta[2] for ANCOVA-change
+coef(fit2)[3] %>% as.double() - 1  # beta[2] for ANCOVA-post minus 1
 ```
 
-This isn't a fluke, and it has also been observed by scholars within the methodological literature [e.g., @clifton2019correlation; @laird1983further]. Note that the precision with which we've estimated that $\beta_2$ parameter is the same in the two ANCOVA models, too; they have the same standard error.
+This isn't a fluke, and it has also been observed by scholars within the methodological literature [e.g., @clifton2019correlation; @laird1983further]. Note that the precision with which we've estimated those $\hat \beta_2$'s is the same in the two ANCOVA models, too; they have the same standard error.
 
 ```{r}
-sqrt(vcov(fit4)[3, 3])  # ANCOVA-change
-sqrt(vcov(fit2)[3, 3])  # ANCOVA-post
+vcov(fit4)[3, 3] %>% sqrt()  # ANCOVA-change
+vcov(fit2)[3, 3] %>% sqrt()  # ANCOVA-post
 ```
 
 So far in this blog series, we have avoided interpreting the $\beta$ coefficients for any of our baseline covariates. In the case of the ANCOVA-change model, I strongly recommend against interpreting $\beta_2$, too. It turns out the correlation between a change score and baseline has no substantive meaning, and therefore the partial correlation among the two as expressed by $\beta_2$ has no substantive meaning either. @clifton2019correlation showed this correlation is purely a statistical artifact, and it is a deterministic function of the standard deviation of `pre` $(s_\text{pre})$, the standard deviation of `post` $(s_\text{post})$, and their correlation $(r)$:
@@ -294,7 +292,7 @@ spost / spre
 
 ## Change scores and regression to the mean
 
-Change-scores have a special connection to regression to the mean (RTM). If you need a refresher, RTM comes to us from the work of Sir Francis Galton. Happily, the **UsingR** package [@R-UsingR] contains a copy of the height data Galton. presented in his [-@galton1886regression] paper. The data file been saved as `galton`, which we'll go ahead and load.
+Change-scores have a special connection to regression to the mean (RTM). If you need a refresher, RTM comes to us from the work of Sir Francis Galton. Happily, the **UsingR** package [@R-UsingR] contains a copy of the height data Galton presented in his [-@galton1886regression] paper, and those data will give us a fine example of RTM. The data file been saved as `galton`, which we'll go ahead and load.
 
 ```{r}
 data(galton, package = "UsingR")
@@ -317,11 +315,11 @@ galton %>%
   scale_y_continuous("height of children (in)", 
                      breaks = 31:37 * 2, limits = c(61.5, 74)) +
   coord_equal() +
-  labs(title = "Strong, but not perfect",
+  labs(title = "Strong relation, but not perfect",
        caption = "Note. OLS regression line in blue.")
 ```
 
-Galton's basic insight was even though children's heights are strongly positively correlated with the average heights of their parents, the correlation isn't perfect (it's about .46), and thus the slope of the regression line is a positive value smaller than 1 (it's about 0.65). Let's go ahead and fit the regression model so we can pull the exact predictions.
+Galton's basic insight was even though children's heights are strongly positively correlated with the average heights of their parents, the correlation isn't perfect (it's about .46), and thus the slope of the regression line is a positive value smaller than 1 (it's about 0.65). Let's go ahead and fit the regression model so we can compute the exact predictions.
 
 ```{r, eval = F, echo = F}
 # correlation
@@ -367,21 +365,21 @@ galton %>%
                      breaks = 31:37 * 2, limits = c(61.5, 74)) +
   scale_y_continuous("height of children (in)", 
                      breaks = 31:37 * 2, limits = c(61.5, 74)) +
-  ggtitle("Regression to the mean") +
+  ggtitle("Behold: Regression to the mean") +
   coord_equal()
 ```
 
 Here's the breakdown:
 
 * When you use the average value for `parent` (68), the predicted value for `child` is almost identical (67.9). 
-* When use the short value for `paraent` (65), the predicted value for `child` is also short (66), but it has moved away from the shorter `parent` value towards the mean. 
-* In the opposite way, when use the tall value for `paraent` (72), the predicted value for `child` is also tall (70.5), but it has moved away from the taller `parent` value towards the mean.
+* When use the short value for `paraent` (65), the predicted value for `child` is also short (66), but it has increased a little towards the mean. 
+* In the opposite way, when use the tall value for `paraent` (72), the predicted value for `child` is also tall (70.5), but it decreased a little towards the mean.
 
 This is the essence of RTM. Extremely large values predict large values which are less extreme, and extremely small values predict small values which are less extreme. By now you may find yourself asking: *What's the point of all this?* The answer comes from @clifton2019correlation, who discussed how RTM applies to randomized experiments:
 
 > If an extreme measure is observed at baseline, then its value is likely to be less extreme in the post-intervention measure, even if the intervention has no effect. (p. 2)
 
-Under simple random assignment, you will occasionally see large average differences among the experimental groups on the pre score, even though they will be zero in the population.[^4] Due to RTM, a simple ANOVA-change model can show an upward or downward bias, depending on the direction of the baseline imbalance and so on. This means that even though the pre score is included in the computation of the change score, ANOVA-change models do not *control* for baseline imbalance, and thus they do not protect against RTM. However, the ANCOVA-change model explicitly controls for baseline imbalance, and does protect against RTM, which Clifton and Clifton spelled out in greater detail in their paper. Thus if you want to use a change score to make your causal inferences, use the ANCOVA-change model, not the weaker ANOVA-change model. In the words of Clifton and Clifton:
+Under simple random assignment, you will occasionally see large average differences among the experimental groups on the baseline score, even though they will be zero in the population.[^4] Due to RTM, a simple ANOVA-change model can show an upward or downward bias, depending on the direction of the baseline imbalance and so on. This means that even though the baseline score is included in the computation of the change score, ANOVA-change models do not *control* for baseline imbalance, and thus they do not protect against RTM. However, the ANCOVA-change model explicitly controls for baseline imbalance, and does protect against RTM, which Clifton and Clifton spelled out in greater detail in their paper. Thus if you want to use a change score to make your causal inferences, use the ANCOVA-change model, not the weaker ANOVA-change model. In the words of Clifton and Clifton:
 
 > ANCOVA has the advantages of being unaffected by baseline imbalance [@vickers2001analysing], and it has greater statistical power than other methods [@vickers2001use]. An RCT reduces RTM at the design stage, but one should still use ANCOVA to adjust for baseline in the analysis stage [@barnett2005regression]. (p. 3)
 
@@ -391,7 +389,7 @@ Don Rubin has written on how to change-scores fit within his potential-outcomes 
 
 ### $(y_i^1 - x_i) - (y_i^0 - x_i)$.
 
-In Jin and Rubin [-@jin2009public, p. 29], we learn the contrast of a person's posttest potential outcome values is equivalent to the contrast of difference scores of potential outcomes. Using a slightly modified version of their notation, let $x_i$ be a pretest score for the $i$th person, $y_i^1$ be their potential outcome for the posttest score in the experimental condition, and $y_i^0$ be their potential outcome for the posttest score in the control condition. We can write the person-level contrast as
+In Jin and Rubin [-@jin2009public, p. 29], we learn the contrast of a person's posttest potential outcome values is equivalent to the contrast of difference scores of potential outcomes. Using a slightly modified version of their notation, let $x_i$ be a pretest score for the $i$th person, let $y_i^1$ be their potential outcome for the posttest score in the experimental condition, and let $y_i^0$ be their potential outcome for the posttest score in the control condition. We can write the person-level contrast as
 
 $$(y_i^1 - x_i) - (y_i^0 - x_i),$$
 
@@ -449,11 +447,11 @@ Though we won't cover the material here, you can also find a discussion of perso
 
 ### $\mathbb E(y_i^1 - x_i) - \mathbb E(y_i^0 - x_i)$.
 
-In @rubinEstimatingCausalEffects1974, we learn that within the context of a pre/post RCT, the simple mean difference in gain scores
+In @rubinEstimatingCausalEffects1974, we learn that within the context of a pre/post RCT, the simple mean difference in gain scores,
 
 $$\mathbb E(y_i^1 - x_i) - \mathbb E(y_i^0 - x_i),$$
 
-"remains an unbiased estimate of $\tau$ [what we typically call $\tau_\text{ATE}$] over the randomization set" (p. 696). Again, Rubin used different notation which emphasized the sample statistics, as hinted at in his language of "the randomization set," but I see no reason not to generalize to population inference. In case it's not clear, this equation is just a fancy way of expressing what we've called the ANOVA-change model. Thus Rubin anticipated the basic findings in Clifton's [-@clifton2019correlation] simulation that ANOVA-change is an unbiased estimator of $\tau_\text{ATE}$, but Clifton's simulation did help clarify we get greater efficiency by using the ANCOVA-change version of model.[^6]
+"remains an unbiased estimate of $\tau$ [what we typically call $\tau_\text{ATE}$] over the randomization set" (p. 696). Again, Rubin used different notation which emphasized the sample statistics, as hinted at in his language of "the randomization set," but I see no reason not to generalize to population inference. In case it's not clear, this equation is just a fancy way of expressing what we've called the ANOVA-change model. Thus Rubin anticipated the basic findings in Clifton and colleagues's [-@clifton2019correlation] simulation that ANOVA-change is an unbiased estimator of $\tau_\text{ATE}$, but the simulation did help clarify we get greater efficiency by using the ANCOVA-change version of model.[^6]
 
 ### $[\mathbb E(y_i^1) - \mathbb E(x_i)] - [\mathbb E(y_i^0) - \mathbb E(x_i)]$.
 
@@ -520,7 +518,7 @@ m_y1 - m_y0
 (m_y1 - m_x) - (m_y0 - m_x)
 ```
 
-These point estimates are identical with one another, and they're both the same as $\beta_1$ from our ANOVA-post model from above.
+These point estimates are identical with one another, and they're both the same as $\hat \beta_1$ from our ANOVA-post model from above.
 
 ```{r}
 betas %>% 
@@ -554,7 +552,7 @@ m_y1 <- predict(fit2, newdata = nd)[2] %>% as.double()
 m_x; m_y0; m_y1
 ```
 
-Now use those point estimates to compute the posttreatment difference, and the posttreatment difference as expressed in terms of change from baseline, both in light of the `pre` values as seen through the lens of the ANCOVA-pre.
+Now use those point estimates to compute the posttreatment difference, and the posttreatment difference as expressed in terms of change from baseline, both in light of the `pre` values as seen through the lens of the ANCOVA-post.
 
 ```{r}
 # the posttreatment difference
@@ -564,7 +562,7 @@ m_y1 - m_y0
 (m_y1 - m_x) - (m_y0 - m_x)
 ```
 
-Again, the effect size (the ATE) is the same value, whether expressed as a simple posttreatment difference, or as a difference in changes from baseline. And indeed, both these values are the same as the $\beta_1$ coefficient from the ANCOVA-post.
+Again, the effect size (the ATE) is the same value, whether expressed as a simple posttreatment difference, or as a difference in changes from baseline. And indeed, both these values are the same as the $\hat \beta_1$ value from the ANCOVA-post.
 
 ```{r}
 betas %>% 
@@ -574,11 +572,11 @@ betas %>%
   flextable()
 ```
 
-So when you compute $\tau_\text{ATE}$ from an ANCOVA-post model, you can interpret as the posttreatment causal effect, as is conventional among the potential-outcomes crowd, but you can also interpret is as the causal effect for posttreatment change from baseline, which is the language sometimes preferred by clinicians. Because of some simple algebra, they're the same value. 
+So when you compute $\hat{\tau}_\text{ATE}$ from an ANCOVA-post model, you can interpret it as the posttreatment causal effect, as is conventional among the those in the potential-outcomes crowd, but you can also interpret it as the causal effect for posttreatment change from baseline, which is the language sometimes preferred by clinicians. As we've seen with a little algebra, they're the same value.
 
 ## Observational studies and difference-in-differences
 
-Economists have long used a very close variant of this framework with what they call *difference-in-differences* (DiD) analyses. I have not waded deeply into the DiD literature, and my current impression is it's primarily oriented around observational or quasi-experimental data, which is outside of the scope of this blog series. But one thing to note is that in the DiD framework, analysts don't typically use the *unconditional* score at baseline $x_i$, but rather they separate baseline by group into what we might call $x_i^1$ and $x_i^0$, all of which would typically be expressed in different notation in the DiD literature. Thus when focusing on the group-mean perspective, we might express our causal effect as something like
+Economists have long used a very close variant of this framework with what they call *difference-in-differences* (DiD) analyses. I have not waded deeply into the DiD literature, and my current impression is it's primarily oriented around observational or quasi-experimental data, which is outside of the scope of this blog series. But one thing to note is that in the DiD framework, analysts don't typically use the *unconditional* score at baseline $x_i$, but rather they separate baseline by group into what we might call $x_i^1$ and $x_i^0$--all of which would typically be expressed in different notation in the DiD literature. Thus when focusing on the group-mean perspective, we might express the causal effect as something like
 
 $$
 \tau_\text{ATT} = [\mathbb{E}(y_i^1) - \mathbb{E}(x_i^1)] - [\mathbb{E}(y_i^0) - \mathbb{E}(x_i^0)],
@@ -592,19 +590,19 @@ $$
 
 which is why we have used $x_i$ up to this point, rather than $x_i^1$ and $x_i^0$. By extension, this is why we compute the ATE, rather than the ATT. When you randomize after baseline in a randomized experiment, you have methodologically ensured all your participants are from the same population at baseline, rendering separation by $x_i^1$ and $x_i^0$ nonsensical and inefficient. But anyways, this is one of the many reasons this blog series is exclusively focused on randomized experiments. Observational and quasi-experimental designs introduce many more complications, which would render an already very long blog series much much longer.
 
-That's as far as we're going down this rabbit hole. But if you would like a proper introduction to DiD analyses from an economist, I recommend Chapter 9 in Cunningham's [-@cunningham2021causal] text, a free ebook version of which you can find at [https://mixtape.scunning.com/09-difference_in_differences](https://mixtape.scunning.com/09-difference_in_differences). For a DiD introduction aimed at epidemiologists, see @caniglia2020difference.
+That's as far as we're going down this rabbit hole, here. But if you would like a proper introduction to DiD analyses from an economist, I recommend Chapter 9 in Cunningham's [-@cunningham2021causal] text, a free ebook version of which you can find at [https://mixtape.scunning.com/09-difference_in_differences](https://mixtape.scunning.com/09-difference_in_differences). For a DiD introduction aimed at epidemiologists, see @caniglia2020difference.
 
 ## What about Lord's paradox?
 
-With all this talk about change-scores and ANCOVA's, the whole controversy around Lord's paradox might come to mind. Rubin has indeed written about Lord's paradox from the perspective of causal inference in "On Lord's paradox" [@holland1983lord]. For those new to the topic, Lord's paradox originates from Lord's brief [-@lord1967paradox] article, and Lord later expanded on the topic in @lord1968statistical and @lord1973lord.[^10] Holland and Rubin helped clarify that in all cases, Lord expressed his paradox in terms of study designs that were not fully randomized experiments,[^11] and consequentially the issues Lord raised aren't of central concern in this blog series. We're here to discuss causal inference with RCT-type data. But if you do love Lord's paradox and the potential outcomes framework, I do recommend you read through @holland1983lord, which has some nice insights. Study design aside, I think a big part of the paradox is a simple change-score analysis (what we've been calling ANOVA-change) does not actually *condition* on the baseline scores. You need to use the ANCOVA-change model for that.
+With all this talk about change-scores and ANCOVA's, the whole controversy around Lord's paradox might come to mind. Rubin has indeed written about Lord's paradox from the perspective of causal inference in "On Lord's paradox" [@holland1983lord]. For those new to the topic, Lord's paradox originates from Lord's brief [-@lord1967paradox] article, and Lord later expanded on the topic in @lord1968statistical and @lord1973lord.[^10] Holland and Rubin helped clarify that in all cases, Lord expressed his paradox in terms of study designs that were not fully randomized experiments,[^11] and consequentially the issues Lord raised aren't of central concern in this blog series. We're here to discuss causal inference with RCT-type data. But if you do love Lord's paradox and the potential outcomes framework, I recommend reading through @holland1983lord for some nice insights. Study design aside, I think a big part of the paradox is it's easy to miss how a simple change-score analysis (what we've been calling ANOVA-change) does not actually *condition* on the baseline scores. You need to use the ANCOVA-change model for that.
 
 ## Change scores for non-Gaussian data
 
-The issue of whether you want to express your ATE in terms of change from baseline is distinct from whether you want to analyze your data with change scores. We already showed how you can use the point estimates from the ANCOVA-post model `fit2` to express the ATE in terms of change, so no change scores were needed. But if you really did want to use change scores, as with the `change` column in the `hoorelbeke2021` data, the ANOVA-change model is perfectly fine, too. But with caveats...
+The issue of whether you want to express your ATE in terms of change from baseline is distinct from whether you want to analyze your data with change scores. For example, we already showed how you can use the point estimates from the ANCOVA-post model `fit2` to express the ATE in terms of change, so no change scores were needed. But if you really did want to use change scores, as with the `change` column in the `hoorelbeke2021` data, the ANOVA-change model is perfectly fine, too. But with caveats...
 
 In case it's been a while, the difference between two normal distributions is itself normally distributed. Thus when you're analyzing data you believe are appropriate for the simple OLS-type paradigm, it's fine to use ANCOVA-change. I personally don't like it, but we can have different preferences and still remain friends, and I wouldn't even bring it up if I'm ever your Reviewer #2.
 
-This nice property does not hold for other distributions, though. For example, change scores from an 0/1 binary variable can take on values of -1, 0, and 1, which means you can no longer model the change score of binary data with the binomial likelihood function. I think you'd have to model such a variable as multinomial. As an other example, if you make a change score from two Poisson distributions, which describe non-negative integer values, you can end up with a distribution of integers which are positive *or* negative. As it turns out, you can model such data with the Skellam distribution,[^12] but not another Poisson. Just think of the odd mess you'd make computing a change score from ordinal data. Now if you want to go down a deep stats-internet rabbit hole on all the arcane distributions for non-Gaussian differences, you have fun with that, and have fun trying to defend your obscure likelihood function in peer review. To me, this seems like a big headache. Since change-scores alter the likelihood function for non-Gaussian variables, I recommend avoiding them on those contexts.
+This nice property does not hold for other distributions, though. For example, change scores from an 0/1 binary variable can take on values of -1, 0, and 1, which means you can no longer model the change score of binary data with the binomial likelihood function. I think you'd have to model such a variable as multinomial. As an other example, if you make a change score from two Poisson distributions, which describe non-negative integer values, you can end up with a distribution of integers which are positive *or* negative. As it turns out, you can model such data with the Skellam distribution,[^12] but not another Poisson. Now just think of the odd mess you'd make computing a change score from ordinal data. If you want to go down a deep stats-internet rabbit hole on all the arcane distributions for non-Gaussian differences, you have fun with that, and have fun trying to defend your obscure likelihood function in peer review. To me, this seems like a big headache. Since change-scores alter the likelihood function for non-Gaussian variables, I recommend avoiding them on those contexts.
 
 ## But but why, though?
 
@@ -612,7 +610,7 @@ This nice property does not hold for other distributions, though. For example, c
 emo::ji("loudly_crying_face")
 ```
 
-In the geeky stats/methods corners of social media, I occasionally see people ask why one would ever want a causal estimand expressed in terms of a change score. To my eye, the change-score haters usually aren't clinicians. I'm a trained therapist, and when I'm wearing my clinical hat, change from pre-treatment baseline is the most natural way to assess the progress of a real-world client. I'm fully aware of the important methodological differences between an RCT and applied clinical work, but that doesn't negate how working clinicians tend to think in terms of change from the start of treatment (i.e., baseline). If your scientific goal is to summarize the results of your fancy experiment to other egghead scientists, feel free to avoid the language of change from baseline. But if your goal is to communicate your results to a group of clinicians, you'd be a fool not to at least consider the language of differences in pre/post change. This is what many of the clinicians want to hear. If you can, just give it to them.
+In the geeky stats/methods corners of social media, I occasionally see people ask why one would ever want a causal estimand expressed in terms of a change score. To my eye, the change-score haters usually aren't clinicians. I'm a trained therapist, and when I'm wearing my clinical hat, change from pre-treatment baseline is the most natural way to assess the progress of a real-world client. I'm fully aware of the important methodological differences between an RCT and applied clinical work, but that doesn't negate how working clinicians tend to think in terms of change from the start of treatment. If your scientific goal is to summarize the results of your fancy experiment to other egghead scientists, feel free to avoid the language of change from baseline. But if your goal is to communicate your results to a group of clinicians, you'd be a fool not to at least consider the language of differences in pre/post change. This is what many of the clinicians want to hear. Know your crowd. If you can give them what they want, just do it.
 
 ## Recap
 
@@ -623,14 +621,14 @@ In this post, some of the main points we covered were:
   - ANOVA-change,
   - ANCOVA-post, and
   - ANCOVA-change.
-* For all those four models, the $\beta$ coefficient for the experimental condition is an unbiased estimator of the average treatment effect, $\tau_\text{ATE}$. However, the ANCOVA models give you greater precision, or statistical power.
-* In a conventional Gaussian model, the $\beta$ coefficient for the experimental condition, along with its standard error, is identical in ANCOVA-post and ANCOVA-change.
-* The ANOVA-change model does not control for pretreatment baseline, and it does not protect against regression to the mean.
+* For all those four models, the $\hat beta$ value for the experimental condition is an unbiased estimator of the average treatment effect, $\tau_\text{ATE}$. However, the ANCOVA models give you greater precision, or statistical power.
+* In a conventional Gaussian model, the $\hat beta$ value for the experimental condition, along with its standard error, is identical in ANCOVA-post and ANCOVA-change.
+* The ANOVA-change model does not control for pretreatment baseline, and it does not protect against regression to the mean (RTM).
 * The correlation between baseline pretreatment scores and change scores is a pure statistical artifact, and it has no substantive meaning.
 * Rubin's potential outcomes framework is not usually expressed in terms of change scores, but it does allow for them, and Rubin has explicitly written about causal inference with change scores in several papers, though usually in the language of "gain scores."
-* When you compute $\tau_\text{ATE}$ from an ANCOVA-post model, it can also be described as the causal effect for the differences from baseline.
+* When you compute $\hat{\tau}_\text{ATE}$ from an ANCOVA-post model, it can also be described as the causal effect for the differences from baseline.
 * The DiD framework used by economists to analyze non-experimental data is not the same as the change-score methods recommended in this post. Because we're focused on experimental data, you should not decompose the pretreatment score $x$ into separate scores by treatment, which would be $x^0$ for control and $x_1$ for treatment. This is because random assignment after baseline methodologically guarantees $\mathbb E(x_i^0) = \mathbb E(x_i^1)$ in the population.
-* Given its inefficiency and vulnerability to regression to the mean, I would never recommend using the ANOVA-change model. If you have measurements at pre and post, I would always recommend either ANCOVA-post or ANCOVA-change. These offer greater statistical precision, and control for regression to the mean.
+* Given its inefficiency and vulnerability to RTM, I would never recommend using the ANOVA-change model. If you have measurements at pre and post, I would always recommend either ANCOVA-post or ANCOVA-change. These offer greater statistical precision, and they protect against RTM.
 * I would only recommend the ANCOVA-change model if you are analyzing data appropriate for the Gaussian likelihood. When you compute change scores from other data types, such as counts or ordinal variables, you end up changing the likelihood function, and I can't imagine why you'd want to bring that kind of extra burden upon yourself.[^13]
 
 As to next steps, some of my eagle-eyed readers may have noticed the primary outcome variable in the `hoorelbeke2021` data is bounded between 0 and 1, which makes our use of OLS--and thus the Gaussian likelihood by mathematical equivalence--dubious. In the next post, we'll address this shortcoming by exploring causal inference with beta regression.
@@ -651,13 +649,13 @@ sessionInfo()
 
 [^2]: In all fairness, included among those "distractions" are some potentially interesting and useful baseline covariates one could use in addition to the baseline aPASAT scores. If you were analyzing these data for a real publication, I'd seriously consider adding a few of them in the ANCOVA analyses. But for the sake of conceptual simplicity, we'll forgo those here.
 
-[^3]: In addition to the four model types we focus on in this blog post, @oConnell2017methods also examined a multilevel version of the ANOVA-post model. We haven't mentioned version of the model here because I'm trying to avoid multilevel models in this series; we already have enough complications on our hands. If you are interested in multilevel approaches to pre/post experimental data, you should check out @vanBreukelen2013ancova, who covered multilevel versions of both the ANOVA-post *and* the ANCOVA-post model, the second of which I think is pretty cool.
+[^3]: In addition to the four model types we focus on in this blog post, @oConnell2017methods also examined a multilevel version of the ANOVA-post model. We haven't mentioned that version of the model here because I'm trying to avoid multilevel models in this series; we already have enough complications on our hands. If you are interested in multilevel approaches to pre/post experimental data, you should check out @vanBreukelen2013ancova, who covered multilevel versions of both the ANOVA-post *and* the ANCOVA-post model, the second of which I think is pretty dang cool.
 
 [^4]: If you were using observational data, you could not just assume an exact zero difference in the baseline means in the population. This is why we like to randomize in situations when it's possible and ethical.
 
 [^5]: Using very different notation, @rubin2004potential made the same point in Section 2.4.
 
-[^6]: In fairness, @rubinEstimatingCausalEffects1974 went on to caution against carelessly including covariates in an ANCOVA-style analysis (pp. 696--697), particularly from the perspective of sample inference, and some of these concerns were echoed in @raab2000HowToSelect. However, my current read of the methodological literature is that, from a population-inference perspective, the ANCOVA is *always* an unbiased estimator of $\tau_\text{ATE}$, no matter what covariates you throw into the hopper. Also, bear in mind the focus in this blog series is on population-level inference, not sample inference (see [here](https://solomonkurz.netlify.app/blog/2023-04-16-causal-inference-with-potential-outcomes-bootcamp/#fn:4)).
+[^6]: In fairness, @rubinEstimatingCausalEffects1974 went on to caution against carelessly including covariates in an ANCOVA-style analysis (pp. 696--697), particularly from the perspective of sample inference, and some of these concerns were echoed in @raab2000HowToSelect. However, my current read of the methodological literature is that, from a population-inference perspective, the ANCOVA is *always* an unbiased estimator of $\tau_\text{ATE}$, no matter what covariates you throw into the hopper. Also, bear in mind the focus in this blog series is on population-level inference, not sample inference (see footnote #4 [here](https://solomonkurz.netlify.app/blog/2023-04-16-causal-inference-with-potential-outcomes-bootcamp/#fn:4)).
 
 [^7]: We haven't focused on estimands like the ATT at all in the blog series because, well, we don't have to. Within the randomized experiment paradigm, we're good to focus on the ATE. Now the ATE does require stronger methodological/theoretical assumptions than estimands like the ATT, but our randomized experimental methodology justifies those assumptions to the point that I haven't even felt the need to mention them until now. When it's ethical and feasible, randomization is a powerful technology, friends.
 
@@ -669,9 +667,9 @@ sessionInfo()
 
 [^11]: For example, the very first line in @lord1967paradox reads: "It is common practice in behavior research, and in other areas, to apply analysis of covariance in the investigation of preexisting natural groups." Try as you may, one cannot randomly assign human participants into "preexisting natural groups."
 
-[^12]: Apparently the Skellam distribution can be handy in sports analytics, like modeling differences in goals [see @karlis2009bayesian]. 
+[^12]: Apparently the Skellam distribution can be handy in sports analytics, like modeling differences in goals [see @karlis2009bayesian]. Who knew!?
 
-[^13]: However, I recognize analysis and reporting practices can vary widely across disciplines. If the people in your discipline like using exotic change-score distributions, like the Skellam distribution, then that's totally cool with me. I reserve the right to think you're a weirdo, but no hate, though.
+[^13]: However, I recognize analysis and reporting practices can vary widely across disciplines. If the people in your discipline like using exotic change-score distributions (e.g., the Skellam), then that's totally cool with me. I still reserve the right to think y'all are a bunch of a weirdos, though.
 
 
 ```{r, eval = F, echo = F}
