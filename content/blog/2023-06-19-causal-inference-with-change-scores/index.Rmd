@@ -669,15 +669,13 @@ sessionInfo()
 
 
 ```{r, eval = F, echo = F}
-tibble(model = rep(c("ANOVA", "ANCOVA"), each = 2),
-       dv = rep(c("post", "change"), times = 2),
+tibble(dv = rep(c("post", "change"), times = 2),
+       model = rep(c("ANOVA", "ANCOVA"), each = 2),
        formula = c("post ~ tx", "change ~ tx", "post ~ tx + pre", "change ~ tx + pre")) %>% 
   
   ggplot(aes(x = dv, y = model, label = formula)) +
   geom_tile(aes(fill = formula),
-            show.legend = F,
-            alpha = 0.75,
-            linewidth = 0) +
+            alpha = 0.75, linewidth = 0, show.legend = F) +
   geom_text() +
   scale_fill_viridis_d(option = "C", begin = .3, end = .9) +
   scale_x_discrete("outcome variable", position = "top", expand = c(0, 0)) +
