@@ -107,7 +107,7 @@ hoorelbeke2021 %>%
   ggplot(aes(x = value)) +
   geom_rug(linewidth = 1/5) +
   geom_histogram(binwidth = 0.1, boundary = 0) +
-  scale_x_continuous("PASAT", breaks = -5:5 * 0.2) +
+  scale_x_continuous("aPASAT", breaks = -5:5 * 0.2) +
   facet_wrap(~ name, scales = "free_x")
 ```
 
