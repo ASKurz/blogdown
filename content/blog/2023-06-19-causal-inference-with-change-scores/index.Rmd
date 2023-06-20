@@ -68,7 +68,7 @@ These data were from a randomized controlled trial in Ghent (2017–2018), which
 
 You can find the preregistration for the overall study at https://osf.io/g2k4w. Based on the preregistration, it's not exactly clear to me which variable the research team intended as the primary outcome. But based on the paper and the preregistration, the adaptive paced auditory serial-addition task [aPASAT, @siegle2007neurobehavioral] is one of the clear contenders, and it will be the variable we'll focus on in this post. Since I'm not an aPASAT researcher, we'll lean on @koster2017cognitive for a description:
 
-> During the adaptive PASAT, a series of digits is presented and participants continuously add the currently presented digit to the previously presented digit. They need to provide a response to the sum of the last two presented digits which generates interference with updating the last heard digits in working memory. Task difficulty is tailored to participant’s performance by changing the inter-stimulus interval between each digit, causing the digits to follow faster or slower. Doing so, *it is assumed that cognitive control is being trained in a challenging task context*. (*emphasis* added) 
+> During the adaptive PASAT, a series of digits is presented and participants continuously add the currently presented digit to the previously presented digit. They need to provide a response to the sum of the last two presented digits which generates interference with updating the last heard digits in working memory. Task difficulty is tailored to participant’s performance by changing the inter-stimulus interval between each digit, causing the digits to follow faster or slower. Doing so, *it is assumed that cognitive control is being trained in a challenging task context*. (*emphasis* added)
 
 So in a trial designed to train *cognitive control*, the aPASAT seems like a fine primary outcome variable. In our wrangled `hoorelbeke2021` data frame, the `pre` column contains aPASAT scores at baseline, the `post` columns contains posttreatment aPASAT scores, and the posttreatment aPASAT scores minus the baseline aPASAT scores (i.e., the change scores) are saved in the `change` column. The data in the original `Baseline & FU rating.sav` file are much more extensive, but we don't need all those distractions in this blog post.[^2]
 
@@ -301,7 +301,7 @@ data(galton, package = "UsingR")
 glimpse(galton)
 ```
 
-The values in the `child` column are heights of children, measured in inches. The `parent` columns contains the average height of the children's parents. We might get a sense of the data in a plot (with the values jittered a little to reduce overplotting).
+The values in the `child` column are heights of children, measured in inches. The `parent` columns contains the average height of the parents of each child. We might get a sense of the data in a plot (with the values jittered a little to reduce overplotting).
 
 ```{r, fig.width = 4}
 galton %>%
@@ -371,8 +371,8 @@ galton %>%
 
 Here's the breakdown:
 
-* When you use the average value for `parent` (68), the predicted value for `child` is almost identical (67.9). 
-* When use the short value for `paraent` (65), the predicted value for `child` is also short (66), but it has increased a little towards the mean. 
+* When you use the average value for `parent` (68), the predicted value for `child` is almost identical (67.9).
+* When use the short value for `paraent` (65), the predicted value for `child` is also short (66), but it has increased a little towards the mean.
 * In the opposite way, when use the tall value for `paraent` (72), the predicted value for `child` is also tall (70.5), but it decreased a little towards the mean.
 
 This is the essence of RTM. Extremely large values predict large values which are less extreme, and extremely small values predict small values which are less extreme. By now you may find yourself asking: *What's the point of all this?* The answer comes from @clifton2019correlation, who discussed how RTM applies to randomized experiments:
@@ -455,7 +455,7 @@ $$\mathbb E(y_i^1 - x_i) - \mathbb E(y_i^0 - x_i),$$
 
 ### $[\mathbb E(y_i^1) - \mathbb E(x_i)] - [\mathbb E(y_i^0) - \mathbb E(x_i)]$.
 
-Extrapolating, when we're talking about group averages, 
+Extrapolating, when we're talking about group averages,
 
 $$
 \mathbb E(y_i^1) - \mathbb E(y_i^0) = [\mathbb E(y_i^1) - \mathbb E(x_i)] - [\mathbb E(y_i^0) - \mathbb E(x_i)],
@@ -605,10 +605,6 @@ In case it's been a while, the difference between two normal distributions is it
 This nice property does *not* hold for other distributions, though. For example, change scores from an 0/1 binary variable can take on values of -1, 0, and 1, which means you can no longer model the change score of binary data with the binomial likelihood function. I think you'd have to model such a variable as multinomial. As an other example, if you make a change score from two Poisson distributions, which describe non-negative integer values, you can end up with a distribution of integers which are positive *or* negative. As it turns out, you can model such data with the Skellam distribution,[^12] but not another Poisson. Now just think of the odd mess you'd make computing a change score from ordinal data. If you want to go down a deep stats-internet rabbit hole on all the arcane distributions for non-Gaussian differences, you have fun with that, and have fun trying to defend your obscure likelihood function in peer review. To me, this seems like a big headache. Since change-scores alter the likelihood function for non-Gaussian variables, I recommend avoiding them on those contexts.
 
 ## But but why, though?
-
-```{r, eval = F, echo = F}
-emo::ji("loudly_crying_face")
-```
 
 In the geeky stats/methods corners of social media, I occasionally see people ask why one would ever want a causal estimand expressed in terms of a change score. To my eye, the change-score haters usually aren't clinicians. I'm a trained therapist, and when I'm wearing my clinical hat, change from pre-treatment baseline is the most natural way to assess the progress of a real-world client. I'm fully aware of the important methodological differences between an RCT and applied clinical work, but that doesn't negate how working clinicians tend to think in terms of change from the start of treatment. If your scientific goal is to summarize the results of your fancy experiment to other egghead scientists, feel free to avoid the language of change from baseline. But if your goal is to communicate your results to a group of clinicians, you'd be a fool not to at least consider the language of differences in pre/post change. This is what many of the clinicians want to hear. Know your crowd. If you can give them what they want, just do it.
 
