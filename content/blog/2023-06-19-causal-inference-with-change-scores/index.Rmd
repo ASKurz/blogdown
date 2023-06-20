@@ -675,7 +675,7 @@ tibble(dv = rep(c("post", "change"), times = 2),
   
   ggplot(aes(x = dv, y = model, label = formula)) +
   geom_tile(aes(fill = formula),
-            alpha = 0.75, linewidth = 0, show.legend = F) +
+            alpha = 0.75, linewidth = 0, show.legend = FALSE) +
   geom_text() +
   scale_fill_viridis_d(option = "C", begin = .3, end = .9) +
   scale_x_discrete("outcome variable", position = "top", expand = c(0, 0)) +
