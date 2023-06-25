@@ -820,7 +820,7 @@ If we want to improve our estimates of the ATE with baseline covariates, we need
 
 #### Beta ANCOVA and `\(\mathbb E (y_i^1 - y_i^0 \mid \mathbf C_i, \mathbf D_i)\)`.
 
-Before we compute our `\(\hat \tau_\text{ATE}\)` from the beta ANCOVA, we’ll want to expand our `nd` predictor grid to include the values for the `pre` covariate and it’s transformations.
+Before we compute our `\(\hat \tau_\text{ATE}\)` from the beta ANCOVA, we’ll want to expand our `nd` predictor grid to include the values for the `pre` covariate and its transformations.
 
 ``` r
 nd <- hoorelbeke2021 %>% 
@@ -841,7 +841,7 @@ glimpse(nd)
     ## $ txf   <int> 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1…
     ## $ row   <int> 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,…
 
-Still building up to the main event, let’s make a couple participant-level plots. Here we compute the `\(\hat y_i^1\)` and `\(\hat y_i^0\)` values for each participant. For comparison sake, we’ll include the estimates for both Gaussian and beta ANCOVA’s.
+Still building up to the main event, let’s make a couple plots. Here we compute and then display the `\(\hat y_i^1\)` and `\(\hat y_i^0\)` values for each participant. For comparison sake, we’ll include the estimates for both Gaussian and beta ANCOVA’s.
 
 ``` r
 # save a character vector to streamline the code below
@@ -949,7 +949,7 @@ bind_rows(
 
 Yep, look at that. The beta ANCOVA gave us a more precise estimate of the ATE by the 95% interval width and the posterior SD. I’d want to see a simulation study or something before I made any broad claims about greater precision with the beta ANCOVA versus the Gaussian ANCOVA. Regardless of the magnitude of the posterior SD, I’d much rather use the beta ANCOVA for computing my `\(\hat{\tau}_\text{ATE}\)` because it’s just silly to presume `\((0, 1)\)` interval data will follow a Gaussian distribution. The beta likelihood is a much better conceptual fit, and I’d love to see my fellow scientists using the beta ANCOVA more frequently in their work.
 
-We should investigate whether the beta ANCOVA did indeed return a more precise estimate for the ATE than the beta ANOVA.
+We should investigate whether the beta ANCOVA did indeed return a more precise estimate for the ATE, relative to the beta ANOVA.
 
 ``` r
 bind_rows(
@@ -971,7 +971,7 @@ bind_rows(
     ## 1 beta ANOVA  ate      0.178 0.031  0.118   0.239
     ## 2 beta ANCOVA ate      0.207 0.02   0.166   0.246
 
-Yep, adding the `pre` score to the beta ANCOVA returned a smaller posterior SD and a narrower 95% interval. If you can add a high-quality baseline covariate or two to your beta model, you probably should. For kicks and giggles, let’s finish this section out with a coefficient plot of the `\(\hat{\tau}_\text{ATE}\)` from all 4 models.
+Yep, adding the `pre` score to the beta ANCOVA returned a smaller posterior SD and a narrower 95% interval. If you can add a high-quality baseline covariate or 2 to your beta model, you probably should. For kicks and giggles, let’s finish this section out with a coefficient plot of the `\(\hat{\tau}_\text{ATE}\)` from all 4 models.
 
 ``` r
 bind_rows(
@@ -998,11 +998,11 @@ bind_rows(
 
 ## What about 0 and 1?
 
-So far in this post, we’ve largely described the `pre` and `post` variables in the `hoorelbeke2021` data as if they’re bound within the `\((0, 1)\)` interval. I’m no aPASAT expert, but I suspect those aPASAT scores can technically take on values of 0 and 1, too. Even if I’m wrong in this special case, sometimes researchers have `\([0, 1]\)` data, and in this cases the simple beta likelihood just won’t work. Happily for us, our friends the statisticians and methodologists have already proposed zero-or-one-inflated beta models ([Ospina & Ferrari, 2012](#ref-ospina2012general)), zero-and-one inflated beta models ([Swearingen et al., 2012](#ref-swearingen2012inflated)) and ordered beta models ([Kubinec, 2022](#ref-kubinec2022ordered)). Zero-, one-, and zero-and-one inflated beta models are available with **brms** ([Bürkner, 2023c](#ref-Bürkner2023Parameterization)). To my knowledge, ordered beta models are only indirectly available with **brms** through the **ordbetareg** package ([Kubinec, 2023](#ref-R-ordbetareg)).
+So far in this post, we’ve largely described the `pre` and `post` variables in the `hoorelbeke2021` data as if they’re bound within the `\((0, 1)\)` interval. I’m no aPASAT expert, but I suspect those aPASAT scores can technically take on values of 0 and 1, too. Even if I’m wrong in this special case, sometimes researchers have `\([0, 1]\)` data, and in thos cases the simple beta likelihood just won’t work. Happily for us, our friends the statisticians and methodologists have already proposed zero-or-one-inflated beta models ([Ospina & Ferrari, 2012](#ref-ospina2012general)), zero-and-one inflated beta models ([Swearingen et al., 2012](#ref-swearingen2012inflated)) and ordered beta models ([Kubinec, 2022](#ref-kubinec2022ordered)). Zero-, one-, and zero-and-one inflated beta models are available with **brms** ([Bürkner, 2023c](#ref-Bürkner2023Parameterization)). To my knowledge, ordered beta models are only indirectly available with **brms** through the **ordbetareg** package ([Kubinec, 2023](#ref-R-ordbetareg)), at the moment.
 
 ## How about intervals other than 0 and 1?
 
-Sometimes interval-bounded continuous data have an upper limit other than 1 and a lower limit other than 0. At the moment, the go-to solution with **brms** and other packages is to just rescale your data to the `\((0, 1)\)` or `\([0, 1]\)` range prior to the analysis, and then fit a variant of a beta model with our without inflation. However, there is such a thing as a four-parameter beta distribution which includes a shift parameter to adjust the lower limit and a scale parameter to adjust the upper limit. See [here](https://en.wikipedia.org/wiki/Beta_distribution#Four_parameters) for a quick reference. To my knowledge, the only way to actually fit such a model without rescaling the data involves making a custom likelihood in **brms**, which you can learn about in Bürkner’s ([2023b](#ref-Bürkner2023Define)) vignette, *Define custom response distributions with brms*.
+Sometimes interval-bounded continuous data have an upper limit other than 1 and a lower limit other than 0. The current go-to solution with **brms** and other packages is to just rescale your data to the `\((0, 1)\)` or `\([0, 1]\)` range prior to the analysis, and then fit a variant of a beta model with our without inflation. However, there is such a thing as a four-parameter beta distribution which includes a shift parameter to adjust the lower limit and a scale parameter to adjust the upper limit. See [here](https://en.wikipedia.org/wiki/Beta_distribution#Four_parameters) for a quick reference. To my knowledge, the only way to actually fit such a model without rescaling the data involves making a custom likelihood in **brms**, which you can learn about in Bürkner’s ([2023b](#ref-Bürkner2023Define)) vignette, *Define custom response distributions with brms*.
 
 ## Recap
 
@@ -1012,9 +1012,9 @@ In this post, some of the main points we covered were:
 - I’m not aware there is a canonical link for beta models, but I recommend the logit link, which is the default for **brms**.
 - For the beta ANOVA, the `\(\mathbb E (y_i^1 - y_i^0)\)` method and the `\(\mathbb E (y_i^1) - \mathbb E (y_i^0)\)` method are both valid estimators of `\(\tau_\text{ATE}\)`.
 - For the beta ANCOVA, the only valid estimator of `\(\tau_\text{ATE}\)` is the `\(\mathbb E (y_i^1 - y_i^0)\)` method, which we typically refer to as *standardization* in this blog series.
-- Finally, it does appear that the beta ANCOVA will return more precise estimates of the ATE than the simple beta ANOVA.
+- Finally, it does appear that the beta ANCOVA will return more precise estimates of the ATE than the simple beta ANOVA. Use your baseline covariates!
 
-In the next post, we’ll introduce the analysis of heterogeneous covariance (ANHECOVA) for causal inference.
+In the next post, we’ll shift gears and introduce the analysis of heterogeneous covariance (ANHECOVA) for causal inference.
 
 ## Session info
 
