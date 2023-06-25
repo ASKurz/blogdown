@@ -47,11 +47,11 @@ load("fits/fit2g.rda")
 load("fits/fit2b.rda")
 ```
 
-Sometimes in the methodological literature, models for continuous outcomes are presumed to use the Gaussian likelihood. In the [sixth post](https://solomonkurz.netlify.app/blog/2023-05-14-causal-inference-with-gamma-regression-or-the-problem-is-with-the-link-function-not-the-likelihood/) of this series, we saw the gamma likelihood is a great alternative when your continuous data are restricted to positive values, such as in reaction times and bodyweight. In this post, we explore the beta likelihood for data restricted within the range of $(0, 1)$.
+Sometimes in the methodological literature, models for continuous outcomes are presumed to use the Gaussian likelihood. In the [sixth post](https://solomonkurz.netlify.app/blog/2023-05-14-causal-inference-with-gamma-regression-or-the-problem-is-with-the-link-function-not-the-likelihood/) of this series, we saw the gamma likelihood is a great alternative when your continuous data are restricted to positive values, such as in reaction times and bodyweight. In this ninth post, we explore the beta likelihood for continuous data restricted within the range of $(0, 1)$.
 
 ## Reload the data
 
-In post, we’ll be continuing on with our `hoorelbeke2021` data set from the [last post](https://solomonkurz.netlify.app/blog/2023-06-19-causal-inference-with-change-scores/) on change scores. These data, recall, come from @hoorelbeke2021preventing, who saved them in a `Baseline & FU rating.sav` file uploaded to the OSF at https://osf.io/6ptu5/. `r emo::ji("warning")` For this next code block to work on your computer, you will need to first download that `Baseline & FU rating.sav` file, and then save that file in a `data` subfolder in your working directory.
+In post, we'll be continuing on with our `hoorelbeke2021` data set from the [last post](https://solomonkurz.netlify.app/blog/2023-06-19-causal-inference-with-change-scores/) on change scores. These data, recall, come from @hoorelbeke2021preventing, who saved them in a `Baseline & FU rating.sav` file uploaded to the OSF at https://osf.io/6ptu5/. `r emo::ji("warning")` For this next code block to work on your computer, you will need to first download that `Baseline & FU rating.sav` file, and then save that file in a `data` subfolder in your working directory.
 
 ```{r, warning = F, message = F}
 # packages
