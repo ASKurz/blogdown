@@ -3,7 +3,7 @@ title: Causal inference with beta regression
 subtitle: 'Part 9 of the GLM and causal inference series.'
 author: A. Solomon Kurz
 date: '2023-06-25'
-excerpt: "In this sixth post of the causal inference + GLM series, we explore the beta likelihood for continuous data restricted within the range of 0 to 1."
+excerpt: "In this ninth post of the causal inference + GLM series, we explore the beta likelihood for continuous data restricted within the range of 0 to 1."
 tags:
   - ANCOVA
   - ANOVA
