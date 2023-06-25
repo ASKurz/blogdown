@@ -40,7 +40,7 @@ Here’s the working table of contents for this series:
 6.  Causal inference with gamma regression (link [here](https://solomonkurz.netlify.app/blog/2023-05-14-causal-inference-with-gamma-regression-or-the-problem-is-with-the-link-function-not-the-likelihood/))
 7.  Causal inference with ordinal regression (link [here](https://solomonkurz.netlify.app/blog/2023-05-21-causal-inference-with-ordinal-regression/))
 8.  Causal inference with change scores (link [here](https://solomonkurz.netlify.app/blog/2023-06-19-causal-inference-with-change-scores/))
-9.  Causal inference with beta regression (ETA: June 2023)
+9.  Causal inference with beta regression (link [here](https://solomonkurz.netlify.app/blog/2023-06-25-causal-inference-with-beta-regression/))
 10. Causal inference with an analysis of heterogeneous covariance (ETA: July 2023)
 11. Causal inference with distributional models (ETA: July 2023)
 
@@ -601,7 +601,7 @@ sessionInfo()
     ## [17] viridisLite_0.4.2 scales_1.2.1      jquerylib_0.1.4   cli_3.6.1        
     ## [21] rlang_1.1.1       ellipsis_0.3.2    munsell_0.5.0     withr_2.5.0      
     ## [25] cachem_1.0.8      yaml_2.3.7        tools_4.3.0       tzdb_0.4.0       
-    ## [29] colorspace_2.1-0  vctrs_0.6.2       R6_2.5.1          lifecycle_1.0.3  
+    ## [29] colorspace_2.1-0  vctrs_0.6.3       R6_2.5.1          lifecycle_1.0.3  
     ## [33] pkgconfig_2.0.3   pillar_1.9.0      bslib_0.5.0       gtable_0.3.3     
     ## [37] glue_1.6.2        highr_0.10        xfun_0.39         tidyselect_1.2.0 
     ## [41] rstudioapi_0.14   knitr_1.43        farver_2.1.1      htmltools_0.5.5  

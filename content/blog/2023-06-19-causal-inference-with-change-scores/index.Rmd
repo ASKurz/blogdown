@@ -627,7 +627,7 @@ In this post, some of the main points we covered were:
 * Given its inefficiency and vulnerability to RTM, I would never recommend using the ANOVA-change model. If you have measurements at pre and post, I would always recommend either ANCOVA-post or ANCOVA-change. These offer greater statistical precision, and they protect against RTM.
 * I would only recommend the ANCOVA-change model if you are analyzing data appropriate for the Gaussian likelihood. When you compute change scores from other data types, such as counts or ordinal variables, you end up changing the likelihood function, and I can't imagine why you'd want to bring that kind of extra burden upon yourself.[^13]
 
-As to next steps, some of my eagle-eyed readers may have noticed the primary outcome variable in the `hoorelbeke2021` data is bounded between 0 and 1, which makes our use of OLS--and thus the Gaussian likelihood by mathematical equivalence--dubious. In the next post, we'll address this shortcoming by exploring causal inference with beta regression.
+As to next steps, some of my eagle-eyed readers may have noticed the primary outcome variable in the `hoorelbeke2021` data is bounded between 0 and 1, which makes our use of OLS--and thus the Gaussian likelihood by mathematical equivalence--dubious. In the [next post](https://solomonkurz.netlify.app/blog/2023-06-25-causal-inference-with-beta-regression/), we'll address this shortcoming by exploring causal inference with beta regression.
 
 ## No more pre-release peer review
 
