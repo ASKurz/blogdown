@@ -583,7 +583,7 @@ We already know that when you’re using simple Gaussian models, be they ANOVA�
 
 `$$\operatorname{logit}^{-1}(\beta_0 + \beta_1) - \operatorname{logit}^{-1}(\beta_1),$$`
 
-where `\(\operatorname{logit}^{-1}(\cdot)\)` is the inverse of the logistic function (i.e., `plogis()`).[^7] Here’s how to work with the `as_draws_df()` output for `fit1b` to plot the full posterior distribution for the ATE. For kicks, we’ll even compare our ATE posterior with the *sample* ATE (SATE), as computed by hand with sample statistics.
+where `\(\operatorname{logit}^{-1}(\cdot)\)` is the inverse of the logit function (i.e., `plogis()`).[^7] Here’s how to work with the `as_draws_df()` output for `fit1b` to plot the full posterior distribution for the ATE. For kicks, we’ll even compare our ATE posterior with the *sample* ATE (SATE), as computed by hand with sample statistics.
 
 ``` r
 # posttreatment mean for control
@@ -1192,4 +1192,4 @@ Swearingen, C. J., Castro, M. M., & Bursac, Z. (2012). Inflated beta regression:
 
 [^6]: By now you may be asking yourself: *But could I also use a gamma prior for* `\(\sigma\)` *in the Gaussian models?* Why yes, yes you could. If you wanted to be super extra, you could even use a gamma prior for `\(\sigma\)` that’s been truncated on the right at the upper limit of 0.5. Wouldn’t that be fun to slip into a paper?
 
-[^7]: The inverse of the logistic function, recall, is defined as `\(\operatorname{logit}^{-1}(p) = \exp(p)/[1 + \exp(p)]\)`.
+[^7]: The inverse of the logit function, recall, is defined as `\(\operatorname{logit}^{-1}(p) = \exp(p)/[1 + \exp(p)]\)`.
