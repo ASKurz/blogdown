@@ -30,7 +30,7 @@ csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl
 link-citations: yes
 ---
 
-Sometimes in the methodological literature, models for continuous outcomes are presumed to use the Gaussian likelihood. In the [sixth post](https://solomonkurz.netlify.app/blog/2023-05-14-causal-inference-with-gamma-regression-or-the-problem-is-with-the-link-function-not-the-likelihood/) of this series, we saw the gamma likelihood is a great alternative when your continuous data are restricted to positive values, such as in reaction times and bodyweight. In this ninth post, we make causal inferences with the beta likelihood for continuous data restricted within the range of `\((0, 1)\)`.
+Sometimes in the methodological literature, models for continuous outcomes are presumed to use the Gaussian likelihood. In the [sixth post](https://solomonkurz.netlify.app/blog/2023-05-14-causal-inference-with-gamma-regression-or-the-problem-is-with-the-link-function-not-the-likelihood/) of this series, we saw the gamma likelihood is a great alternative when your continuous data are restricted to positive values, such as in reaction times and bodyweight. In this ninth post, we practice making causal inferences with the beta likelihood for continuous data restricted within the range of `\((0, 1)\)`.
 
 ## Reload the data
 
