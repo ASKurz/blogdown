@@ -34,7 +34,7 @@ Sometimes in the methodological literature, models for continuous outcomes are p
 
 ## Reload the data
 
-In post, we’ll be continuing on with our `hoorelbeke2021` data set from the [last post](https://solomonkurz.netlify.app/blog/2023-06-19-causal-inference-with-change-scores/) on change scores. These data, recall, come from Hoorelbeke et al. ([2021](#ref-hoorelbeke2021preventing)), who saved them in a `Baseline & FU rating.sav` file uploaded to the OSF at https://osf.io/6ptu5/. ⚠️ For this next code block to work on your computer, you will need to first download that `Baseline & FU rating.sav` file, and then save that file in a `data` subfolder in your working directory.
+In this post, we’ll be continuing on with our `hoorelbeke2021` data set from the [last post](https://solomonkurz.netlify.app/blog/2023-06-19-causal-inference-with-change-scores/) on change scores. These data, recall, come from Hoorelbeke et al. ([2021](#ref-hoorelbeke2021preventing)), who saved them in a `Baseline & FU rating.sav` file uploaded to the OSF at https://osf.io/6ptu5/. ⚠️ For this next code block to work on your computer, you will need to first download that `Baseline & FU rating.sav` file, and then save that file in a `data` subfolder in your working directory.
 
 ``` r
 # packages
@@ -72,7 +72,7 @@ glimpse(hoorelbeke2021)
     ## $ post   <dbl> 0.9166667, 0.7000000, 0.8166667, 0.7722222, 0.9000000, 0.3888889, 0.9833333, 0.6944444, 0.972…
     ## $ change <dbl> 0.57222222, 0.18888889, 0.23333333, 0.12777778, 0.20555556, 0.05000000, 0.20000000, 0.1055555…
 
-We’re not going to go into a full introduction of these data, again. You have the last post for that. But I do think we should warm up with another exploratory plot of the data. This time, we’ll make scatter plots with `pre` on the `\(x\)` and `post` on the `\(y\)`, separated by the two levels of the experimental grouping variable `tx`.
+We’re not going to go into a full introduction of these data, again. You have the [last post](https://solomonkurz.netlify.app/blog/2023-06-19-causal-inference-with-change-scores/) for that. But I do think we should warm up with another exploratory plot. This time, we’ll make scatter plots with `pre` on the `\(x\)` and `post` on the `\(y\)`, separated by the two levels of the experimental grouping variable `tx`.
 
 ``` r
 hoorelbeke2021 %>% 
