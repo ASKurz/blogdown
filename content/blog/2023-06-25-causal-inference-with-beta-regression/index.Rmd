@@ -102,7 +102,7 @@ Note the vertical and horizontal white lines at the edges of the panels mark off
 
 ## Model framework
 
-It's possible to fit beta regression models in **R** with packages like **betareg** [@R-betareg; @betareg2010; @betareg2012] and **glmmTMB** [@glmmTMB; @glmmTMB2017]. Here we're just going to jump straight into Bayesland and fit our models with **brms**. Before we fit the beta models, though, we'll warm up with the Gauss. Using both likelihoods, we'll analyze the data with an ANOVA and an ANCOVA, which will make for 4 models in total.
+It's possible to fit beta regression models in **R** with packages like **betareg** [@R-betareg; @betareg2010; @betareg2012] and **glmmTMB** [@R-glmmTMB; @glmmTMB2017]. Here we're just going to jump straight into Bayesland and fit our models with **brms**. Before we fit the beta models, though, we'll warm up with the Gauss. Using both likelihoods, we'll analyze the data with an ANOVA and an ANCOVA, which will make for 4 models in total.
 
 ### Normal Gaussian models.
 

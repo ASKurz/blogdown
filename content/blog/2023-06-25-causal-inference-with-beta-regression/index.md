@@ -95,7 +95,7 @@ Note the vertical and horizontal white lines at the edges of the panels mark off
 
 ## Model framework
 
-It’s possible to fit beta regression models in **R** with packages like **betareg** ([Cribari-Neto & Zeileis, 2010](#ref-betareg2010); [Grün et al., 2012](#ref-betareg2012); [Zeileis et al., 2021](#ref-R-betareg)) and **glmmTMB** ([Brooks et al., 2017](#ref-glmmTMB2017); [**glmmTMB?**](#ref-glmmTMB)). Here we’re just going to jump straight into Bayesland and fit our models with **brms**. Before we fit the beta models, though, we’ll warm up with the Gauss. Using both likelihoods, we’ll analyze the data with an ANOVA and an ANCOVA, which will make for 4 models in total.
+It’s possible to fit beta regression models in **R** with packages like **betareg** ([Cribari-Neto & Zeileis, 2010](#ref-betareg2010); [Grün et al., 2012](#ref-betareg2012); [Zeileis et al., 2021](#ref-R-betareg)) and **glmmTMB** ([M. Brooks et al., 2023](#ref-R-glmmTMB); [M. E. Brooks et al., 2017](#ref-glmmTMB2017)). Here we’re just going to jump straight into Bayesland and fit our models with **brms**. Before we fit the beta models, though, we’ll warm up with the Gauss. Using both likelihoods, we’ll analyze the data with an ANOVA and an ANCOVA, which will make for 4 models in total.
 
 ### Normal Gaussian models.
 
@@ -1079,6 +1079,12 @@ sessionInfo()
 <div id="ref-glmmTMB2017" class="csl-entry">
 
 Brooks, M. E., Kristensen, K., van Benthem, K. J., Magnusson, A., Berg, C. W., Nielsen, A., Skaug, H. J., Maechler, M., & Bolker, B. M. (2017). <span class="nocase">glmmTMB</span> balances speed and flexibility among packages for zero-inflated generalized linear mixed modeling. *The R Journal*, *9*(2), 378–400. <https://doi.org/10.32614/RJ-2017-066>
+
+</div>
+
+<div id="ref-R-glmmTMB" class="csl-entry">
+
+Brooks, M., Bolker, B., Kristensen, K., Maechler, M., Magnusson, A., Skaug, H., Nielsen, A., Berg, C., & van Bentham, K. (2023). *<span class="nocase">glmmTMB</span>: Generalized linear mixed models using template model builder* \[Manual\]. <https://github.com/glmmTMB/glmmTMB>
 
 </div>
 
