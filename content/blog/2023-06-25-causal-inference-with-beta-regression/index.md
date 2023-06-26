@@ -471,7 +471,7 @@ Turns out the `\(\phi\)` posteriors are on the low end of what I anticipated wit
 
 ### Posterior predictive checks.
 
-Before we dive into the potential outcomes and causal estimands, we might compare the overall predictive performance of the two likelihoods. I’m not going to compare the Gaussian and beta models with information criteria contrasts, because my understanding is it’s not the best idea to compare models that way which have radically different likelihood functions (see [McElreath, 2020](#ref-mcelreathStatisticalRethinkingBayesian2020)). We can, however, compare the models with a few posterior predictive checks. To start, we’ll make a few grouped density-overlay plots.
+Before we dive into the potential outcomes and causal estimands, we might compare the overall predictive performance of the two likelihoods. I’m not going to compare the Gaussian and beta models with information criteria contrasts, because my understanding is it’s not the best idea to compare models with radically different likelihood functions in that way (see [McElreath, 2020](#ref-mcelreathStatisticalRethinkingBayesian2020)). We can, however, compare the models with a few posterior predictive checks. To start, we’ll make a few grouped density-overlay plots.
 
 ``` r
 # ANOVA's
