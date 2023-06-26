@@ -95,7 +95,7 @@ Note the vertical and horizontal white lines at the edges of the panels mark off
 
 ## Model framework
 
-It’s possible to fit beta regression models in **R** with packages like **betareg** and **glmmTMB**. Here we’re just going to jump straight into Bayesland and fit our models with **brms**. Before we fit the beta models, though, we’ll warm up with the Gauss. Using both likelihoods, we’ll analyze the data with an ANOVA and an ANCOVA, which will make for 4 models in total.
+It’s possible to fit beta regression models in **R** with packages like **betareg** ([Cribari-Neto & Zeileis, 2010](#ref-betareg2010); [Grün et al., 2012](#ref-betareg2012); [Zeileis et al., 2021](#ref-R-betareg)) and **glmmTMB** ([Brooks et al., 2017](#ref-glmmTMB2017); [**glmmTMB?**](#ref-glmmTMB)). Here we’re just going to jump straight into Bayesland and fit our models with **brms**. Before we fit the beta models, though, we’ll warm up with the Gauss. Using both likelihoods, we’ll analyze the data with an ANOVA and an ANCOVA, which will make for 4 models in total.
 
 ### Normal Gaussian models.
 
@@ -1076,6 +1076,12 @@ sessionInfo()
 
 <div id="refs" class="references csl-bib-body hanging-indent" line-spacing="2">
 
+<div id="ref-glmmTMB2017" class="csl-entry">
+
+Brooks, M. E., Kristensen, K., van Benthem, K. J., Magnusson, A., Berg, C. W., Nielsen, A., Skaug, H. J., Maechler, M., & Bolker, B. M. (2017). <span class="nocase">glmmTMB</span> balances speed and flexibility among packages for zero-inflated generalized linear mixed modeling. *The R Journal*, *9*(2), 378–400. <https://doi.org/10.32614/RJ-2017-066>
+
+</div>
+
 <div id="ref-brms2023RM" class="csl-entry">
 
 Bürkner, P.-C. (2023a). *<span class="nocase">brms</span> reference manual, Version 2.19.0*. <https://CRAN.R-project.org/package=brms/brms.pdf>
@@ -1094,6 +1100,12 @@ Bürkner, P.-C. (2023c). *Parameterization of response distributions in <span cl
 
 </div>
 
+<div id="ref-betareg2010" class="csl-entry">
+
+Cribari-Neto, F., & Zeileis, A. (2010). Beta regression in R. *Journal of Statistical Software*, *34*(2), 1–24. <https://doi.org/10.18637/jss.v034.i02>
+
+</div>
+
 <div id="ref-ferrari2004beta" class="csl-entry">
 
 Ferrari, S., & Cribari-Neto, F. (2004). Beta regression for modelling rates and proportions. *Journal of Applied Statistics*, *31*(7), 799–815. <https://doi.org/10.1080/0266476042000214501>
@@ -1103,6 +1115,12 @@ Ferrari, S., & Cribari-Neto, F. (2004). Beta regression for modelling rates and 
 <div id="ref-ford2002role" class="csl-entry">
 
 Ford, I., & Norrie, J. (2002). The role of covariates in estimating treatment effects and risk in long-term clinical trials. *Statistics in Medicine*, *21*(19), 2899–2908. <https://doi.org/10.1002/sim.1294>
+
+</div>
+
+<div id="ref-betareg2012" class="csl-entry">
+
+Grün, B., Kosmidis, I., & Zeileis, A. (2012). Extended beta regression in R: Shaken, stirred, mixed, and partitioned. *Journal of Statistical Software*, *48*(11), 1–25. <https://doi.org/10.18637/jss.v048.i11>
 
 </div>
 
@@ -1175,6 +1193,12 @@ Robinson, L. D., & Jewell, N. P. (1991). Some surprising results about covariate
 <div id="ref-swearingen2012inflated" class="csl-entry">
 
 Swearingen, C. J., Castro, M. M., & Bursac, Z. (2012). Inflated beta regression: Zero, one, and everything in between. *SAS Global Forum*, *11*.
+
+</div>
+
+<div id="ref-R-betareg" class="csl-entry">
+
+Zeileis, A., Cribari-Neto, F., Gruen, B., & Kosmidis, I. (2021). *<span class="nocase">betareg</span>: Beta regression* \[Manual\]. <https://CRAN.R-project.org/package=betareg>
 
 </div>
 
