@@ -82,7 +82,7 @@ Now we've got our data, we're ready to fit some Bayesian models.
 
 ### Gaussian models.
 
-Instead of expressing our models in OLS-style notation where we include $\epsilon_i$, it's time we switch to the Gaussian likelihoodist format. Here's what are Gaussian ANOVA-type model might look like when including our Bayesian priors:
+Instead of expressing our models in OLS-style notation where we include $\epsilon_i$, it's time we switch to the Gaussian likelihoodist format. Here's what our Gaussian ANOVA-type model might look like when including Bayesian priors:
 
 $$
 \begin{align*}
@@ -94,7 +94,7 @@ $$
 \end{align*}
 $$
 
-The prior for $\beta_0$ is centered on 156.5 because according to the Centers for Disease Control and Prevention (CDC; see [here](https://www.cdc.gov/nchs/fastats/body-measurements.htm)), that is the average weight for 19-year-old women in the US in recent years (2015-2018). Granted, the @horan1971coverant data were from some 50 years ago, but since body weight has increased over the past few decades in the US, an average woman's weight now might be a decent first approximation for an overweight woman 50 years ago. The standard deviation of 15 in the prior is meant to reflect uncertainty, and it suggest that 95% of the prior mass should be between 30 points below and above the prior mean.
+The prior for $\beta_0$ is centered on 156.5 because according to the Centers for Disease Control and Prevention (CDC; see [here](https://www.cdc.gov/nchs/fastats/body-measurements.htm)), that is the average weight for 19-year-old women in the US in recent years (2015-2018). Granted, the @horan1971coverant data were from more than 50 years ago, but since body weight has increased over the past few decades in the US, an average woman's weight now might be a decent first approximation for a woman considered overweight at that time. The standard deviation of 15 in the prior is meant to reflect uncertainty, and it suggests we think about 95% of the prior mass should be between 30 points below and above the prior mean.
 
 The prior for $\beta_1$ is centered on 0 to weakly regularize the estimate for the experimental difference towards smaller values. However, we continue to use a fairly permissive standard deviation of 15 to allow for somewhat large treatment effects. That is, there could be a difference between the groups as large as 30 pounds either way, but smaller differences are more plausible than larger ones.
 

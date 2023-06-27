@@ -65,7 +65,7 @@ Now we’ve got our data, we’re ready to fit some Bayesian models.
 
 ### Gaussian models.
 
-Instead of expressing our models in OLS-style notation where we include `\(\epsilon_i\)`, it’s time we switch to the Gaussian likelihoodist format. Here’s what are Gaussian ANOVA-type model might look like when including our Bayesian priors:
+Instead of expressing our models in OLS-style notation where we include `\(\epsilon_i\)`, it’s time we switch to the Gaussian likelihoodist format. Here’s what our Gaussian ANOVA-type model might look like when including Bayesian priors:
 
 $$
 `\begin{align*}
@@ -77,7 +77,7 @@ $$
 \end{align*}`
 $$
 
-The prior for `\(\beta_0\)` is centered on 156.5 because according to the Centers for Disease Control and Prevention (CDC; see [here](https://www.cdc.gov/nchs/fastats/body-measurements.htm)), that is the average weight for 19-year-old women in the US in recent years (2015-2018). Granted, the Horan & Johnson ([1971](#ref-horan1971coverant)) data were from some 50 years ago, but since body weight has increased over the past few decades in the US, an average woman’s weight now might be a decent first approximation for an overweight woman 50 years ago. The standard deviation of 15 in the prior is meant to reflect uncertainty, and it suggest that 95% of the prior mass should be between 30 points below and above the prior mean.
+The prior for `\(\beta_0\)` is centered on 156.5 because according to the Centers for Disease Control and Prevention (CDC; see [here](https://www.cdc.gov/nchs/fastats/body-measurements.htm)), that is the average weight for 19-year-old women in the US in recent years (2015-2018). Granted, the Horan & Johnson ([1971](#ref-horan1971coverant)) data were from more than 50 years ago, but since body weight has increased over the past few decades in the US, an average woman’s weight now might be a decent first approximation for a woman considered overweight at that time. The standard deviation of 15 in the prior is meant to reflect uncertainty, and it suggests we think about 95% of the prior mass should be between 30 points below and above the prior mean.
 
 The prior for `\(\beta_1\)` is centered on 0 to weakly regularize the estimate for the experimental difference towards smaller values. However, we continue to use a fairly permissive standard deviation of 15 to allow for somewhat large treatment effects. That is, there could be a difference between the groups as large as 30 pounds either way, but smaller differences are more plausible than larger ones.
 
@@ -444,8 +444,8 @@ print(nd)
     ## # A tibble: 2 × 2
     ##        prec experimental
     ##       <dbl>        <int>
-    ## 1 -7.62e-15            0
-    ## 2 -7.62e-15            1
+    ## 1 -8.67e-15            0
+    ## 2 -8.67e-15            1
 
 For our Bayesian ANCOVA, the `fitted()`-based workflow is much the same as for the ANOVA in the previous section. After the basic computation, we convert the output to a data fame, rename the columns, use simple subtraction to compute an `ate` column, and then finally summarize as desired.
 
@@ -475,8 +475,8 @@ predictions(fit2, newdata = nd, by = "experimental")
 
     ## 
     ##  experimental Estimate 2.5 % 97.5 %      prec
-    ##             0      155   152    158 -7.62e-15
-    ##             1      150   147    153 -7.62e-15
+    ##             0      155   152    158 -8.67e-15
+    ##             1      150   147    153 -8.67e-15
     ## 
     ## Columns: rowid, experimental, estimate, conf.low, conf.high, prec, post
 
@@ -1202,52 +1202,54 @@ Do note the final editorial decisions were my own, and I do not think it would b
 sessionInfo()
 ```
 
-    ## R version 4.2.3 (2023-03-15)
-    ## Platform: x86_64-apple-darwin17.0 (64-bit)
-    ## Running under: macOS Big Sur ... 10.16
+    ## R version 4.3.0 (2023-04-21)
+    ## Platform: aarch64-apple-darwin20 (64-bit)
+    ## Running under: macOS Ventura 13.4
     ## 
     ## Matrix products: default
-    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRblas.0.dylib
-    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRlapack.dylib
+    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
+    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
     ## 
     ## locale:
     ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+    ## 
+    ## time zone: America/Chicago
+    ## tzcode source: internal
     ## 
     ## attached base packages:
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ##  [1] marginaleffects_0.11.1.9008 tidybayes_3.0.4             brms_2.19.0                 Rcpp_1.0.10                
-    ##  [5] lubridate_1.9.2             forcats_1.0.0               stringr_1.5.0               dplyr_1.1.2                
-    ##  [9] purrr_1.0.1                 readr_2.1.4                 tidyr_1.3.0                 tibble_3.2.1               
-    ## [13] ggplot2_3.4.2               tidyverse_2.0.0            
+    ##  [1] marginaleffects_0.12.0 tidybayes_3.0.4        brms_2.19.0            Rcpp_1.0.10            lubridate_1.9.2       
+    ##  [6] forcats_1.0.0          stringr_1.5.0          dplyr_1.1.2            purrr_1.0.1            readr_2.1.4           
+    ## [11] tidyr_1.3.0            tibble_3.2.1           ggplot2_3.4.2          tidyverse_2.0.0       
     ## 
     ## loaded via a namespace (and not attached):
-    ##   [1] readxl_1.4.2         backports_1.4.1      plyr_1.8.7           igraph_1.3.4         splines_4.2.3       
-    ##   [6] svUnit_1.0.6         crosstalk_1.2.0      TH.data_1.1-1        rstantools_2.2.0     inline_0.3.19       
-    ##  [11] digest_0.6.31        htmltools_0.5.5      fansi_1.0.4          magrittr_2.0.3       checkmate_2.1.0     
-    ##  [16] tzdb_0.3.0           RcppParallel_5.1.5   matrixStats_0.63.0   xts_0.12.1           sandwich_3.0-2      
-    ##  [21] timechange_0.2.0     prettyunits_1.1.1    colorspace_2.1-0     ggdist_3.2.1.9000    xfun_0.39           
-    ##  [26] callr_3.7.3          crayon_1.5.2         jsonlite_1.8.4       lme4_1.1-31          survival_3.5-3      
-    ##  [31] zoo_1.8-10           glue_1.6.2           gtable_0.3.3         emmeans_1.8.0        distributional_0.3.1
-    ##  [36] pkgbuild_1.3.1       rstan_2.21.8         abind_1.4-5          scales_1.2.1         mvtnorm_1.1-3       
-    ##  [41] DBI_1.1.3            miniUI_0.1.1.1       xtable_1.8-4         stats4_4.2.3         StanHeaders_2.21.0-7
-    ##  [46] DT_0.24              collapse_1.9.2       htmlwidgets_1.5.4    threejs_0.3.3        arrayhelpers_1.1-0  
-    ##  [51] posterior_1.4.1      ellipsis_0.3.2       pkgconfig_2.0.3      loo_2.5.1            farver_2.1.1        
-    ##  [56] sass_0.4.5           utf8_1.2.3           labeling_0.4.2       tidyselect_1.2.0     rlang_1.1.0         
-    ##  [61] reshape2_1.4.4       later_1.3.0          cellranger_1.1.0     munsell_0.5.0        tools_4.2.3         
-    ##  [66] cachem_1.0.7         cli_3.6.1            generics_0.1.3       evaluate_0.20        fastmap_1.1.1       
-    ##  [71] yaml_2.3.7           processx_3.8.1       knitr_1.42           nlme_3.1-162         mime_0.12           
-    ##  [76] projpred_2.2.1       compiler_4.2.3       bayesplot_1.10.0     shinythemes_1.2.0    rstudioapi_0.14     
-    ##  [81] gamm4_0.2-6          bslib_0.4.2          stringi_1.7.12       highr_0.10           ps_1.7.5            
-    ##  [86] blogdown_1.16        Brobdingnag_1.2-8    lattice_0.20-45      Matrix_1.5-3         nloptr_2.0.3        
-    ##  [91] markdown_1.1         shinyjs_2.1.0        tensorA_0.36.2       vctrs_0.6.2          pillar_1.9.0        
-    ##  [96] lifecycle_1.0.3      jquerylib_0.1.4      bridgesampling_1.1-2 estimability_1.4.1   insight_0.19.1.6    
-    ## [101] data.table_1.14.8    httpuv_1.6.5         R6_2.5.1             bookdown_0.28        promises_1.2.0.1    
-    ## [106] gridExtra_2.3        codetools_0.2-19     boot_1.3-28.1        colourpicker_1.1.1   MASS_7.3-58.2       
-    ## [111] gtools_3.9.4         withr_2.5.0          shinystan_2.6.0      multcomp_1.4-20      mgcv_1.8-42         
-    ## [116] parallel_4.2.3       hms_1.1.3            grid_4.2.3           coda_0.19-4          minqa_1.2.5         
-    ## [121] rmarkdown_2.21       numDeriv_2016.8-1.1  shiny_1.7.2          base64enc_0.1-3      dygraphs_1.1.1.6
+    ##   [1] tensorA_0.36.2       rstudioapi_0.14      jsonlite_1.8.5       magrittr_2.0.3       TH.data_1.1-2       
+    ##   [6] estimability_1.4.1   farver_2.1.1         nloptr_2.0.3         rmarkdown_2.22       vctrs_0.6.3         
+    ##  [11] minqa_1.2.5          base64enc_0.1-3      blogdown_1.17        htmltools_0.5.5      distributional_0.3.2
+    ##  [16] cellranger_1.1.0     sass_0.4.6           StanHeaders_2.26.27  bslib_0.5.0          htmlwidgets_1.6.2   
+    ##  [21] plyr_1.8.8           sandwich_3.0-2       emmeans_1.8.6        zoo_1.8-12           cachem_1.0.8        
+    ##  [26] igraph_1.4.3         mime_0.12            lifecycle_1.0.3      pkgconfig_2.0.3      colourpicker_1.2.0  
+    ##  [31] Matrix_1.5-4         R6_2.5.1             fastmap_1.1.1        collapse_1.9.6       shiny_1.7.4         
+    ##  [36] digest_0.6.31        numDeriv_2016.8-1.1  colorspace_2.1-0     ps_1.7.5             crosstalk_1.2.0     
+    ##  [41] projpred_2.6.0       labeling_0.4.2       fansi_1.0.4          timechange_0.2.0     abind_1.4-5         
+    ##  [46] mgcv_1.8-42          compiler_4.3.0       withr_2.5.0          backports_1.4.1      inline_0.3.19       
+    ##  [51] shinystan_2.6.0      gamm4_0.2-6          highr_0.10           pkgbuild_1.4.1       MASS_7.3-58.4       
+    ##  [56] gtools_3.9.4         loo_2.6.0            tools_4.3.0          httpuv_1.6.11        threejs_0.3.3       
+    ##  [61] glue_1.6.2           callr_3.7.3          nlme_3.1-162         promises_1.2.0.1     grid_4.3.0          
+    ##  [66] checkmate_2.2.0      reshape2_1.4.4       generics_0.1.3       gtable_0.3.3         tzdb_0.4.0          
+    ##  [71] data.table_1.14.8    hms_1.1.3            utf8_1.2.3           pillar_1.9.0         ggdist_3.3.0        
+    ##  [76] markdown_1.7         posterior_1.4.1      later_1.3.1          splines_4.3.0        lattice_0.21-8      
+    ##  [81] survival_3.5-5       tidyselect_1.2.0     miniUI_0.1.1.1       knitr_1.43           arrayhelpers_1.1-0  
+    ##  [86] gridExtra_2.3        bookdown_0.34        stats4_4.3.0         xfun_0.39            bridgesampling_1.1-2
+    ##  [91] matrixStats_1.0.0    DT_0.28              rstan_2.21.8         stringi_1.7.12       yaml_2.3.7          
+    ##  [96] boot_1.3-28.1        evaluate_0.21        codetools_0.2-19     cli_3.6.1            RcppParallel_5.1.7  
+    ## [101] shinythemes_1.2.0    xtable_1.8-4         munsell_0.5.0        processx_3.8.1       jquerylib_0.1.4     
+    ## [106] readxl_1.4.2         coda_0.19-4          svUnit_1.0.6         parallel_4.3.0       rstantools_2.3.1    
+    ## [111] ellipsis_0.3.2       prettyunits_1.1.1    dygraphs_1.1.1.6     bayesplot_1.10.0     Brobdingnag_1.2-9   
+    ## [116] lme4_1.1-33          mvtnorm_1.2-2        scales_1.2.1         xts_0.13.1           insight_0.19.2      
+    ## [121] crayon_1.5.2         rlang_1.1.1          multcomp_1.4-24      shinyjs_2.1.0
 
 ## References
 
