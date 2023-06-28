@@ -25,9 +25,9 @@ link-citations: yes
 
 All the players know there are three major ways to handle missing data:
 
--   full-information maximum likelihood,
--   multiple imputation, and
--   one-step full-luxury[^1] Bayesian imputation.
+- full-information maximum likelihood,
+- multiple imputation, and
+- one-step full-luxury[^1] Bayesian imputation.
 
 In an [earlier post](https://solomonkurz.netlify.app/blog/2021-10-21-if-you-fit-a-model-with-multiply-imputed-data-you-can-still-plot-the-line/), we walked through method for plotting the fitted lines from models fit with multiply-imputed data. In this post, we’ll discuss another neglected topic: *How might one compute* **standardized regression coefficients** *from models fit with multiply-imputed data?*
 
@@ -35,11 +35,11 @@ In an [earlier post](https://solomonkurz.netlify.app/blog/2021-10-21-if-you-fit-
 
 For this post, I’m presuming some background knowledge:
 
--   You should be familiar with regression. For frequentist introductions, I recommend Roback and Legler’s ([2021](#ref-roback2021beyond)) online text or James, Witten, Hastie, and Tibshirani’s ([2021](#ref-james2021AnIntroduction)) online text. For Bayesian introductions, I recommend either edition of McElreath’s text ([2020](#ref-mcelreathStatisticalRethinkingBayesian2020), [2015](#ref-mcelreathStatisticalRethinkingBayesian2015)); Kruschke’s ([2015](#ref-kruschkeDoingBayesianData2015)) text; or Gelman, Hill, and Vehtari’s ([2020](#ref-gelmanRegressionOtherStories2020)) text.
+- You should be familiar with regression. For frequentist introductions, I recommend Roback and Legler’s ([2021](#ref-roback2021beyond)) online text or James, Witten, Hastie, and Tibshirani’s ([2021](#ref-james2021AnIntroduction)) online text. For Bayesian introductions, I recommend either edition of McElreath’s text ([2015](#ref-mcelreathStatisticalRethinkingBayesian2015), [2020](#ref-mcelreathStatisticalRethinkingBayesian2020)); Kruschke’s ([2015](#ref-kruschkeDoingBayesianData2015)) text; or Gelman, Hill, and Vehtari’s ([2020](#ref-gelmanRegressionOtherStories2020)) text.
 
--   You should be familiar with contemporary missing data theory. You can find brief overviews in the texts by McElreath and Gelman et al, above. For a deeper dive, I recommend Enders ([2022](#ref-enders2022applied)), Little & Rubin ([2019](#ref-little2019statistical)), or van Buuren ([2018](#ref-vanbuurenFlexibleImputationMissing2018)).
+- You should be familiar with contemporary missing data theory. You can find brief overviews in the texts by McElreath and Gelman et al, above. For a deeper dive, I recommend Enders ([2022](#ref-enders2022applied)), Little & Rubin ([2019](#ref-little2019statistical)), or van Buuren ([2018](#ref-vanbuurenFlexibleImputationMissing2018)).
 
--   All code is in **R**. Data wrangling and plotting were done with help from the **tidyverse** ([Wickham et al., 2019](#ref-wickhamWelcomeTidyverse2019); [Wickham, 2022](#ref-R-tidyverse)) and **ggside** ([Landis, 2022](#ref-R-ggside)). The data and multiple-imputation workflow are from the [**mice** package](https://CRAN.R-project.org/package=mice) ([van Buuren & Groothuis-Oudshoorn, 2011](#ref-mice2011), [2021](#ref-R-mice)).
+- All code is in **R**. Data wrangling and plotting were done with help from the **tidyverse** ([Wickham et al., 2019](#ref-wickhamWelcomeTidyverse2019); [Wickham, 2022](#ref-R-tidyverse)) and **ggside** ([Landis, 2022](#ref-R-ggside)). The data and multiple-imputation workflow are from the [**mice** package](https://CRAN.R-project.org/package=mice) ([van Buuren & Groothuis-Oudshoorn, 2011](#ref-mice2011), [2021](#ref-R-mice)).
 
 Here we load our primary **R** packages.
 
@@ -120,7 +120,7 @@ where `bmi` is the sole predictor of `chl`. Here’s how we use the `with()` fun
 fit1 <- with(imp, lm(chl ~ 1 + bmi))
 ```
 
-We use the `pool()` function to pool the results from the 100 MI data sets according to Ruben’s rules.
+We use the `pool()` function to pool the results from the 100 MI data sets according to Rubin’s rules ([Little & Rubin, 2019](#ref-little2019statistical); [Rubin, 1987](#ref-rubinMultipleImputationNonresponse1987)).
 
 ``` r
 pooled1 <- pool(fit1)
@@ -151,11 +151,11 @@ For the SP method, we don’t need to change our `mice()`-based imputation step 
 fit2 <- with(imp, lm(scale(chl) ~ 1 + scale(bmi)))
 ```
 
-I should note it was Mattan S. Ben-Shachar who came up with the `scale()` insight for our `with()` implementation.
+I should note it was [Mattan S. Ben-Shachar](https://home.msbstats.info) who came up with the `scale()` insight for our `with()` implementation.
 
 {{% tweet user="mattansb" id="1578447175998373893" %}}
 
-While I’m at it, it was Isabella R. Ghement who directed me to the van Ginkel paper.
+While I’m at it, it was [Isabella R. Ghement](http://www.ghement.ca) who directed me to the van Ginkel paper.
 
 {{% tweet user="IsabellaGhement" id="1578557862733045760" %}}
 
@@ -172,7 +172,7 @@ summary(pooled2, conf.int = T)
 ```
 
     ##          term      estimate std.error     statistic       df   p.value
-    ## 1 (Intercept) -5.043931e-19 0.1905258 -2.647375e-18 21.22865 1.0000000
+    ## 1 (Intercept) -1.838514e-17 0.1905258 -9.649687e-17 21.22865 1.0000000
     ## 2  scale(bmi)  3.275347e-01 0.2476081  1.322795e+00 12.84446 0.2089718
     ##        2.5 %    97.5 %
     ## 1 -0.3959603 0.3959603
@@ -256,48 +256,47 @@ Happy modeling!
 sessionInfo()
 ```
 
-    ## R version 4.2.0 (2022-04-22)
-    ## Platform: x86_64-apple-darwin17.0 (64-bit)
-    ## Running under: macOS Big Sur/Monterey 10.16
+    ## R version 4.3.0 (2023-04-21)
+    ## Platform: aarch64-apple-darwin20 (64-bit)
+    ## Running under: macOS Ventura 13.4
     ## 
     ## Matrix products: default
-    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRblas.0.dylib
-    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRlapack.dylib
+    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
+    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
     ## 
     ## locale:
     ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+    ## 
+    ## time zone: America/Chicago
+    ## tzcode source: internal
     ## 
     ## attached base packages:
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ##  [1] mice_3.14.0     ggside_0.2.1    forcats_0.5.1   stringr_1.4.1  
-    ##  [5] dplyr_1.0.10    purrr_0.3.4     readr_2.1.2     tidyr_1.2.1    
-    ##  [9] tibble_3.1.8    ggplot2_3.4.0   tidyverse_1.3.2
+    ##  [1] mice_3.16.0     ggside_0.2.2    lubridate_1.9.2 forcats_1.0.0  
+    ##  [5] stringr_1.5.0   dplyr_1.1.2     purrr_1.0.1     readr_2.1.4    
+    ##  [9] tidyr_1.3.0     tibble_3.2.1    ggplot2_3.4.2   tidyverse_2.0.0
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] Rcpp_1.0.9          lattice_0.20-45     lubridate_1.8.0    
-    ##  [4] assertthat_0.2.1    digest_0.6.30       utf8_1.2.2         
-    ##  [7] R6_2.5.1            cellranger_1.1.0    backports_1.4.1    
-    ## [10] reprex_2.0.2        evaluate_0.18       highr_0.9          
-    ## [13] httr_1.4.4          blogdown_1.15       pillar_1.8.1       
-    ## [16] rlang_1.0.6         googlesheets4_1.0.1 readxl_1.4.1       
-    ## [19] rstudioapi_0.13     jquerylib_0.1.4     rmarkdown_2.16     
-    ## [22] labeling_0.4.2      googledrive_2.0.0   munsell_0.5.0      
-    ## [25] broom_1.0.1         compiler_4.2.0      modelr_0.1.8       
-    ## [28] xfun_0.35           pkgconfig_2.0.3     htmltools_0.5.3    
-    ## [31] tidyselect_1.1.2    bookdown_0.28       emo_0.0.0.9000     
-    ## [34] fansi_1.0.3         crayon_1.5.2        tzdb_0.3.0         
-    ## [37] dbplyr_2.2.1        withr_2.5.0         grid_4.2.0         
-    ## [40] jsonlite_1.8.3      gtable_0.3.1        lifecycle_1.0.3    
-    ## [43] DBI_1.1.3           magrittr_2.0.3      scales_1.2.1       
-    ## [46] cli_3.4.1           stringi_1.7.8       cachem_1.0.6       
-    ## [49] farver_2.1.1        fs_1.5.2            xml2_1.3.3         
-    ## [52] bslib_0.4.0         ellipsis_0.3.2      generics_0.1.3     
-    ## [55] vctrs_0.5.0         tools_4.2.0         glue_1.6.2         
-    ## [58] hms_1.1.1           fastmap_1.1.0       yaml_2.3.5         
-    ## [61] colorspace_2.0-3    gargle_1.2.0        rvest_1.0.2        
-    ## [64] knitr_1.40          haven_2.5.1         sass_0.4.2
+    ##  [1] gtable_0.3.3     shape_1.4.6      xfun_0.39        bslib_0.5.0     
+    ##  [5] lattice_0.21-8   tzdb_0.4.0       vctrs_0.6.3      tools_4.3.0     
+    ##  [9] generics_0.1.3   fansi_1.0.4      highr_0.10       pan_1.6         
+    ## [13] pkgconfig_2.0.3  jomo_2.7-6       Matrix_1.5-4     assertthat_0.2.1
+    ## [17] lifecycle_1.0.3  farver_2.1.1     compiler_4.3.0   munsell_0.5.0   
+    ## [21] codetools_0.2-19 htmltools_0.5.5  sass_0.4.6       yaml_2.3.7      
+    ## [25] glmnet_4.1-7     crayon_1.5.2     nloptr_2.0.3     pillar_1.9.0    
+    ## [29] jquerylib_0.1.4  MASS_7.3-58.4    cachem_1.0.8     iterators_1.0.14
+    ## [33] rpart_4.1.19     boot_1.3-28.1    foreach_1.5.2    mitml_0.4-5     
+    ## [37] nlme_3.1-162     tidyselect_1.2.0 digest_0.6.31    stringi_1.7.12  
+    ## [41] bookdown_0.34    labeling_0.4.2   splines_4.3.0    fastmap_1.1.1   
+    ## [45] grid_4.3.0       colorspace_2.1-0 cli_3.6.1        magrittr_2.0.3  
+    ## [49] emo_0.0.0.9000   survival_3.5-5   utf8_1.2.3       broom_1.0.5     
+    ## [53] withr_2.5.0      scales_1.2.1     backports_1.4.1  timechange_0.2.0
+    ## [57] rmarkdown_2.22   nnet_7.3-18      lme4_1.1-33      blogdown_1.17   
+    ## [61] hms_1.1.3        evaluate_0.21    knitr_1.43       rlang_1.1.1     
+    ## [65] Rcpp_1.0.10      glue_1.6.2       rstudioapi_0.14  minqa_1.2.5     
+    ## [69] jsonlite_1.8.5   R6_2.5.1
 
 ## References
 
@@ -339,21 +338,27 @@ Little, R. J., & Rubin, D. B. (2019). *Statistical analysis with missing data* (
 
 </div>
 
-<div id="ref-mcelreathStatisticalRethinkingBayesian2020" class="csl-entry">
-
-McElreath, R. (2020). *Statistical rethinking: A Bayesian course with examples in R and Stan* (Second Edition). CRC Press. <https://xcelab.net/rm/statistical-rethinking/>
-
-</div>
-
 <div id="ref-mcelreathStatisticalRethinkingBayesian2015" class="csl-entry">
 
 McElreath, R. (2015). *Statistical rethinking: A Bayesian course with examples in R and Stan*. CRC press. <https://xcelab.net/rm/statistical-rethinking/>
 
 </div>
 
+<div id="ref-mcelreathStatisticalRethinkingBayesian2020" class="csl-entry">
+
+McElreath, R. (2020). *Statistical rethinking: A Bayesian course with examples in R and Stan* (Second Edition). CRC Press. <https://xcelab.net/rm/statistical-rethinking/>
+
+</div>
+
 <div id="ref-roback2021beyond" class="csl-entry">
 
 Roback, P., & Legler, J. (2021). *Beyond multiple linear regression: Applied generalized linear models and multilevel models in R*. CRC Press. <https://bookdown.org/roback/bookdown-BeyondMLR/>
+
+</div>
+
+<div id="ref-rubinMultipleImputationNonresponse1987" class="csl-entry">
+
+Rubin, D. B. (1987). *Multiple imputation for nonresponse in surveys*. John Wiley & Sons Inc. <https://doi.org/10.1002/9780470316696>
 
 </div>
 
@@ -401,4 +406,4 @@ Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L. D., François, R., G
 
 </div>
 
-[^1]: Be warned that “full-luxury Bayesian …” isn’t a real term. It’s just a playful term Richard McElreath coined a while back. To hear him use it in action, check out his [nifty talk](https://youtu.be/KNPYUVmY3NM) on causal inference. One-step Bayesian imputation is a real thing, though. McElreath covered it in both editions of his text and I’ve even blogged about it [here](https://solomonkurz.netlify.app/blog/2021-07-27-one-step-bayesian-imputation-when-you-have-dropout-in-your-rct/).
+[^1]: Be warned that “full-luxury Bayesian …” isn’t a real term. It’s just a playful term Richard McElreath coined a while back. To hear him use it in action, check out his [nifty talk](https://youtu.be/KNPYUVmY3NM) on causal inference. One-step Bayesian imputation is a real thing, though. McElreath covered it in both editions of his text ([McElreath, 2015](#ref-mcelreathStatisticalRethinkingBayesian2015), [2020](#ref-mcelreathStatisticalRethinkingBayesian2020)) and I’ve even blogged about it [here](https://solomonkurz.netlify.app/blog/2021-07-27-one-step-bayesian-imputation-when-you-have-dropout-in-your-rct/).

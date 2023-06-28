@@ -109,7 +109,7 @@ where `bmi` is the sole predictor of `chl`. Here's how we use the `with()` funct
 fit1 <- with(imp, lm(chl ~ 1 + bmi))
 ```
 
-We use the `pool()` function to pool the results from the 100 MI data sets according to Ruben's rules.
+We use the `pool()` function to pool the results from the 100 MI data sets according to Rubin's rules [@rubinMultipleImputationNonresponse1987; @little2019statistical].
 
 ```{r}
 pooled1 <- pool(fit1)
@@ -133,13 +133,13 @@ For the SP method, we don't need to change our `mice()`-based imputation step fr
 fit2 <- with(imp, lm(scale(chl) ~ 1 + scale(bmi)))
 ```
 
-I should note it was Mattan S. Ben-Shachar who came up with the `scale()` insight for our `with()` implementation.
+I should note it was [Mattan S. Ben-Shachar](https://home.msbstats.info) who came up with the `scale()` insight for our `with()` implementation.
 
 ```{r echo = FALSE}
 blogdown::shortcode('tweet',  user = "mattansb", id = '1578447175998373893')
 ```
 
-While I'm at it, it was Isabella R. Ghement who directed me to the van Ginkel paper.
+While I'm at it, it was [Isabella R. Ghement](http://www.ghement.ca) who directed me to the van Ginkel paper.
 
 ```{r echo = FALSE}
 blogdown::shortcode('tweet', user = "IsabellaGhement", id = '1578557862733045760')
@@ -228,7 +228,7 @@ sessionInfo()
 
 ## References
 
-[^1]: Be warned that "full-luxury Bayesian ..." isn't a real term. It's just a playful term Richard McElreath coined a while back. To hear him use it in action, check out his [nifty talk](https://youtu.be/KNPYUVmY3NM) on causal inference. One-step Bayesian imputation is a real thing, though. McElreath covered it in both editions of his text and I've even blogged about it [here](https://solomonkurz.netlify.app/blog/2021-07-27-one-step-bayesian-imputation-when-you-have-dropout-in-your-rct/).
+[^1]: Be warned that "full-luxury Bayesian ..." isn't a real term. It's just a playful term Richard McElreath coined a while back. To hear him use it in action, check out his [nifty talk](https://youtu.be/KNPYUVmY3NM) on causal inference. One-step Bayesian imputation is a real thing, though. McElreath covered it in both editions of his text [@mcelreathStatisticalRethinkingBayesian2015; @mcelreathStatisticalRethinkingBayesian2020] and I've even blogged about it [here](https://solomonkurz.netlify.app/blog/2021-07-27-one-step-bayesian-imputation-when-you-have-dropout-in-your-rct/).
 
 ```{r, eval = F, echo = F}
 # make a custom function
