@@ -188,7 +188,7 @@ In this blog post, we’ll be using a Bayesian approach. Our two focal models wi
 $$
 `\begin{align*}
 \text{post}_i & \sim \operatorname{Cumulative}(\mathbf p, \mu_i, \alpha) \\
-\Phi(p_j) & = \tau_j \\ 
+p_j & = \Phi(\tau_j) \\ 
 \mu_i  & = 0 + \beta_1 \text{protection}_i \\
 \alpha & = 1 \\
 \tau_1 & \sim \operatorname{Normal}(-0.8416212, 1) \\
@@ -232,7 +232,7 @@ Our second model will be a cumulative probit ANCOVA of the form
 $$
 `\begin{align*}
 \text{post}_i & \sim \operatorname{Cumulative}(\mathbf p, \mu_i, \alpha) \\
-\operatorname{logit}(p_j) & = \tau_j \\ 
+p_j & = \Phi(\tau_j) \\ 
 \mu_i  & = 0 + \beta_1 \text{protection}_i + \color{blueviolet}{\beta_2 \text{male}_i} + \color{blueviolet}{\beta_3 \text{prez}_i} \\
 \alpha & = 1 \\
 \tau_1 & \sim \operatorname{Normal}(-0.8416212, 1) \\
@@ -243,7 +243,7 @@ $$
 \end{align*}`
 $$
 
-where we now add the two baseline covaraites `male` and `prez`. Both `\(\beta_2\)` and `\(\beta_3\)` parameters have the same `\(\operatorname{Normal}(0, 1)\)` prior as our focal parameter `\(\beta_1\)`. Given how our second covariate `prez` is the standardized baseline version of our post-treatment variable, we might reasonably expect that parameter to be pretty strong. Thus, I could easily see a substantive expert arguing for a prior more like `\(\operatorname{Normal}(1, 1)\)` for `\(\beta_3\)`. Since that’s not the main point of this blog post, we’ll press forward with my preferred weakly-regularizing default.
+where we now add the two baseline covariates `male` and `prez`. Both `\(\beta_2\)` and `\(\beta_3\)` parameters have the same `\(\operatorname{Normal}(0, 1)\)` prior as our focal parameter `\(\beta_1\)`. Given how our second covariate `prez` is the standardized baseline version of our post-treatment variable, we might reasonably expect that parameter to be pretty strong. Thus, I could easily see a substantive expert arguing for a prior more like `\(\operatorname{Normal}(1, 1)\)` for `\(\beta_3\)`. Since that’s not the main point of this blog post, we’ll press forward with my preferred weakly-regularizing default.
 
 Here’s how to fit the two models with `brm()`. Note the syntax in the `family` argument. The default is the logit link. You have to manually adjust the link function if you want a cumulative probit model.
 
@@ -466,7 +466,7 @@ With the cumulative probit model, adding predictive baseline covariates *increas
 
 `$$\beta_1 = \tau_z^\text{ATE},$$`
 
-the average treatment effect on the scale of the underlying latent variable. Since we are using a cumulative probit model, this is on a standard normal (i.e., `\(z\)`) scale, and thus this can be interpreted as a latent Cohen’s `\(d\)`. I believe this is the first time we’ve had a model where baseline covariates increased the posterior SD for `\(\hat \beta_1\)` AND for the estimate of the causal estimand.[^7] Strange, eh?
+the average treatment effect on the scale of the underlying latent variable. Since we are using a cumulative probit model, this is on a standard normal (i.e., `\(z\)`) scale, and thus this can be interpreted as a latent Cohen’s `\(d\)`. I believe this is the first time we’ve had a model where baseline covariates increased the posterior SD for `\(\hat \beta_1\)` AND the posterior SD for our causal estimate `\(\hat \tau_\text{ATE}\)`.[^7] Strange, eh?
 
 #### `\(\mathbb E (z_i^1 - z_i^0)\)` without and with covariates.
 
@@ -1765,7 +1765,7 @@ sessionInfo()
     ## 
     ## loaded via a namespace (and not attached):
     ##   [1] tensorA_0.36.2       rstudioapi_0.14      jsonlite_1.8.5       magrittr_2.0.3       TH.data_1.1-2       
-    ##   [6] estimability_1.4.1   farver_2.1.1         nloptr_2.0.3         rmarkdown_2.22       vctrs_0.6.2         
+    ##   [6] estimability_1.4.1   farver_2.1.1         nloptr_2.0.3         rmarkdown_2.22       vctrs_0.6.3         
     ##  [11] minqa_1.2.5          base64enc_0.1-3      blogdown_1.17        htmltools_0.5.5      haven_2.5.2         
     ##  [16] distributional_0.3.2 sass_0.4.6           StanHeaders_2.26.27  bslib_0.5.0          htmlwidgets_1.6.2   
     ##  [21] plyr_1.8.8           sandwich_3.0-2       emmeans_1.8.6        zoo_1.8-12           cachem_1.0.8        
