@@ -137,9 +137,7 @@ Much like we do for our most meaningful relationships, let’s embrace our hate/
 
 Following Singer and Willett, we can define our first model using a level-1/level-2 specification. The level-1 model would be
 
-$$
-\text{cesd}_{ij} = \pi_{0i} + \pi_{1i} \text{months}_{ij} + \pi_{2i} \text{unemp}_{ij} + \epsilon_{ij},
-$$
+`$$\text{cesd}_{ij} = \pi_{0i} + \pi_{1i} \text{months}_{ij} + \pi_{2i} \text{unemp}_{ij} + \epsilon_{ij},$$`
 
 where `\(\pi_{0i}\)` is the intercept, `\(\pi_{1i}\)` is the effect of `months` on `cesd`, and `\(\pi_{2i}\)` is the effect of `unemp` on `cesd`. The final term, `\(\epsilon_{ij}\)`, is the within-person variation not accounted for by the model–sometimes called error or residual variance. Our `\(\epsilon_{ij}\)` term follows the usual distribution of
 
@@ -149,7 +147,13 @@ $$
 
 which, in words, means that the within-person variance estimates are normally distributed with a mean of zero and a standard deviation that’s estimated from the data. The corresponding level-2 model follows the form
 
-`\begin{align*} \pi_{0i} & = \gamma_{00} + \zeta_{0i} \\ \pi_{1i} & = \gamma_{10} + \zeta_{1i} \\ \pi_{2i} & = \gamma_{20}, \end{align*}`
+$$
+`\begin{align*}
+\pi_{0i} & = \gamma_{00} + \zeta_{0i} \\
+\pi_{1i} & = \gamma_{10} + \zeta_{1i} \\
+\pi_{2i} & = \gamma_{20},
+\end{align*}`
+$$
 
 where `\(\gamma_{00}\)` is the grand mean for the intercept, which varies by person, as captured by the level-2 variance term `\(\zeta_{0i}\)`. Similarly, `\(\gamma_{10}\)` is the grand mean for the effect of `months`, which varies by person, as captured by the second level-2 variance term `\(\zeta_{1i}\)`. With this parameterization, it turns out `\(\pi_{2i}\)` does not vary by person and so its `\(\gamma_{20}\)` terms does not get a corresponding level-2 variance coefficient. If we wanted the effects of the time-varying covariate `unemp` to vary across individuals, we’d expand the definition of `\(\pi_{2i}\)` to be
 
@@ -159,11 +163,30 @@ $$
 
 Within our **brms** paradigm, the two level-2 variance parameters follow the form
 
-\`\`
+$$
+`\begin{align*}
+\begin{bmatrix} 
+\zeta_{0i} \\ \zeta_{1i} \\
+\end{bmatrix} & \sim \operatorname{Normal} 
+\left ( 
+\begin{bmatrix} 0 \\ 0 \end{bmatrix},
+\mathbf{D} \mathbf{\Omega} \mathbf{D}'
+\right ), \text{where} \\
+\mathbf{D}    & = \begin{bmatrix} \sigma_0 & 0 \\ 0 & \sigma_1 \end{bmatrix} \text{and} \\
+\mathbf{\Omega}  & = \begin{bmatrix} 1 & \rho_{01} \\ \rho_{01} & 1 \end{bmatrix}.
+\end{align*}`
+$$
 
 I’ll be using a weakly-regularizing approach for the model priors in this post. I detail how I came to these in the [Chapter 5 file from my GitHub repo](https://github.com/ASKurz/Applied-Longitudinal-Data-Analysis-with-brms-and-the-tidyverse/blob/master/05.md). If you check that file, you’ll see this model is a simplified version of `fit10`. Here are our priors:
 
-`\begin{align*} \gamma_{00}     & \sim \operatorname{Normal}(14.5, 20) \\ \gamma_{10} \text{ and }  \gamma_{20}  & \sim \operatorname{Normal}(0, 10) \\ \sigma_\epsilon, \sigma_0,  \text{ and } \sigma_1 & \sim \operatorname{Student-t} (3, 0, 10) \\ \Omega          & \sim \operatorname{LKJ} (4). \end{align*}`
+$$
+`\begin{align*}
+\gamma_{00} & \sim \operatorname{Normal}(14.5, 20) \\
+\gamma_{10}, \gamma_{20} & \sim \operatorname{Normal}(0, 10) \\
+\sigma_\epsilon, \sigma_0, \sigma_1 & \sim \operatorname{Student-t}(3, 0, 10) \\
+\Omega & \sim \operatorname{LKJ}(4).
+\end{align*}`
+$$
 
 Feel free to explore different priors on your own. But now we’re done spelling our our first model, it’s time to fire up our main statistical package, **brms**.
 
@@ -237,21 +260,45 @@ We should rehearse how we might interpret the `unemp_id_mu` values. First recall
 
 Since our new `\(\overline{\text{unemp}}_i\)` variable is a level-2 predictor, the level-1 equation for our next model is the same as before:
 
-$$
-\text{cesd}_{ij} = \pi_{0i} + \pi_{1i} \text{months}_{ij} + \pi_{2i} \text{unemp}_{ij} + \epsilon_{ij}.
-$$
+`$$\text{cesd}_{ij} = \pi_{0i} + \pi_{1i} \text{months}_{ij} + \pi_{2i} \text{unemp}_{ij} + \epsilon_{ij}.$$`
 
 However, there are two new terms in our level-2 model,
 
-`\begin{align*} \pi_{0i} & = \gamma_{00} + \gamma_{01} (\overline{\text{unemp}}_i) + \zeta_{0i} \\ \pi_{1i} & = \gamma_{10} + \gamma_{11} (\overline{\text{unemp}}_i) + \zeta_{1i} \\ \pi_{2i} & = \gamma_{20}, \end{align*}`
+$$
+`\begin{align*}
+\pi_{0i} & = \gamma_{00} + \gamma_{01} (\overline{\text{unemp}}_i) + \zeta_{0i} \\
+\pi_{1i} & = \gamma_{10} + \gamma_{11} (\overline{\text{unemp}}_i) + \zeta_{1i} \\
+\pi_{2i} & = \gamma_{20},
+\end{align*}`
+$$
 
 which is meant to convey that `\(\overline{\text{unemp}}_i\)` is allowed to explain variability in both initial status on CES-D scores (i.e., the random intercepts) and change in CES-D scores over time (i.e., the random `months` slopes). Our variance parameters are all the same:
 
-\`\`
+$$
+`\begin{align*}
+\epsilon_{ij} & \sim \operatorname{Normal} (0, \sigma_\epsilon) \text{ and} \\
+\begin{bmatrix} 
+\zeta_{0i} \\ \zeta_{1i} \\
+\end{bmatrix} & \sim \operatorname{Normal} 
+\left ( 
+\begin{bmatrix} 0 \\ 0 \end{bmatrix},
+\mathbf{D} \mathbf{\Omega} \mathbf{D}'
+\right ), \text{where} \\
+\mathbf{D} & = \begin{bmatrix} \sigma_0 & 0 \\ 0 & \sigma_1 \end{bmatrix} \text{and} \\
+\mathbf{\Omega}  & = \begin{bmatrix} 1 & \rho_{01} \\ \rho_{01} & 1 \end{bmatrix}.
+\end{align*}`
+$$
 
 Our priors also follow the same basic specification as before:
 
-`\begin{align*} \gamma_{00}     & \sim \operatorname{Normal}(14.5, 20) \\ \gamma_{01}, \gamma_{10}, \gamma_{11}, \text{ and }  \gamma_{20}  & \sim \operatorname{Normal}(0, 10) \\ \sigma_\epsilon, \sigma_0,  \text{ and } \sigma_1 & \sim \operatorname{Student-t} (3, 0, 10) \\ \Omega          & \sim \operatorname{LKJ} (4). \end{align*}`
+$$
+`\begin{align*}
+\gamma_{00} & \sim \operatorname{Normal}(14.5, 20) \\
+\gamma_{01}, \gamma_{10}, \gamma_{11},  \gamma_{20}  & \sim \operatorname{Normal}(0, 10) \\
+\sigma_\epsilon, \sigma_0, \sigma_1 & \sim \operatorname{Student-t}(3, 0, 10) \\
+\Omega & \sim \operatorname{LKJ}(4).
+\end{align*}`
+$$
 
 Note, however, that the inclusion of our new level-2 predictor, `\((\overline{\text{unemp}}_i)\)`, changes the meaning of the intercept, `\(\gamma_{00}\)`. The intercept is now the expected value for a person for whom `unemp_id_mu == 0` at the start of the study (i.e., `months == 0`). I still think our intercept prior from the first model is fine for this example. But do think carefully about the priors you use in your real-world data analyses.
 
@@ -369,69 +416,67 @@ If you look through our primary two references for this post, Enders & Tofighi (
 sessionInfo()
 ```
 
-    ## R version 4.2.0 (2022-04-22)
-    ## Platform: x86_64-apple-darwin17.0 (64-bit)
-    ## Running under: macOS Big Sur/Monterey 10.16
+    ## R version 4.3.0 (2023-04-21)
+    ## Platform: aarch64-apple-darwin20 (64-bit)
+    ## Running under: macOS Ventura 13.4
     ## 
     ## Matrix products: default
-    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRblas.0.dylib
-    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRlapack.dylib
+    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRblas.0.dylib 
+    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.3-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.11.0
     ## 
     ## locale:
     ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+    ## 
+    ## time zone: America/Chicago
+    ## tzcode source: internal
     ## 
     ## attached base packages:
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ##  [1] brms_2.18.0     Rcpp_1.0.9      forcats_0.5.1   stringr_1.4.1  
-    ##  [5] dplyr_1.0.10    purrr_0.3.4     readr_2.1.2     tidyr_1.2.1    
-    ##  [9] tibble_3.1.8    ggplot2_3.4.0   tidyverse_1.3.2
+    ##  [1] brms_2.19.0     Rcpp_1.0.10     lubridate_1.9.2 forcats_1.0.0  
+    ##  [5] stringr_1.5.0   dplyr_1.1.2     purrr_1.0.1     readr_2.1.4    
+    ##  [9] tidyr_1.3.0     tibble_3.2.1    ggplot2_3.4.2   tidyverse_2.0.0
     ## 
     ## loaded via a namespace (and not attached):
-    ##   [1] readxl_1.4.1         backports_1.4.1      plyr_1.8.7          
-    ##   [4] igraph_1.3.4         splines_4.2.0        crosstalk_1.2.0     
-    ##   [7] TH.data_1.1-1        rstantools_2.2.0     inline_0.3.19       
-    ##  [10] digest_0.6.30        htmltools_0.5.3      fansi_1.0.3         
-    ##  [13] magrittr_2.0.3       checkmate_2.1.0      googlesheets4_1.0.1 
-    ##  [16] tzdb_0.3.0           modelr_0.1.8         RcppParallel_5.1.5  
-    ##  [19] matrixStats_0.62.0   vroom_1.5.7          xts_0.12.1          
-    ##  [22] sandwich_3.0-2       prettyunits_1.1.1    colorspace_2.0-3    
-    ##  [25] rvest_1.0.2          haven_2.5.1          xfun_0.35           
-    ##  [28] callr_3.7.3          crayon_1.5.2         jsonlite_1.8.3      
-    ##  [31] lme4_1.1-31          survival_3.4-0       zoo_1.8-10          
-    ##  [34] glue_1.6.2           gtable_0.3.1         gargle_1.2.0        
-    ##  [37] emmeans_1.8.0        distributional_0.3.1 pkgbuild_1.3.1      
-    ##  [40] rstan_2.21.7         abind_1.4-5          scales_1.2.1        
-    ##  [43] mvtnorm_1.1-3        emo_0.0.0.9000       DBI_1.1.3           
-    ##  [46] miniUI_0.1.1.1       xtable_1.8-4         bit_4.0.4           
-    ##  [49] stats4_4.2.0         StanHeaders_2.21.0-7 DT_0.24             
-    ##  [52] htmlwidgets_1.5.4    httr_1.4.4           threejs_0.3.3       
-    ##  [55] posterior_1.3.1      ellipsis_0.3.2       pkgconfig_2.0.3     
-    ##  [58] loo_2.5.1            farver_2.1.1         sass_0.4.2          
-    ##  [61] dbplyr_2.2.1         utf8_1.2.2           labeling_0.4.2      
-    ##  [64] tidyselect_1.1.2     rlang_1.0.6          reshape2_1.4.4      
-    ##  [67] later_1.3.0          munsell_0.5.0        cellranger_1.1.0    
-    ##  [70] tools_4.2.0          cachem_1.0.6         cli_3.4.1           
-    ##  [73] generics_0.1.3       broom_1.0.1          ggridges_0.5.3      
-    ##  [76] evaluate_0.18        fastmap_1.1.0        yaml_2.3.5          
-    ##  [79] bit64_4.0.5          processx_3.8.0       knitr_1.40          
-    ##  [82] fs_1.5.2             nlme_3.1-159         mime_0.12           
-    ##  [85] projpred_2.2.1       xml2_1.3.3           compiler_4.2.0      
-    ##  [88] bayesplot_1.9.0      shinythemes_1.2.0    rstudioapi_0.13     
-    ##  [91] curl_4.3.2           gamm4_0.2-6          reprex_2.0.2        
-    ##  [94] bslib_0.4.0          stringi_1.7.8        highr_0.9           
-    ##  [97] ps_1.7.2             blogdown_1.15        Brobdingnag_1.2-8   
-    ## [100] lattice_0.20-45      Matrix_1.4-1         nloptr_2.0.3        
-    ## [103] markdown_1.1         shinyjs_2.1.0        tensorA_0.36.2      
-    ## [106] vctrs_0.5.0          pillar_1.8.1         lifecycle_1.0.3     
-    ## [109] jquerylib_0.1.4      bridgesampling_1.1-2 estimability_1.4.1  
-    ## [112] httpuv_1.6.5         R6_2.5.1             bookdown_0.28       
-    ## [115] promises_1.2.0.1     gridExtra_2.3        codetools_0.2-18    
-    ## [118] boot_1.3-28          colourpicker_1.1.1   MASS_7.3-58.1       
-    ## [121] gtools_3.9.3         assertthat_0.2.1     withr_2.5.0         
-    ## [124] shinystan_2.6.0      multcomp_1.4-20      mgcv_1.8-40         
-    ## [127] parallel_4.2.0       hms_1.1.1            grid_4.2.0          
-    ## [130] coda_0.19-4          minqa_1.2.5          rmarkdown_2.16      
-    ## [133] googledrive_2.0.0    shiny_1.7.2          lubridate_1.8.0     
-    ## [136] base64enc_0.1-3      dygraphs_1.1.1.6
+    ##   [1] tensorA_0.36.2       rstudioapi_0.14      jsonlite_1.8.5      
+    ##   [4] magrittr_2.0.3       TH.data_1.1-2        estimability_1.4.1  
+    ##   [7] farver_2.1.1         nloptr_2.0.3         rmarkdown_2.22      
+    ##  [10] vctrs_0.6.3          minqa_1.2.5          base64enc_0.1-3     
+    ##  [13] blogdown_1.17        htmltools_0.5.5      distributional_0.3.2
+    ##  [16] curl_5.0.1           sass_0.4.6           StanHeaders_2.26.27 
+    ##  [19] bslib_0.5.0          htmlwidgets_1.6.2    plyr_1.8.8          
+    ##  [22] sandwich_3.0-2       emmeans_1.8.6        zoo_1.8-12          
+    ##  [25] cachem_1.0.8         igraph_1.4.3         mime_0.12           
+    ##  [28] lifecycle_1.0.3      pkgconfig_2.0.3      colourpicker_1.2.0  
+    ##  [31] Matrix_1.5-4         R6_2.5.1             fastmap_1.1.1       
+    ##  [34] shiny_1.7.4          digest_0.6.31        colorspace_2.1-0    
+    ##  [37] ps_1.7.5             crosstalk_1.2.0      projpred_2.6.0      
+    ##  [40] labeling_0.4.2       fansi_1.0.4          timechange_0.2.0    
+    ##  [43] abind_1.4-5          mgcv_1.8-42          compiler_4.3.0      
+    ##  [46] bit64_4.0.5          withr_2.5.0          backports_1.4.1     
+    ##  [49] inline_0.3.19        shinystan_2.6.0      gamm4_0.2-6         
+    ##  [52] pkgbuild_1.4.1       highr_0.10           MASS_7.3-58.4       
+    ##  [55] gtools_3.9.4         loo_2.6.0            tools_4.3.0         
+    ##  [58] httpuv_1.6.11        threejs_0.3.3        glue_1.6.2          
+    ##  [61] callr_3.7.3          nlme_3.1-162         promises_1.2.0.1    
+    ##  [64] grid_4.3.0           checkmate_2.2.0      reshape2_1.4.4      
+    ##  [67] generics_0.1.3       gtable_0.3.3         tzdb_0.4.0          
+    ##  [70] hms_1.1.3            utf8_1.2.3           pillar_1.9.0        
+    ##  [73] markdown_1.7         vroom_1.6.3          posterior_1.4.1     
+    ##  [76] later_1.3.1          splines_4.3.0        lattice_0.21-8      
+    ##  [79] survival_3.5-5       bit_4.0.5            tidyselect_1.2.0    
+    ##  [82] miniUI_0.1.1.1       knitr_1.43           gridExtra_2.3       
+    ##  [85] bookdown_0.34        stats4_4.3.0         xfun_0.39           
+    ##  [88] bridgesampling_1.1-2 matrixStats_1.0.0    DT_0.28             
+    ##  [91] rstan_2.21.8         stringi_1.7.12       yaml_2.3.7          
+    ##  [94] boot_1.3-28.1        evaluate_0.21        codetools_0.2-19    
+    ##  [97] emo_0.0.0.9000       cli_3.6.1            RcppParallel_5.1.7  
+    ## [100] shinythemes_1.2.0    xtable_1.8-4         munsell_0.5.0       
+    ## [103] processx_3.8.1       jquerylib_0.1.4      coda_0.19-4         
+    ## [106] parallel_4.3.0       rstantools_2.3.1     ellipsis_0.3.2      
+    ## [109] assertthat_0.2.1     prettyunits_1.1.1    dygraphs_1.1.1.6    
+    ## [112] bayesplot_1.10.0     Brobdingnag_1.2-9    lme4_1.1-33         
+    ## [115] mvtnorm_1.2-2        scales_1.2.1         xts_0.13.1          
+    ## [118] crayon_1.5.2         rlang_1.1.1          multcomp_1.4-24     
+    ## [121] shinyjs_2.1.0

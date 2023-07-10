@@ -136,9 +136,7 @@ Much like we do for our most meaningful relationships, let's embrace our hate/lo
 
 Following Singer and Willett, we can define our first model using a level-1/level-2 specification. The level-1 model would be
 
-$$
-\text{cesd}_{ij} = \pi_{0i} + \pi_{1i} \text{months}_{ij} + \pi_{2i} \text{unemp}_{ij} + \epsilon_{ij},
-$$
+$$\text{cesd}_{ij} = \pi_{0i} + \pi_{1i} \text{months}_{ij} + \pi_{2i} \text{unemp}_{ij} + \epsilon_{ij},$$
 
 where $\pi_{0i}$ is the intercept, $\pi_{1i}$ is the effect of `months` on `cesd`, and $\pi_{2i}$ is the effect of `unemp` on `cesd`. The final term, $\epsilon_{ij}$, is the within-person variation not accounted for by the model--sometimes called error or residual variance. Our $\epsilon_{ij}$ term follows the usual distribution of
 
@@ -148,11 +146,13 @@ $$
 
 which, in words, means that the within-person variance estimates are normally distributed with a mean of zero and a standard deviation that's estimated from the data. The corresponding level-2 model follows the form
 
+$$
 \begin{align*}
 \pi_{0i} & = \gamma_{00} + \zeta_{0i} \\
 \pi_{1i} & = \gamma_{10} + \zeta_{1i} \\
 \pi_{2i} & = \gamma_{20},
 \end{align*}
+$$
 
 where $\gamma_{00}$ is the grand mean for the intercept, which varies by person, as captured by the level-2 variance term $\zeta_{0i}$. Similarly, $\gamma_{10}$ is the grand mean for the effect of `months`, which varies by person, as captured by the second level-2 variance term $\zeta_{1i}$. With this parameterization, it turns out $\pi_{2i}$ does not vary by person and so its $\gamma_{20}$ terms does not get a corresponding level-2 variance coefficient. If we wanted the effects of the time-varying covariate `unemp` to vary across individuals, we'd expand the definition of $\pi_{2i}$ to be
 
@@ -162,6 +162,7 @@ $$
 
 Within our **brms** paradigm, the two level-2 variance parameters follow the form
 
+$$
 \begin{align*}
 \begin{bmatrix} 
 \zeta_{0i} \\ \zeta_{1i} \\
@@ -170,21 +171,21 @@ Within our **brms** paradigm, the two level-2 variance parameters follow the for
 \begin{bmatrix} 0 \\ 0 \end{bmatrix},
 \mathbf{D} \mathbf{\Omega} \mathbf{D}'
 \right ), \text{where} \\
-
 \mathbf{D}    & = \begin{bmatrix} \sigma_0 & 0 \\ 0 & \sigma_1 \end{bmatrix} \text{and} \\
-
 \mathbf{\Omega}  & = \begin{bmatrix} 1 & \rho_{01} \\ \rho_{01} & 1 \end{bmatrix}.
-
 \end{align*}
+$$
 
 I'll be using a weakly-regularizing approach for the model priors in this post. I detail how I came to these in the [Chapter 5 file from my GitHub repo](https://github.com/ASKurz/Applied-Longitudinal-Data-Analysis-with-brms-and-the-tidyverse/blob/master/05.md). If you check that file, you'll see this model is a simplified version of `fit10`. Here are our priors:
 
+$$
 \begin{align*}
-\gamma_{00}     & \sim \operatorname{Normal}(14.5, 20) \\
-\gamma_{10} \text{ and }  \gamma_{20}  & \sim \operatorname{Normal}(0, 10) \\
-\sigma_\epsilon, \sigma_0,  \text{ and } \sigma_1 & \sim \operatorname{Student-t} (3, 0, 10) \\
-\Omega          & \sim \operatorname{LKJ} (4).
+\gamma_{00} & \sim \operatorname{Normal}(14.5, 20) \\
+\gamma_{10}, \gamma_{20} & \sim \operatorname{Normal}(0, 10) \\
+\sigma_\epsilon, \sigma_0, \sigma_1 & \sim \operatorname{Student-t}(3, 0, 10) \\
+\Omega & \sim \operatorname{LKJ}(4).
 \end{align*}
+$$
 
 Feel free to explore different priors on your own. But now we're done spelling our our first model, it's time to fire up our main statistical package, **brms**.
 
@@ -240,20 +241,21 @@ We should rehearse how we might interpret the `unemp_id_mu` values. First recall
 
 Since our new $\overline{\text{unemp}}_i$ variable is a level-2 predictor, the level-1 equation for our next model is the same as before:
 
-$$
-\text{cesd}_{ij} = \pi_{0i} + \pi_{1i} \text{months}_{ij} + \pi_{2i} \text{unemp}_{ij} + \epsilon_{ij}.
-$$
+$$\text{cesd}_{ij} = \pi_{0i} + \pi_{1i} \text{months}_{ij} + \pi_{2i} \text{unemp}_{ij} + \epsilon_{ij}.$$
 
 However, there are two new terms in our level-2 model,
 
+$$
 \begin{align*}
 \pi_{0i} & = \gamma_{00} + \gamma_{01} (\overline{\text{unemp}}_i) + \zeta_{0i} \\
 \pi_{1i} & = \gamma_{10} + \gamma_{11} (\overline{\text{unemp}}_i) + \zeta_{1i} \\
 \pi_{2i} & = \gamma_{20},
 \end{align*}
+$$
 
 which is meant to convey that $\overline{\text{unemp}}_i$ is allowed to explain variability in both initial status on CES-D scores (i.e., the random intercepts) and change in CES-D scores over time (i.e., the random `months` slopes). Our variance parameters are all the same:
 
+$$
 \begin{align*}
 \epsilon_{ij} & \sim \operatorname{Normal} (0, \sigma_\epsilon) \text{ and} \\
 \begin{bmatrix} 
@@ -263,21 +265,21 @@ which is meant to convey that $\overline{\text{unemp}}_i$ is allowed to explain 
 \begin{bmatrix} 0 \\ 0 \end{bmatrix},
 \mathbf{D} \mathbf{\Omega} \mathbf{D}'
 \right ), \text{where} \\
-
-\mathbf{D}    & = \begin{bmatrix} \sigma_0 & 0 \\ 0 & \sigma_1 \end{bmatrix} \text{and} \\
-
+\mathbf{D} & = \begin{bmatrix} \sigma_0 & 0 \\ 0 & \sigma_1 \end{bmatrix} \text{and} \\
 \mathbf{\Omega}  & = \begin{bmatrix} 1 & \rho_{01} \\ \rho_{01} & 1 \end{bmatrix}.
-
 \end{align*}
+$$
 
 Our priors also follow the same basic specification as before:
 
+$$
 \begin{align*}
-\gamma_{00}     & \sim \operatorname{Normal}(14.5, 20) \\
-\gamma_{01}, \gamma_{10}, \gamma_{11}, \text{ and }  \gamma_{20}  & \sim \operatorname{Normal}(0, 10) \\
-\sigma_\epsilon, \sigma_0,  \text{ and } \sigma_1 & \sim \operatorname{Student-t} (3, 0, 10) \\
-\Omega          & \sim \operatorname{LKJ} (4).
+\gamma_{00} & \sim \operatorname{Normal}(14.5, 20) \\
+\gamma_{01}, \gamma_{10}, \gamma_{11},  \gamma_{20}  & \sim \operatorname{Normal}(0, 10) \\
+\sigma_\epsilon, \sigma_0, \sigma_1 & \sim \operatorname{Student-t}(3, 0, 10) \\
+\Omega & \sim \operatorname{LKJ}(4).
 \end{align*}
+$$
 
 Note, however, that the inclusion of our new level-2 predictor, $(\overline{\text{unemp}}_i)$, changes the meaning of the intercept, $\gamma_{00}$. The intercept is now the expected value for a person for whom `unemp_id_mu == 0` at the start of the study (i.e., `months == 0`). I still think our intercept prior from the first model is fine for this example. But do think carefully about the priors you use in your real-world data analyses.
 
