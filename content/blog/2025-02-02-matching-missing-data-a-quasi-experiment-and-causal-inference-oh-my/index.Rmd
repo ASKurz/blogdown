@@ -1,0 +1,558 @@
+---
+title: Matching, missing data, a quasi-experiment, and causal inference--Oh my!
+author: A. Solomon Kurz
+date: '2025-02-02'
+excerpt: "I'm finally dipping my does into causal inference for quasi-experiments, and my first use case has missing data. In this post we practice propensity score matching with multiply-imputed data sets, and how to compute the average treatment effect for the treated (ATT) with g-computation."
+tags:
+  - ANCOVA
+  - ATT
+  - binary
+  - binomial
+  - causal inference
+  - g-computation
+  - GLM
+  - logistic regression
+  - matching
+  - mice
+  - missing data
+  - potential outcomes
+  - quasi-experiment
+  - R
+  - standardization
+  - tidyverse
+  - tutorial
+featured: no
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
+biblio-style: apalike
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
+link-citations: yes
+---
+
+## Context
+
+I have a project for work where the goal is to compare two non-randomized groups. One group received and experimental intervention, and we'd like to compare them to their peers who were not offered the same intervention. We have access to data from folks from the broader population during the same time period, so the goal isn't so bad as far as quasi-experiments go. The team would like to improve the comparisons by using matching, and we have some missing data issues in the matching covariate set. I haven't done an analysis quite like this before, so this post is a walk through of the basic statistical procedure as I see it.
+
+You are welcome to give feedback in the comments section.
+
+### I make assumptions.
+
+For this post, I'm presuming readers have a passing familiarity with the following:
+
+#### Regression.
+
+You'll want to be familiar with single-level regression, from the perspective of the generalized linear model. For frequentist resources, I recommend the texts by @ismay2022StatisticalInference and @roback2021beyond. For the Bayesians in the room, I recommend the texts by Gelman and colleagues [-@gelmanRegressionOtherStories2020], Kruschke [-@kruschkeDoingBayesianData2015], or McElreath [-@mcelreathStatisticalRethinkingBayesian2015; -@mcelreathStatisticalRethinkingBayesian2020]. In this post, we'll mainly rely on the frequentist paradigm.
+
+#### Missing data.
+
+You should be familiar with contemporary missing data theory, particularly multiple imputation (MI). You can find brief overviews in the texts by McElreath and Gelman et al, above. For a deeper dive, I recommend @enders2022applied, @little2019statistical, or @vanbuurenFlexibleImputationMissing2018. I will walk through the imputation steps in some detail, but this will not be a full-blown MI tutorial.
+
+#### Experimental design.
+
+I'm assuming readers have a basic background in experimental design. At a minimum, you'll want to have a sense of why it's harder to make comparisons between non-randomized groups than it is between those formed by random assignment. If these ideas are new, I recommend @shadish2002Experimental or @kazdin2017ResearchDesign. You might also check out @taback2022DesignAndAnalysis, and its free companion website at [https://designexptr.org/index.html](https://designexptr.org/index.html).
+
+#### Matching for causal inference.
+
+Of the various skills required for these analysis, causal inference with matching is the new part for me, which means I'll walk through those parts of the analysis with more attention to detail and pedagogy than others. For the basic matching workflow, I'll be relying heavily on the documentation for the **MatchIt** [@ho2011MatchIt] and  **MatchThem** [@pishgar2021MatchThem] packages. I also found the papers by @stuart2010matching and @greifer2021matching were helpful introductions to the paradigm. For general introductions to causal inference, consider texts like @brumback2022Fundamentals, @hernan2020CausalInference, or @imbensCausalInferenceStatistics2015. If you prefer freely-accessible ebooks, check out @cunningham2021causal.
+
+#### **R**.
+
+All code will be in **R** [@R-base]. Data wrangling and plotting will rely heavily on the **tidyverse** [@R-tidyverse; @wickhamWelcomeTidyverse2019]. We multiply impute the missing values with the **mice** package [@R-mice; @mice2011]. The MI data sets are matched with propensity scores with the **MatchThem** package, and we assess matching balance with functions from **cobalt** [@R-cobalt]. Finally, we compute the causal estimand itself with help from **marginaleffects** [@R-marginaleffects].
+
+Load the packages.
+
+```{r, message = FALSE, warning = FALSE}
+# Load
+library(tidyverse)
+library(mice)
+library(MatchThem)
+library(cobalt)
+library(marginaleffects)
+
+# Remove ggplot gridlines
+theme_set(
+  theme_gray() +
+    theme(panel.grid = element_blank())
+  )
+```
+
+#### We need data.
+
+The structure of our workflow will largely follow the extend example from @pishgar2021MatchThem. As did they, here we load the `osteoarthritis` data. If you'd like to dive deeply into the data documentation, execute `?osteoarthritis` in your console.
+
+```{r}
+data("osteoarthritis")
+
+# What?
+glimpse(osteoarthritis)
+```
+
+Here we make a few adjustments to the data. First, I generally prefer the **tidyverse** style of lower-case variable names [see @wickhamTidyverseStyleGuide2020]. Second, I generally like my lower-case names to use whole words such as `race`, rather than abbreviations, such as `rac`. Third, I prefer my 2-level nominal variables in a dummy-code format. Here we make those changes and save the results as `d`.
+
+```{r}
+d <- osteoarthritis |> 
+  rename_all(.funs = str_to_lower) |>
+  rename(male = sex,
+         race = rac,
+         smoker = smk) |> 
+  mutate(male   = as.integer(male)   - 1,
+         smoker = as.integer(smoker) - 1,
+         koa    = as.integer(koa)    - 1)
+
+# What?
+head(d)
+```
+
+As in @pishgar2021MatchThem, the criterion variable is knee osteoarthritis in the follow-up time period, `koa`. The focal *treatment* variable^[Often called an *exposure* variable in the causal-inference literature. I don't know for sure, but I imagine the term has its roots in the epidemiological literature.] is osteoporosis at baseline, `osp`. The remaining variables are potential confounders. Thus the research question for this blog is: *What is the causal effect of baseline osteoporosis status on follow-up knee osteoarthritis status?* For my real-world use case, the research question is more like: *What is the causal effect of our new treatment, relative to business as usual?*
+
+## Missing data
+
+When you have missing data, you might get a high-level summary of the missing data patterns with the `md.pattern()` function.
+
+```{r}
+md.pattern(d)
+```
+
+The top row indicates most cases (2,363 out of 2,585) had no missing data. Though we have no missingness in the focal exposure `osp`--arguably the most important variable from a missing data perspective--, we have missingness on the criterion `koa` and on some of the potential confounders. Importantly, some of these variables are categorical, which means multiple imputation is the go-to solution here. There has also been some discussion of how one might best handle missing data for matching methods in the methods literature, and it appears the methodologists have been recommending the MI approach in recent years [e.g., @leyrat2019propensity; @zhao2021propensity; @nguyen2024multiple].
+
+## Impute with `mice()`
+
+We'll start the imputation discussion with an initial default^[Technically this isn't a pure default call since we're setting `print = FALSE` to suppress the print history. But this is small potatoes and all the other settings are at their defaults, some of which we'll be changing shortly.] call to `mice()`, the primary function from the **mice** package, and we save the results as `imputed.datasets`.^[I'm just going to continue paying homage to @pishgar2021MatchThem by reusing many of the object names from their paper.]
+
+```{r}
+imputed.datasets <- mice(d, print = FALSE)
+```
+
+```{r, echo = FALSE, eval = FALSE}
+str(imputed.datasets, max.level = 1, give.attr = FALSE)
+
+imputed.datasets$method
+
+imputed.datasets$predictorMatrix
+```
+
+The default imputation method for `mice()` is generally predictive mean matching (execute `imputed.datasets$method`), which is attractive in how simple and general it is. If you're not familiar with predictive mean matching, see [Section 3.4](https://stefvanbuuren.name/fimd/sec-pmm.html) in @vanbuurenFlexibleImputationMissing2018 for an introduction. I believe there are some concerns predictive mean matching doesn't work as well with smaller sample sizes, but I think the $N = 2{,}585$ data set here is large enough to discard those worries. Note though, the `mice()` function used polytomous logistic regression (`method = "polyreg"`) for the factor variable `race`, which I think is a great choice for that variable.
+
+By default, all variables are used to predict the missingness of all other variables in a simple linear model (execute `imputed.datasets$predictorMatrix`). However, there is some concern in the RCT literature that such a simple model may be inappropriate in that it would not be robust to possible treatment-by-covariate interactions, which could bias the results [@sullivan2018should].^[Though we don't have randomly-assigned groups in this example, I believe the basic concern is the same. The two groups may have different correlations among the covariates, and we want an imputation method that can handle such a pattern.] This leaves us with two basic solutions: expand the predictor matrix to include all possible `osp`-by-covariate interactions, or impute the data sets separately by the two levels of `osp`. With a small number of rows, the second option might be worrisome, but I think splitting the data set into $n_{{\text{osp}} = 0} = 2{,}106$ and $n_{{\text{osp}} = 1} = 479$ should be fine.
+
+```{r, echo = FALSE, eval = FALSE}
+d |> 
+  count(osp)
+```
+
+Toward that end, we first make two new versions of the `d` data set. The new `d0` subset only contains the cases for which `osp == 0`; the `d1` subset only contains the remaining cases for which `osp == 1`.
+
+```{r}
+d0 <- d |> 
+  filter(osp == 0)
+
+d1 <- d |> 
+  filter(osp == 1)
+
+# Sample sizes
+nrow(d0)
+nrow(d1)
+```
+
+Now we make two new `imputed.datasets` objects, one for each of the new data subsets.
+
+```{r, warning = FALSE}
+imputed.datasets0 <- mice(d0, print = FALSE)
+imputed.datasets1 <- mice(d1, print = FALSE)
+```
+
+If you look at the new `predictorMatrix` for either, you'll note that the `osp` column has changed to a vector of `0`'s. As an example, here we look at the matrix for `imputed.datasets0`.
+
+```{r}
+imputed.datasets0$predictorMatrix
+```
+
+The `mice()` function noticed that `osp` was now a constant within each data subset, and it correctly removed that "variable" from the predictor matrix of the other variables. This is exactly what one would hope for, and it's a testament to the foresight of the **mice** package team.
+
+To combine the two `imputed.datasets0` and `imputed.datasets1` objects, you can use the `rbind()` function.
+
+```{r}
+imputed.datasets <- rbind(imputed.datasets0, imputed.datasets1)
+
+# What?
+imputed.datasets |> 
+  str(max.level = 1, give.attr = FALSE)
+```
+
+In the `str()` output, you'll note how the data frame in the `data` section now has 2,585 rows (i.e., the full sample size), and that correct number of cases is also echoed in the `where` and `ignore` sections. `rbind()` worked!
+
+By default, `mice()` only imputes five data sets (i.e., `m = 5`). In my use case, it'd be better if we had a larger number like 20 or 100. For the sake of practice in this post, we'll use `m = 10`. I'd also like to make my results more reproducible by setting my seed value by way of the `seed` argument. Finally, I continue setting `print = FALSE` for silent printing.
+
+Here's the full updated workflow.
+
+```{r, warning = FALSE}
+# Impute separately by `osp`
+imputed.datasets0 <- mice(d0, m = 10, print = FALSE, seed = 0)
+imputed.datasets1 <- mice(d1, m = 10, print = FALSE, seed = 1)
+
+# Combine
+imputed.datasets <- rbind(imputed.datasets0, imputed.datasets1)
+```
+
+```{r, echo = FALSE, eval = FALSE}
+imputed.datasets |> 
+  str(max.level = 1, give.attr = FALSE)
+```
+
+It can be wise to check the trace plots for the imputed variables with `plot()`.
+
+```{r}
+plot(imputed.datasets)
+```
+
+To my eye, these look pretty good.
+
+Once you're imputed the data sets, it's also a good idea to take a look at the results with summary statistics and/or plots. As a first step, you can extract the MI data sets with the `complete()` function. By setting `action = "long"`, all MI data sets will be returned in a long format with respect to the imputation number (`.imp`). Setting `include = TRUE` returns the results for the original un-imputed data set (`.imp == 0`), too.
+
+```{r}
+imputed.datasets |> 
+  complete(action = "long", include = TRUE) |> 
+  glimpse()
+```
+
+Now you can summarize each variable with missingness, as desired. For example, here are the counts for the criterion `koa`, by imputation.
+
+```{r}
+imputed.datasets |> 
+  complete(action = "long", include = TRUE) |> 
+  count(koa, .imp) |> 
+  pivot_wider(names_from = koa, values_from = n)
+```
+
+Here we compute the means of the standard deviations for `bmi` across the imputations, and then compare those statistics with the statistics for the complete cases in a faceted histogram.
+
+```{r, fig.width = 6, fig.height = 2.75}
+imputed.datasets |> 
+  complete(action = "long", include = TRUE) |> 
+  group_by(.imp) |> 
+  summarise(mean = mean(bmi, na.rm = TRUE),
+            sd = sd(bmi, na.rm = TRUE)) |> 
+  pivot_longer(cols = mean:sd) |> 
+  mutate(type = ifelse(.imp == 0, "complete case", "imputation")) |> 
+  
+  ggplot(aes(x = value)) +
+  geom_histogram(aes(fill = type),
+                 bins = 8) +
+  geom_rug(aes(color = type)) +
+  scale_color_viridis_d(NULL, option = "A", begin = 0.2, end = 0.6) +
+  scale_fill_viridis_d(NULL, option = "A", begin = 0.2, end = 0.6) +
+  xlab(NULL) +
+  facet_wrap(~ name, scales = "free_x")
+```
+
+You might also want to plot the imputed data themselves. The **mice** package has a few plotting functions to aid with this, such as `bwplot()`, `densityplot()`, and `xyplot()`. The `densityplot()` function is good for displaying continuous variables, though it won't work well in our case because `bmi` is the only continuous variable with missingness, and with a single missing case `densityplot()` won't be able to select the bandwidth appropriately. 
+
+```{r, echo = FALSE, eval = FALSE}
+densityplot(imputed.datasets, ~ bmi)
+```
+
+The `bwplot()` method, however, can be of use for `bmi` in our example. The blue blox and whisker plot on the left is for the complete cases only. Had we had more missing values, we would have had 10 red box and whisker plots to its right for the remaining levels of `.imp`. But in this case because we have a single case with missingness for `bmi`, its exact value gets displayed by a red colored dot.
+
+```{r, fig.width = 4, fig.height = 2.75}
+bwplot(imputed.datasets, bmi ~ .imp )
+```
+
+The `xyplot()` function is good for bivariate plots. For example, here we plot the distribution of the imputed `bmi` values on the y axis by their distribution of `age` values on the x axis. The case with the imputed `bmi` value is color coded red. Note how the upper left panel is for `.imp == 0`, the complete cases only.
+
+```{r, fig.width = 6, fig.height = 4.25}
+xyplot(imputed.datasets, bmi ~ age | .imp, pch = c(1, 20))
+```
+
+You could also always make your own custom missing data visualizations with the output from `complete(imputed.datasets, action = "long", include = TRUE)` and the **ggplot2** functions of your choosing.
+
+### Parting thoughts.
+
+For a modest $N$ data set with so few columns, it's not a big deal to just use all variables to predict all other variables for the imputation step, and we'll be using all variables in the matching procedure to come, too. In my real-world use case, we'll have many more columns to choose from. In the abstract, the more data the better! But as your columns increase, the predictor matrix for the imputation step increases, too, and you might find yourself running into computation problems. If and when that arises, it might be wise to think about reducing the columns in your data set, and/or manually adjusting the predictor matrix. From a purely missing data perspective, you can find a lot of guidance in @enders2022applied, particularly from his discussion of Collins et al's [-@collins2001comparison] typology.
+
+## Match
+
+Now we match. Were we using a single data set, we might match with the `matchit()` function from **MatchIt**. But since we have MI data sets, we instead use the `matchthem()` function from **MatchThem**. Note the name of the `datasets` argument (typically `data` in most functions) further indicates `matchthem()` is designed for MI data sets.
+
+In the `formula` argument, we use the confounder variables to predict the *treatment* variable `osp`. Here I use a simple approach where all confounder only have lower-order terms. But you might also consider adding interactions among the confounders, or even adding polynomial terms [see @zhao2021propensity for an extended example].
+
+The default for the `method` argument is `"nearest"` for *nearest neighbor matching*. In a personal consultation, Noah Greifer recommended I use the *genetic matching* approach for my use case, and so we use it here. You can learn about the various matching methods in Greifer's [*Matching Methods* vignette](https://CRAN.R-project.org/package=MatchIt/vignettes/matching-methods.html), and you can specifically learn about the genetic algorithm used when you set `methoc = "genetic"` [here](https://CRAN.R-project.org/package=MatchIt/vignettes/matching-methods.html#genetic-matching-method-genetic). In short, the genetic algorithm optimizes balance among the confounders using the scaled generalized Mahalanobis distance via functions from the **Matching** package [@sekhon2011multivariate]. 
+
+Note the `pop.size` argument. If you run the code without that argument, you'll get a warning message from **Matching** that the optimization parameters are at their default values, and that `pop.size` in particular might should be increased from its default setting of `100`. At the moment, I do not have a deep grasp of this setting, but for the sake of practice I have increased it to `200`. 
+
+So far, my experience is the genetic algorithm with an increased `pop.size` setting is computationally expensive. Execute code like this with care.
+
+```{r, eval = FALSE}
+t0 <- Sys.time()
+
+matched.datasets <- matchthem(
+  datasets = imputed.datasets,
+  osp ~ age + male + bmi + race + smoker,
+  method = "genetic",
+  pop.size = 200)
+
+t1 <- Sys.time()
+t1 - t0
+```
+
+```{r, echo = FALSE}
+# save(matched.datasets, file = "objects/matched.datasets.rda")
+# save(t0, file = "objects/t0.rda")
+# save(t1, file = "objects/t1.rda")
+
+load(file = "objects/matched.datasets.rda")
+load(file = "objects/t0.rda")
+load(file = "objects/t1.rda")
+
+t1 - t0
+```
+
+Note the `Sys.time()` calls and the `t1 - t0` algebra at the bottom of the code block. This is a method I often use to keep track of the computation time for longer operations. In this case this code block took just under ten minutes to complete on my laptop.^[2023 M2 chip MacBook Pro] YMMV.
+
+The output of `matchthem()` is an object of class `mimids`, which is a list of 4.
+
+```{r}
+class(matched.datasets)
+str(matched.datasets, max.level = 1, give.attr = FALSE)
+```
+
+### Assess balance.
+
+We match data from quasi-experiments to better balance the confounder sets in a way that would ideally mimic the kind of balance you'd get by random assignment in an RCT. Therefore we might inspect the degree of balance after the matching step to get a sense of how well we did. Here we do so with tables and plots. We start with tables.
+
+#### Tables.
+
+One way to assess how well the matching step balanced the data is simply with the `summary()` function. If you set `improvement = TRUE`, you will also get information about how more more balanced the adjusted data set is compares to the original unadjusted data. However, this produces a lot of output and we will take a more focused approach instead.
+
+```{r, eval = FALSE}
+# Execute this on your own
+summary(matched.datasets, improvement = TRUE)
+```
+
+The `bal.tab()` function from **cobalt** returns a focused table of contrasts for each covariate. These are computed across all MI data sets, and then summarized in three columns: one for the minimum, mean, and maximum value of the statistic.
+
+```{r}
+bal.tab(matched.datasets)
+```
+
+Notice the `Type` column differentiates between continuous and binary predictors (and further note how the `race` predictor is broken into categories). The `Type` column is important because the metrics for the contrasts in the remaining three columns depend on the type of predictor. The contrasts for the continuous predictors are standardized mean differences (SMD, i.e., Cohen's $d$'s). The binary variables are raw differences in proportion (i.e., "risk" differences in the jargon often used in biostatistics and the medical literatures).
+
+I don't love the mixing of these metrics, and an alternative is to make separate tables by type. When you're working with matched MI data sets, the only way to do that is to use the alternative formula syntax in `bal.tab()`. The trick is to input the `imputed.datasets` object to the `data` argument, and to input the `matched.datasets` object to the `weights` argument.
+
+```{r}
+# Continuous (SMD contrasts)
+bal.tab(osp ~ age + bmi, 
+        data = imputed.datasets,
+        weights = matched.datasets)
+
+# Binary (raw proportion contrasts)
+bal.tab(osp ~ male + race + smoker, 
+        data = imputed.datasets,
+        weights = matched.datasets)
+```
+
+In this case all the contrasts look great. The SMD's are all below the conventional threshold for a *small* difference,^[That is, they're below $d = 0.2$. See @cohenStatisticalPowerAnalysis1988a] and the proportion contrasts are about as close to zero as you could hope for.
+
+Also note in the secondary tables we can see that whereas the total sample size for the `osp == 0` cases was 2,106, only 479 cases were matched with with the 479 available cases in the `osp == 1`. This is as expected.
+
+#### Plots.
+
+We can also get a plot representation of this table with a love plot via `love.plot()`. When working with MI data sets, you'll want to set the `which.imp` argument which specifies which of the MI data sets get displayed in the plot. One way to do this is to feed a vector of integers. In this case, we set `which.imp = 1:3` to plot the first three MI data sets.
+
+```{r, fig.width = 7, fig.height = 3, warning = FALSE}
+love.plot(matched.datasets, which.imp = 1:3, thresholds = 0.2)
+```
+
+You have the contrasts on the x axis, and the various predictor variables on the y. The contrasts are color coded by whether they're for the original unadjusted data, or the adjusted matched data. As with the `bal.tab()` tables above, the metrics of the contrasts differ based on whether the predictors are continuous or binary.
+
+Another approach with these plots is to set `which.imp = .none`, which collapses across all MI data sets.
+
+```{r, fig.width = 5, fig.height = 3, warning = FALSE}
+love.plot(matched.datasets, which.imp = .none, thresholds = 0.2)
+```
+
+Further, if you would like to separate the continuous and binary predictors, you can use the alternative formula syntax similar to the `bal.tab()` tables, above. Here's an example with the continuous variables and the `which.imp = 1:3` setting.
+
+```{r, fig.width = 7, fig.height = 1.875, message = FALSE}
+love.plot(osp ~ age + bmi, 
+          data = imputed.datasets,
+          weights = matched.datasets, 
+          which.imp = 1:3, thresholds = 0.2) +
+  xlim(-1, 1)
+```
+
+Notice how because `love.plot()` returns a ggplot object, we can further adjust the settings with other **ggplot2** functions, like `xlim()`.
+
+```{r, fig.width = 5, fig.height = 2.2, message = FALSE, echo = FALSE, eval = FALSE}
+love.plot(osp ~ male + race + smoker, 
+          data = imputed.datasets,
+          weights = matched.datasets, 
+          which.imp = .none, thresholds = 0.1) +
+  xlim(-1, 1)
+```
+
+You can continue to narrow your diagnostic focus by using `bal.plot()` to compare the distributions of specific variables by the treatment variable (`osp`) and whether the solutions are unadjusted or adjusted. As we are working with MI data sets, we'll also want to continue setting the `which.imp` argument. Here we make overlaid density plots for propensity score `distance` for the first four MI data sets.
+
+```{r, fig.width = 7, fig.height = 4.5}
+bal.plot(matched.datasets, var.name = 'distance', which = "both", which.imp = 1:4)
+```
+
+I find the similarity in the adjusted solutions pretty impressive.
+
+Here we collapse across all the MI data sets and compare the `male` dummy with a faceted histogram.
+
+```{r, fig.width = 5, fig.height = 2.5}
+bal.plot(matched.datasets, var.name = 'male', which = "both", which.imp = .none)
+```
+
+On average, the balance is perfect in the adjusted data.
+
+```{r, echo = FALSE, eval = FALSE}
+bal.plot(matched.datasets, var.name = 'distance', which = "both", which.imp = 1:3)
+bal.plot(matched.datasets, var.name = 'distance', which = "both", which.imp = .none)
+
+bal.plot(matched.datasets, var.name = 'age', which = "both", which.imp = 1:3)
+bal.plot(matched.datasets, var.name = 'age', which = "both", which.imp = .none)
+
+bal.plot(matched.datasets, var.name = 'bmi', which = "both", which.imp = 1:3)
+bal.plot(matched.datasets, var.name = 'bmi', which = "both", which.imp = .none)
+
+bal.plot(matched.datasets, var.name = 'male', which = "both", which.imp = 1:3)
+bal.plot(matched.datasets, var.name = 'male', which = "both", which.imp = .none)
+
+bal.plot(matched.datasets, var.name = 'race', which = "both", which.imp = 1:3)
+bal.plot(matched.datasets, var.name = 'race', which = "both", which.imp = .none)
+
+bal.plot(matched.datasets, var.name = 'smoker', which = "both", which.imp = 1:3)
+bal.plot(matched.datasets, var.name = 'smoker', which = "both", which.imp = .none)
+```
+
+### But what have we done?
+
+Before we move forward with fitting the substantive model, we might linger a while on the output of our matching step. 
+
+Much like we used the `mice::complete()` function to extract the imputed data sets from our `imputed.datasets` mids object above, the **MatchThem** package comes with a variant of the `complete()` function that extracts MI data sets from a mimids object. By setting `action = "long"`, we extract all MI data sets in the long format, where each is indexed by an `.imp` column.
+
+```{r}
+matched.datasets.long <- complete(matched.datasets, action = "long") 
+
+# What?
+matched.datasets.long |> 
+  glimpse()
+```
+
+Note the three new columns at the end. The `weights` column includes the matching weights. In this case, the values are `0` for unmatched cases and `1` for matched cases. 
+
+```{r}
+matched.datasets.long |> 
+  distinct(weights)
+```
+
+The `subclass` column contains the indices for the matched pairs, saved as a factor. Each level of the factor includes two cases from the data, and these were matched based on their covariate set with the genetic algorithm above.
+
+```{r}
+matched.datasets.long |> 
+  filter(.imp == 1) |> 
+  count(subclass) |> 
+  glimpse()
+```
+
+You'll also note every time `weights == 0`, we have missingness for `subclass`. Those cases that were not matched (i.e., no `subclass` factor level) have an exact zero weight in the substantive analyses.
+
+```{r}
+matched.datasets.long |> 
+  filter(weights == 0) |> 
+  distinct(subclass)
+```
+
+Finally, we have the `distance` column. Those values are the propensity scores, which range from zero to one. In a well-matched data set, the `distance` distributions for the two intervention groups mirror one another, and this was the case for our example based on the `bal.plot()` plot from a couple code blocks above.
+
+To give a further sense of the matched pairs and their propensity scores, here's a plot of the first 30 pairs from the first MI data set.
+
+```{r, fig.width = 6, fig.height = 3.75}
+matched.datasets.long |> 
+  filter(.imp == 1) |> 
+  filter(subclass %in% 1:30) |> 
+  mutate(osp = factor(osp)) |> 
+  
+  ggplot(aes(x = distance, y  = subclass, group = subclass)) +
+  geom_line() +
+  geom_point(aes(color = osp)) +
+  scale_x_continuous("distance (i.e., propensity score)", limits = c(0, NA)) +
+  scale_color_viridis_d(end = 0.6)
+```
+
+Each matched pair contains one of each of the two levels of the treatment variable `osp`. Look how closely the members of each of the pairs are on their propensity scores. The matching wasn't exact, but it was very close.
+
+## Fit the primary model and compute the estimand
+
+We're finally ready to fit the substantive model. Technically we could just fit the simple univariable model `koa ~ osp`.^[An ANOVA.] However, there's no inherent reason for us not to condition the substantive model on the covariate set, and doing so can help further control for confounding, particularly in the presence of imperfect matching [see @greifer2021matching]. One approach would be the simple expansion `koa ~ osp + age + male + bmi + race + smoker`.^[An ANCOVA.] But we could go even further to protect against any treatment-by-covariate interactions with the fuller  `koa ~ osp * (age + male + bmi + race + smoker)`.^[An ANHECOVA, an analysis of *heterogeneous* covariance.] We use the `with()` function to fit the model to the matched MI data sets.
+
+```{r}
+matched.models <- with(
+  data = matched.datasets,
+  expr = glm(koa ~ osp * (age + male + bmi + race + smoker), 
+             family = binomial))
+```
+
+Here's the summary of the pooled model parameters. As with a typical MI data analysis, you pool the results across the MI data sets with Rubin's rules using the `pool()` function.
+
+```{r}
+matched.models |> 
+  pool() |> 
+  summary(conf.int = TRUE)
+```
+
+However, in the *MatchIt: Getting Started* vignette, Greifer cautioned:
+
+> The outcome model coefficients and tests should not be interpreted or reported.
+
+But rather, one should only report and interpret the causal estimand, which in our case is the ATT, the *average treatment effect for the treated*.^[If you're not familiar with the ATT, it was discussed a bit in @greifer2021matching, though instead by the term "average exposure effect in the exposed." Greifer recommend the ATT for my real-world use case, which is why I use it here.] We can compute the ATT with g-computation using the `avg_comparisons()` function from the **marginaleffects** package.^[If you're not familiar with g-computation, boy do I have the blog series for you. Start [here](https://solomonkurz.netlify.app/blog/2023-04-12-boost-your-power-with-baseline-covariates/). You'll want to read the first three posts. Sorry, but some topics take a little effort to walk out.] Note how we can request cluster-robust standard errors with pair membership as the clustering variable by setting `vcov = ~subclass`. By setting `by = "osp"`, we compute both the ATU^[That is, the *average treatment effect for the untreated*.] and the ATT. Our focus will be the ATT.
+
+```{r}
+avg_comparisons(matched.models,
+                variables = "osp",
+                # cluster-robust standard errors for most analyses, 
+                # with pair membership as the clustering variable
+                vcov = ~subclass,
+                by = "osp")
+```
+
+The second row of the output, for which `osp == 1`, is where we see the summary for the ATT. By default, `avg_comparisons()` puts this in a probability-difference metric, though other metrics can be called with the `comparison` and/or `transform` arguments. My understanding is this summary also automatically pools the results using Rubin's rules. Substantively, the probability difference is -0.03, 95% CI [-0.10, 0.03], which is about as close to zero as you could ask for. This is the effect size you would report in a white paper.
+
+## Session info
+
+```{r}
+sessionInfo()
+```
+
+## References
+
+```{r, eval = F, echo = F}
+matched.datasets.long |> 
+  filter(.imp %in% 1:2) %>% 
+  filter(weights == 1) %>% 
+  select(.imp, osp, weights:distance) %>% 
+  group_by(.imp) %>% 
+  arrange(subclass) %>% 
+  group_by(.imp, subclass) %>% 
+  mutate(mean_distance = mean(distance)) %>% 
+  arrange(.imp, mean_distance) %>% 
+  group_by(.imp) %>% 
+  slice(1:40) %>% 
+  ungroup() %>% 
+  mutate(matched_pair = rep(1:20, each = 2) %>% 
+           rep(times = 2) %>% 
+           factor(),
+         imp = str_c("imputation #", .imp)) |> 
+  
+  ggplot(aes(x = distance, y  = matched_pair, group = matched_pair)) +
+  geom_line() +
+  geom_point(aes(color = osp)) +
+  scale_x_continuous("propensity score", breaks = 0:2 / 50, 
+                     labels = c(0, 0.02, 0.04), limits = c(0, NA)) +
+  scale_color_viridis_d(end = 0.6, breaks = NULL) +
+  ylab("matched pair") +
+  facet_wrap(~ imp)
+
+ggsave("matched-pairs-featured.jpg", width = 3.6, height = 3.5, units = "in")
+```
+
