@@ -137,7 +137,7 @@ The default imputation method for `mice()` is generally predictive mean matching
 
 I might also explicitly mention that, yes, we are imputing the missing data for the criterion variable `koa`. Personally, I find this natural and sensible. But there has been some concern about imputing missing criterion values in some areas of the literature. If you share that concern, see the nice simulation study by @kontopantelis2017outcome. In short, it's fine.
 
-By default, all variables are used to predict the missingness of all other variables in a simple linear model (execute `imputed.datasets$predictorMatrix`). However, there is some concern in the RCT literature that such a simple model may be inappropriate in that it would not be robust to possible treatment-by-covariate interactions, which could bias the results [@sullivan2018should; @zhang2023should].^[Though we don't have randomly-assigned groups in this example, I believe the basic concern is the same. The two groups may have different correlations among the covariates, and we want an imputation method that can handle such a pattern.] This leaves us with two basic solutions: expand the predictor matrix to include all possible `osp`-by-covariate interactions, or impute the data sets separately by the two levels of `osp`. With a small number of rows, the second option might be worrisome, but I think splitting the data set into $n_{{\text{osp}} = 0} = 2{,}106$ and $n_{{\text{osp}} = 1} = 479$ should be fine.^[As a third option, you could also use random forests to addresses possible interactions and nonlinear effects.]
+By default, all variables are used to predict the missingness of all other variables in a simple linear model (execute `imputed.datasets$predictorMatrix`). However, there is some concern in the RCT literature that such a simple model may be inappropriate in that it would not be robust to possible treatment-by-covariate interactions, which could bias the results [@sullivan2018should; @zhang2023should].^[Though we don't have randomly-assigned groups in this example, I believe the basic concern is the same. The two groups may have different correlations among the covariates, and we want an imputation method that can handle such a pattern.] This leaves us with two basic solutions: expand the predictor matrix to include all possible `osp`-by-covariate interactions, or impute the data sets separately by the two levels of `osp`. With a small number of rows, the second option might be worrisome, but I think splitting the data set into $n_{{\text{osp}} = 0} = 2{,}106$ and $n_{{\text{osp}} = 1} = 479$ should be fine.^[As a third option, you could also use random forests to addresses possible interactions and nonlinear effects [see @laqueur2022supermice].]
 
 ```{r, echo = FALSE, eval = FALSE}
 d |> 
@@ -314,7 +314,7 @@ load(file = "objects/t1.rda")
 t1 - t0
 ```
 
-Note the `Sys.time()` calls and the `t1 - t0` algebra at the bottom of the code block. This is a method I often use to keep track of the computation time for longer operations. In this case this code block took just under ten minutes to complete on my laptop.^[2023 M2 chip MacBook Pro] YMMV.
+Note the `Sys.time()` calls and the `t1 - t0` algebra at the bottom of the code block. This is a method I often use to keep track of the computation time for longer operations. In this case this code block took just under nine minutes to complete on my laptop.^[2023 M2 chip MacBook Pro] YMMV.
 
 The output of `matchthem()` is an object of class `mimids`, which is a list of 4.
 
@@ -539,21 +539,16 @@ avg_comparisons(matched.models,
                 by = "osp")
 ```
 
-The second row of the output, for which `osp == 1`, is where we see the summary for the ATT. By default, `avg_comparisons()` puts this in a probability-difference metric, though other metrics can be called with the `comparison` and/or `transform` arguments. My understanding is this summary also automatically pools the results using Rubin's rules. Substantively, the probability difference is -0.03, 95% CI [-0.10, 0.03], which is about as close to zero as you could ask for. This is the effect size you would report in a white paper.
+The second row of the output, for which `osp == 1`, is where we see the summary for the ATT. By default, `avg_comparisons()` puts this in a probability-difference metric, though other metrics can be called with the `comparison` and/or `transform` arguments. My understanding is this summary also automatically pools the results using Rubin's rules. Substantively, the probability difference is -0.04, 95% CI [-0.10, 0.02], which is about as close to zero as you could ask for. This is the effect size you would report in a white paper.
 
-## Thank the reviewer
+## Thank the reviewers
 
 I'd like to publicly acknowledge and thank
 
+* [Noah Greifer](https://ngreifer.github.io/) and
 * [Julia Rohrer](https://juliarohrer.com/)
 
-for her kind efforts reviewing the draft of this post. Do note the final editorial decisions were my own.
-
-```{r, eval = FALSE, echo = FALSE}
-for her kind efforts reviewing the draft of this post. Go team!
-
-Do note the final editorial decisions were my own, and I do not think it would be reasonable to assume my reviewers have given blanket endorsements of the current version of this post.
-```
+for their kind efforts reviewing the draft of this post. Do note the final editorial decisions were my own, and I do not think it would be reasonable to assume my reviewers have given blanket endorsements of the current version of this post.
 
 ## Session info
 
@@ -565,7 +560,7 @@ sessionInfo()
 
 ```{r, eval = F, echo = F}
 matched.datasets.long |> 
-  filter(.imp %in% 1:2) |> 
+  filter(.imp %in% c(1, 5)) |> 
   filter(weights == 1) |> 
   select(.imp, osp, weights:distance) |> 
   group_by(.imp) |> 

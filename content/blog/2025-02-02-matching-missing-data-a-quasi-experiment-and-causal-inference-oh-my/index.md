@@ -233,9 +233,9 @@ imputed.datasets |>
     ##  $ ignore         : logi [1:2585] FALSE FALSE FALSE FALSE FALSE FALSE ...
     ##  $ seed           : logi NA
     ##  $ iteration      : num 5
-    ##  $ lastSeedValue  : int [1:626] 10403 567 609554489 -1561491313 75312635 1003853842 -1636020304 -460525899 -856562940 -2136089537 ...
-    ##  $ chainMean      : num [1:7, 1:5, 1:5] NaN NaN NaN NaN 0.429 ...
-    ##  $ chainVar       : num [1:7, 1:5, 1:5] NA NA NA NA 0.265 ...
+    ##  $ lastSeedValue  : int [1:626] 10403 480 -794428955 474296762 -696371925 -1062066067 -768590641 -1839416198 521653197 311473819 ...
+    ##  $ chainMean      : num [1:7, 1:5, 1:5] NaN NaN NaN NaN 0.536 ...
+    ##  $ chainVar       : num [1:7, 1:5, 1:5] NA NA NA NA 0.268 ...
     ##  $ loggedEvents   :'data.frame':	1 obs. of  5 variables:
     ##  $ version        :Classes 'package_version', 'numeric_version'  hidden list of 1
     ##  $ date           : Date[1:1], format: "2025-02-03"
@@ -385,9 +385,9 @@ t1 <- Sys.time()
 t1 - t0
 ```
 
-    ## Time difference of 9.274688 mins
+    ## Time difference of 8.658647 mins
 
-Note the `Sys.time()` calls and the `t1 - t0` algebra at the bottom of the code block. This is a method I often use to keep track of the computation time for longer operations. In this case this code block took just under ten minutes to complete on my laptop.[^7] YMMV.
+Note the `Sys.time()` calls and the `t1 - t0` algebra at the bottom of the code block. This is a method I often use to keep track of the computation time for longer operations. In this case this code block took just under nine minutes to complete on my laptop.[^7] YMMV.
 
 The output of `matchthem()` is an object of class `mimids`, which is a list of 4.
 
@@ -428,15 +428,15 @@ bal.tab(matched.datasets)
 
     ## Balance summary across all imputations
     ##              Type Min.Diff.Adj Mean.Diff.Adj Max.Diff.Adj
-    ## distance Distance       0.0158        0.0449       0.0538
-    ## age       Contin.      -0.0029        0.0137       0.0433
+    ## distance Distance       0.0173        0.0434       0.0543
+    ## age       Contin.       0.0037        0.0178       0.0507
     ## male       Binary       0.0000        0.0000       0.0000
-    ## bmi       Contin.      -0.0530       -0.0422      -0.0086
+    ## bmi       Contin.      -0.0527       -0.0386      -0.0083
     ## race_0     Binary       0.0000        0.0000       0.0000
     ## race_1     Binary       0.0000        0.0000       0.0000
     ## race_2     Binary       0.0000        0.0000       0.0000
     ## race_3     Binary       0.0000        0.0000       0.0000
-    ## smoker     Binary      -0.0042       -0.0004       0.0000
+    ## smoker     Binary      -0.0355       -0.0040       0.0021
     ## 
     ## Average sample sizes across imputations
     ##              0   1
@@ -457,8 +457,8 @@ bal.tab(osp ~ age + bmi,
 
     ## Balance summary across all imputations
     ##        Type Min.Diff.Adj Mean.Diff.Adj Max.Diff.Adj
-    ## age Contin.      -0.0029        0.0137       0.0433
-    ## bmi Contin.      -0.0530       -0.0422      -0.0086
+    ## age Contin.       0.0037        0.0178       0.0507
+    ## bmi Contin.      -0.0527       -0.0386      -0.0083
     ## 
     ## Average effective sample sizes across imputations
     ##               0   1
@@ -474,12 +474,12 @@ bal.tab(osp ~ male + race + smoker,
 
     ## Balance summary across all imputations
     ##          Type Min.Diff.Adj Mean.Diff.Adj Max.Diff.Adj
-    ## male   Binary       0.0000        0.0000       0.0000
-    ## race_0 Binary       0.0000        0.0000       0.0000
-    ## race_1 Binary      -0.0021        0.0004       0.0021
-    ## race_2 Binary      -0.0021       -0.0002       0.0000
-    ## race_3 Binary      -0.0021       -0.0002       0.0021
-    ## smoker Binary      -0.0125        0.0002       0.0084
+    ## male   Binary       0.0000         0.000       0.0000
+    ## race_0 Binary       0.0000         0.000       0.0000
+    ## race_1 Binary       0.0000         0.000       0.0000
+    ## race_2 Binary       0.0000         0.000       0.0000
+    ## race_3 Binary       0.0000         0.000       0.0000
+    ## smoker Binary      -0.0355        -0.004       0.0021
     ## 
     ## Average effective sample sizes across imputations
     ##               0   1
@@ -569,9 +569,9 @@ matched.datasets.long |>
     ## $ smoker   <dbl> 1, 0, 0, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 0, 0, 0…
     ## $ osp      <fct> 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0…
     ## $ koa      <dbl> 1, 0, 1, 1, 0, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 0, 1, 0, 0…
-    ## $ weights  <dbl> 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0…
-    ## $ subclass <fct> NA, 376, NA, 141, NA, NA, NA, NA, NA, NA, 169, NA, NA, NA, NA…
-    ## $ distance <dbl> 0.028437764, 0.465112074, 0.052341221, 0.006110089, 0.0598369…
+    ## $ weights  <dbl> 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0…
+    ## $ subclass <fct> NA, 49, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, NA, N…
+    ## $ distance <dbl> 0.028633357, 0.463091487, 0.051944199, 0.006169306, 0.0602663…
 
 Note the three new columns at the end. The `weights` column includes the matching weights. In this case, the values are `0` for unmatched cases and `1` for matched cases.
 
@@ -664,39 +664,39 @@ matched.models |>
 ```
 
     ##           term     estimate    std.error   statistic        df      p.value
-    ## 1  (Intercept)  -4.98809313   2.05143801 -2.43151053 478.21271 1.540227e-02
-    ## 2         osp1 -16.15915175 479.84319812 -0.03367590 939.91137 9.731427e-01
-    ## 3          age   0.02616364   0.01886925  1.38657571 370.98420 1.664038e-01
-    ## 4         male  -0.22699036   0.44725227 -0.50752198  78.60782 6.132096e-01
-    ## 5          bmi   0.11715216   0.02828944  4.14119691 160.74018 5.566346e-05
-    ## 6        race1   0.22400485   1.39529652  0.16054283 181.91644 8.726316e-01
-    ## 7        race2   0.51516851   1.45871665  0.35316558 153.85396 7.244477e-01
-    ## 8        race3   0.03447518   1.85872612  0.01854775 191.62459 9.852212e-01
-    ## 9       smoker  -0.27925667   0.20827985 -1.34077622 310.11309 1.809744e-01
-    ## 10    osp1:age   0.02061808   0.02607307  0.79078092 488.44712 4.294556e-01
-    ## 11   osp1:male   0.87792221   0.62092728  1.41388894 114.95901 1.600969e-01
-    ## 12    osp1:bmi  -0.02576603   0.03808613 -0.67651983 196.10577 4.995078e-01
-    ## 13  osp1:race1  14.27235099 479.83808498  0.02974410 939.91137 9.762775e-01
-    ## 14  osp1:race2  14.44694881 479.83844551  0.03010794 939.91137 9.759874e-01
-    ## 15  osp1:race3  16.40606723 479.84099244  0.03419063 939.91137 9.727324e-01
-    ## 16 osp1:smoker   0.34161400   0.29188009  1.17039159 389.36103 2.425593e-01
+    ## 1  (Intercept)  -4.33329495   2.30572094 -1.87936661  95.57790 6.324105e-02
+    ## 2         osp1 -16.78892460 479.52834485 -0.03501133 939.91137 9.720781e-01
+    ## 3          age   0.02515651   0.01877522  1.33987862 422.78756 1.810045e-01
+    ## 4         male  -0.20564090   0.42972287 -0.47854307 109.85389 6.332148e-01
+    ## 5          bmi   0.11604786   0.02733849  4.24485193 240.87284 3.124027e-05
+    ## 6        race1  -0.32464880   1.49340345 -0.21738854  88.96382 8.284034e-01
+    ## 7        race2  -0.03792124   1.50924147 -0.02512602 106.84098 9.800013e-01
+    ## 8        race3  -1.59784236 139.64607263 -0.01144209 938.67648 9.908732e-01
+    ## 9       smoker  -0.30575408   0.20746913 -1.47373285 324.83022 1.415219e-01
+    ## 10    osp1:age   0.02171560   0.02650799  0.81920969 372.86920 4.131901e-01
+    ## 11   osp1:male   0.77830353   0.59993486  1.29731338 160.21147 1.963884e-01
+    ## 12    osp1:bmi  -0.02307764   0.03668963 -0.62899629 340.77566 5.297729e-01
+    ## 13  osp1:race1  14.81110394 479.52163116  0.03088725 939.91137 9.753660e-01
+    ## 14  osp1:race2  15.07286024 479.52179890  0.03143311 939.91137 9.749308e-01
+    ## 15  osp1:race3  17.71192964 499.44300859  0.03546336 939.90451 9.717178e-01
+    ## 16 osp1:smoker   0.37223668   0.28803087  1.29234998 498.31354 1.968349e-01
     ##            2.5 %       97.5 %
-    ## 1    -9.01903969  -0.95714657
-    ## 2  -957.84716384 925.52886035
-    ## 3    -0.01094045   0.06326773
-    ## 4    -1.11729281   0.66331209
-    ## 5     0.06128525   0.17301907
-    ## 6    -2.52904095   2.97705065
-    ## 7    -2.36653049   3.39686750
-    ## 8    -3.63171524   3.70066561
-    ## 9    -0.68907708   0.13056374
-    ## 10   -0.03061113   0.07184730
-    ## 11   -0.35201989   2.10786431
-    ## 12   -0.10087701   0.04934496
-    ## 13 -927.40562663 955.95032860
-    ## 14 -927.23173633 956.12563395
-    ## 15 -925.27761624 958.08975071
-    ## 16   -0.23224426   0.91547226
+    ## 1    -8.91037282   0.24378292
+    ## 2  -957.85903996 924.28119075
+    ## 3    -0.01174788   0.06206091
+    ## 4    -1.05726336   0.64598156
+    ## 5     0.06219481   0.16990091
+    ## 6    -3.29202627   2.64272867
+    ## 7    -3.02986736   2.95402489
+    ## 8  -275.65248377 272.45679904
+    ## 9    -0.71390685   0.10239869
+    ## 10   -0.03040829   0.07383950
+    ## 11   -0.40649685   1.96310391
+    ## 12   -0.09524429   0.04908901
+    ## 13 -926.24583587 955.86804374
+    ## 14 -925.98440875 956.13012922
+    ## 15 -962.44054555 997.86440483
+    ## 16   -0.19366792   0.93814129
 
 However, in the ([2025b](#ref-greifer2025MatchIt)) [*MatchIt: Getting Started* vignette](https://CRAN.R-project.org/package=MatchIt/vignettes/MatchIt.html), Greifer cautioned:
 
@@ -716,23 +716,24 @@ avg_comparisons(matched.models,
     ## Warning in get.dfcom(object, dfcom): Infinite sample size assumed.
 
     ## 
-    ##  Term osp Estimate Std. Error     t Pr(>|t|)   S   2.5 % 97.5 %  Df
-    ##   osp   0  -0.0352     0.0329 -1.07    0.285 1.8 -0.0999 0.0295 433
-    ##   osp   1  -0.0338     0.0327 -1.04    0.301 1.7 -0.0980 0.0303 426
+    ##  Term osp Estimate Std. Error     t Pr(>|t|)   S  2.5 % 97.5 %  Df
+    ##   osp   0  -0.0403     0.0328 -1.23     0.22 2.2 -0.105 0.0241 595
+    ##   osp   1  -0.0390     0.0324 -1.20     0.23 2.1 -0.103 0.0247 632
     ## 
     ## Type:  response 
     ## Comparison: 1 - 0
     ## Columns: term, contrast, osp, estimate, std.error, s.value, df, statistic, p.value, conf.low, conf.high
 
-The second row of the output, for which `osp == 1`, is where we see the summary for the ATT. By default, `avg_comparisons()` puts this in a probability-difference metric, though other metrics can be called with the `comparison` and/or `transform` arguments. My understanding is this summary also automatically pools the results using Rubin’s rules. Substantively, the probability difference is -0.03, 95% CI \[-0.10, 0.03\], which is about as close to zero as you could ask for. This is the effect size you would report in a white paper.
+The second row of the output, for which `osp == 1`, is where we see the summary for the ATT. By default, `avg_comparisons()` puts this in a probability-difference metric, though other metrics can be called with the `comparison` and/or `transform` arguments. My understanding is this summary also automatically pools the results using Rubin’s rules. Substantively, the probability difference is -0.04, 95% CI \[-0.10, 0.02\], which is about as close to zero as you could ask for. This is the effect size you would report in a white paper.
 
-## Thank the reviewer
+## Thank the reviewers
 
 I’d like to publicly acknowledge and thank
 
+- [Noah Greifer](https://ngreifer.github.io/) and
 - [Julia Rohrer](https://juliarohrer.com/)
 
-for her kind efforts reviewing the draft of this post. Do note the final editorial decisions were my own.
+for their kind efforts reviewing the draft of this post. Do note the final editorial decisions were my own, and I do not think it would be reasonable to assume my reviewers have given blanket endorsements of the current version of this post.
 
 ## Session info
 
@@ -910,6 +911,12 @@ Kruschke, J. K. (2015). *Doing Bayesian data analysis: A tutorial with R, JAGS, 
 
 </div>
 
+<div id="ref-laqueur2022supermice" class="csl-entry">
+
+Laqueur, H. S., Shev, A. B., & Kagawa, R. M. (2022). SuperMICE: An ensemble machine learning approach to multiple imputation by chained equations. *American Journal of Epidemiology*, *191*(3), 516–525. <https://doi.org/10.1093/aje/kwab271>
+
+</div>
+
 <div id="ref-leyrat2019propensity" class="csl-entry">
 
 Leyrat, C., Seaman, S. R., White, I. R., Douglas, I., Smeeth, L., Kim, J., Resche-Rigon, M., Carpenter, J. R., & Williamson, E. J. (2019). Propensity score analysis with partially observed covariates: How should multiple imputation be used? *Statistical Methods in Medical Research*, *28*(1), 3–19. <https://doi.org/10.1177/0962280217713032>
@@ -1054,7 +1061,7 @@ Zhao, Q.-Y., Luo, J.-C., Su, Y., Zhang, Y.-J., Tu, G.-W., & Luo, Z. (2021). Prop
 
 [^5]: Though we don’t have randomly-assigned groups in this example, I believe the basic concern is the same. The two groups may have different correlations among the covariates, and we want an imputation method that can handle such a pattern.
 
-[^6]: As a third option, you could also use random forests to addresses possible interactions and nonlinear effects.
+[^6]: As a third option, you could also use random forests to addresses possible interactions and nonlinear effects (see [Laqueur et al., 2022](#ref-laqueur2022supermice)).
 
 [^7]: 2023 M2 chip MacBook Pro
 
