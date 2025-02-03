@@ -5,6 +5,7 @@ date: '2025-02-02'
 excerpt: "I'm finally dipping my does into causal inference for quasi-experiments, and my first use case has missing data. In this post we practice propensity score matching with multiply-imputed data sets, and how to compute the average treatment effect for the treated (ATT) with g-computation."
 tags:
   - ANCOVA
+  - ANHECOVA
   - ATT
   - binary
   - binomial
@@ -21,6 +22,8 @@ tags:
   - standardization
   - tidyverse
   - tutorial
+draft: false
+layout: single
 featured: no
 bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
@@ -228,9 +231,9 @@ imputed.datasets |>
     ##  $ ignore         : logi [1:2585] FALSE FALSE FALSE FALSE FALSE FALSE ...
     ##  $ seed           : logi NA
     ##  $ iteration      : num 5
-    ##  $ lastSeedValue  : int [1:626] 10403 201 1203537208 -13427708 214585135 720740771 495562831 -887252208 -934949203 -1665339607 ...
-    ##  $ chainMean      : num [1:7, 1:5, 1:5] NaN NaN NaN NaN 0.464 ...
-    ##  $ chainVar       : num [1:7, 1:5, 1:5] NA NA NA NA 0.223 ...
+    ##  $ lastSeedValue  : int [1:626] 10403 515 -1423799940 379833824 -713404134 761168244 840394686 -321468233 580131582 -772360391 ...
+    ##  $ chainMean      : num [1:7, 1:5, 1:5] NaN NaN NaN NaN 0.5 ...
+    ##  $ chainVar       : num [1:7, 1:5, 1:5] NA NA NA NA 0.268 ...
     ##  $ loggedEvents   :'data.frame':	1 obs. of  5 variables:
     ##  $ version        :Classes 'package_version', 'numeric_version'  hidden list of 1
     ##  $ date           : Date[1:1], format: "2025-02-02"

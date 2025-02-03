@@ -5,6 +5,7 @@ date: '2025-02-02'
 excerpt: "I'm finally dipping my does into causal inference for quasi-experiments, and my first use case has missing data. In this post we practice propensity score matching with multiply-imputed data sets, and how to compute the average treatment effect for the treated (ATT) with g-computation."
 tags:
   - ANCOVA
+  - ANHECOVA
   - ATT
   - binary
   - binomial
@@ -21,6 +22,8 @@ tags:
   - standardization
   - tidyverse
   - tutorial
+draft: false
+layout: single
 featured: no
 bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
