@@ -27,15 +27,13 @@ Edited on December 12, 2022, to use the new `as_draws_df()` workflow.
 
 ## What?
 
-One of [Tristan Mahr](https://twitter.com/tjmahr)’s recent Twitter threads almost broke my brain.
-
-{{% tweet user="SolomonKurz" id="1413186646783242242" %}}
+One of [Tristan Mahr](https://twitter.com/tjmahr)’s recent Twitter threads almost broke my brain.[^1]
 
 It turns out that you can use random effects on cross-sectional count data. Yes, that’s right. Each count gets its own random effect. Some people call this observation-level random effects and it can be a tricky way to handle overdispersion. The purpose of this post is to show how to do this and to try to make sense of what it even means.
 
 ## Background
 
-First, I should clarify a bit. Mahr’s initial post and much of the thread to follow primarily focused on counts within the context of binomial data. If you’ve ever read a book on the generalized linear model (GLM), you know that the two broad frameworks for modeling counts are as binomial or Poisson. The basic difference is if your counts are out of a known number of trials (e.g., I got 3 out of 5 questions correct in my pop quiz, last week[^1]), the binomial is generally the way to go. However, if your counts aren’t out of a well-defined total (e.g., I drank 1497 cups of coffee[^2], last year), the Poisson distribution offers a great way to think about your data. In this post, we’ll be focusing on Poisson-like counts.
+First, I should clarify a bit. Mahr’s initial post and much of the thread to follow primarily focused on counts within the context of binomial data. If you’ve ever read a book on the generalized linear model (GLM), you know that the two broad frameworks for modeling counts are as binomial or Poisson. The basic difference is if your counts are out of a known number of trials (e.g., I got 3 out of 5 questions correct in my pop quiz, last week[^2]), the binomial is generally the way to go. However, if your counts aren’t out of a well-defined total (e.g., I drank 1497 cups of coffee[^3], last year), the Poisson distribution offers a great way to think about your data. In this post, we’ll be focusing on Poisson-like counts.
 
 The Poisson distribution is named after the French mathematician [Siméon Denis Poisson](https://upload.wikimedia.org/wikipedia/commons/e/e8/E._Marcellot_Siméon-Denis_Poisson_1804.jpg), who lived and died about 200 years ago. Poisson’s distribution is valid for non-negative integers, which is basically what counts are. The distribution has just one parameter, `\(\lambda\)`, which controls both its mean and variance and imposes the assumption that the mean of your counts is the same as the variance. On the one hand, this is great because it keeps things simple–parsimony and all. On the other hand, holding the mean and variance the same is a really restrictive assumption and it just doesn’t match up well with a lot of real-world data.
 
@@ -43,11 +41,11 @@ This Poisson assumption that the mean equals the variance is sometimes called *e
 
 ### Negative-binomial counts.
 
-As its name implies, the negative-binomial model has a deep relationship with the binomial model. I’m not going to go into those details, but Hilbe covered them in his well-named ([2011](#ref-hilbeNegativeBinomialRegression2011)) textbook, if you’re curious. Basically, the negative-binomial model adds a dispersion parameter to the Poisson. Different authors refer to it with different names. Hilbe, for example, called it both `\(r\)` and `\(\nu\)`. Bürkner ([2021b](#ref-Bürkner2021Parameterization)) and the Stan Development Team ([2021](#ref-standevelopmentteamStanFunctionsReference2021)) both call it `\(\phi\)`. By which ever name, the negative-binomial overdispersion parameter helps disentangle the mean from the variance in a set of counts. The way it does it is by re-expressing the count data as coming from a mixture where each count is from its own Poisson distribution with its own `\(\lambda\)` parameter. Importantly, the `\(\lambda\)`’s in this mixture of Poissons follow a gamma distribution, which is why the negative binomial is also sometimes referred to as a gamma-Poisson model. McElreath ([2020](#ref-mcelreathStatisticalRethinkingBayesian2020)), for example, generally prefers to speak in terms of the gamma-Poisson.
+As its name implies, the negative-binomial model has a deep relationship with the binomial model. I’m not going to go into those details, but Hilbe covered them in his well-named ([2011](#ref-hilbeNegativeBinomialRegression2011)) textbook, if you’re curious. Basically, the negative-binomial model adds a dispersion parameter to the Poisson. Different authors refer to it with different names. Hilbe, for example, called it both `\(r\)` and `\(\nu\)`. Bürkner ([2021b](#ref-Bürkner2021Parameterization)) and the Stan Development Team ([2021](#ref-standevelopmentteamStanFunctionsReference2021)) both call it `\(\phi\)`. By which ever name, the negative-binomial overdispersion parameter helps disentangle the mean from the variance in a set of counts. The way it does it is by re-expressing the count data as coming from a mixture where each count is from its own Poisson distribution with its own `\(\lambda\)` parameter. Importantly, the `\(\lambda\)`’s in this mixture of Poissons follow a gamma distribution, which is why the negative binomial is also sometimes referred to as a gamma-Poisson model. McElreath ([2020b](#ref-mcelreathStatisticalRethinkingBayesian2020)), for example, generally prefers to speak in terms of the gamma-Poisson.
 
 ### Poission counts with random intercepts.
 
-Another way to handle overdispersion is to ask whether the data are grouped. In my field, this naturally occurs when you collect longitudinal data. My counts, over time, will differ form your counts, over time, and we accommodate that by adding a multilevel structure to the model. This, then, takes us to the generalized linear *mixed* model (GLMM), which is covered in text books like Cameron & Trivedi ([2013](#ref-cameron2013regression)); Gelman & Hill ([2006](#ref-gelmanDataAnalysisUsing2006)); and McElreath ([2020](#ref-mcelreathStatisticalRethinkingBayesian2020)). Say your data have `\(J\)` groups. With a simple random-intercept Poisson model, each group of counts gets its own `\(\lambda_j\)` parameter and the population of those `\(\lambda_j\)`’s is described in terms of a grand mean (an overall `\(\lambda\)` intercept) and variation around that grand mean (typically a standard deviation or variance parameter). Thus, if your `\(y\)` data are counts from `\(I\)` cases clustered within `\(J\)` groups, the random-intercept Poisson model can be expressed as
+Another way to handle overdispersion is to ask whether the data are grouped. In my field, this naturally occurs when you collect longitudinal data. My counts, over time, will differ form your counts, over time, and we accommodate that by adding a multilevel structure to the model. This, then, takes us to the generalized linear *mixed* model (GLMM), which is covered in text books like Cameron & Trivedi ([2013](#ref-cameron2013regression)); Gelman & Hill ([2006](#ref-gelmanDataAnalysisUsing2006)); and McElreath ([2020b](#ref-mcelreathStatisticalRethinkingBayesian2020)). Say your data have `\(J\)` groups. With a simple random-intercept Poisson model, each group of counts gets its own `\(\lambda_j\)` parameter and the population of those `\(\lambda_j\)`’s is described in terms of a grand mean (an overall `\(\lambda\)` intercept) and variation around that grand mean (typically a standard deviation or variance parameter). Thus, if your `\(y\)` data are counts from `\(I\)` cases clustered within `\(J\)` groups, the random-intercept Poisson model can be expressed as
 
 $$
 `\begin{align*}
@@ -86,7 +84,7 @@ y_i & \sim \operatorname{Normal}(\mu_i, \sigma) \\
 \end{align*}`
 $$
 
-where the residual variance not accounted for by `\(x\)` is captured in `\(\sigma\)`[^3]. Thus `\(\sigma\)` can be seen as a residual-variance term. The conventional Poisson model,
+where the residual variance not accounted for by `\(x\)` is captured in `\(\sigma\)`[^4]. Thus `\(\sigma\)` can be seen as a residual-variance term. The conventional Poisson model,
 
 $$
 `\begin{align*}
@@ -124,7 +122,7 @@ Now we have a sense of the theory, it’s time to fit some models.
 
 ### We need data.
 
-As per usual, we’ll be working within **R** ([R Core Team, 2022](#ref-R-base)). We’ll be fitting our models with **brms** ([Bürkner, 2017](#ref-burknerBrmsPackageBayesian2017), [2018](#ref-burknerAdvancedBayesianMultilevel2018), [2022](#ref-R-brms)) and most of our data wrangling and plotting work will be done with aid from the **tidyverse** ([Wickham et al., 2019](#ref-wickhamWelcomeTidyverse2019); [Wickham, 2022](#ref-R-tidyverse)) and friends–**patchwork** ([Pedersen, 2022](#ref-R-patchwork)) and **tidybayes** ([Kay, 2022](#ref-R-tidybayes)). We’ll take our data set from McElreath’s ([2020](#ref-R-rethinking)) **rethinking** package.
+As per usual, we’ll be working within **R** ([R Core Team, 2022](#ref-R-base)). We’ll be fitting our models with **brms** ([Bürkner, 2017](#ref-burknerBrmsPackageBayesian2017), [2018](#ref-burknerAdvancedBayesianMultilevel2018), [2022](#ref-R-brms)) and most of our data wrangling and plotting work will be done with aid from the **tidyverse** ([Wickham et al., 2019](#ref-wickhamWelcomeTidyverse2019); [Wickham, 2022](#ref-R-tidyverse)) and friends–**patchwork** ([Pedersen, 2022](#ref-R-patchwork)) and **tidybayes** ([Kay, 2023](#ref-R-tidybayes)). We’ll take our data set from McElreath’s ([2020a](#ref-R-rethinking)) **rethinking** package.
 
 ``` r
 library(brms)
@@ -168,11 +166,11 @@ salamanders %>%
     ##       mean variance
     ## 1 2.468085 11.38483
 
-For small-$N$ data, we shouldn’t expect the mean to be exactly the same as the variance in Poisson data. This big of a difference, though, suggests[^4] overdispersion even with a modest `\(N = 47\)`.
+For small-$N$ data, we shouldn’t expect the mean to be exactly the same as the variance in Poisson data. This big of a difference, though, suggests[^5] overdispersion even with a modest `\(N = 47\)`.
 
 ### Fit the models.
 
-We’ll fit three intercepts-only models. The first will be a conventional Poisson model and the second will be the negative binomial (a.k.a. the gamma-Poisson mixture). We’ll finish off with our Poisson-lognormal mixture via the OLRE technique. Since we’re working with Bayesian software, we’ll need priors. Though I’m not going to explain them in any detail, we’ll be using the weakly-regularizing approach advocated for in McElreath ([2020](#ref-mcelreathStatisticalRethinkingBayesian2020)).
+We’ll fit three intercepts-only models. The first will be a conventional Poisson model and the second will be the negative binomial (a.k.a. the gamma-Poisson mixture). We’ll finish off with our Poisson-lognormal mixture via the OLRE technique. Since we’re working with Bayesian software, we’ll need priors. Though I’m not going to explain them in any detail, we’ll be using the weakly-regularizing approach advocated for in McElreath ([2020b](#ref-mcelreathStatisticalRethinkingBayesian2020)).
 
 Here’s how to fit the models with **brms**.
 
@@ -219,7 +217,7 @@ print(fit1)
     ##   Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
     ##          total post-warmup draws = 4000
     ## 
-    ## Population-Level Effects: 
+    ## Regression Coefficients:
     ##           Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
     ## Intercept     0.91      0.09     0.73     1.08 1.00     1483     1967
     ## 
@@ -238,11 +236,11 @@ print(fit2)
     ##   Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
     ##          total post-warmup draws = 4000
     ## 
-    ## Population-Level Effects: 
+    ## Regression Coefficients:
     ##           Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
     ## Intercept     0.95      0.21     0.54     1.36 1.00     2908     2195
     ## 
-    ## Family Specific Parameters: 
+    ## Further Distributional Parameters:
     ##       Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
     ## shape     0.58      0.18     0.30     1.01 1.00     3607     2640
     ## 
@@ -261,12 +259,12 @@ print(fit3)
     ##   Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
     ##          total post-warmup draws = 4000
     ## 
-    ## Group-Level Effects: 
+    ## Multilevel Hyperparameters:
     ## ~SITE (Number of levels: 47) 
     ##               Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
     ## sd(Intercept)     1.28      0.23     0.89     1.80 1.00     1117     1435
     ## 
-    ## Population-Level Effects: 
+    ## Regression Coefficients:
     ##           Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
     ## Intercept     0.34      0.22    -0.12     0.75 1.00     1687     2533
     ## 
@@ -584,7 +582,7 @@ For reference, we superimposed the mean of the `SALAMAN` data with a dashed line
 
 Okay, this is about as far as I’d like to go with this one. To be honest, the Poisson-lognormal mixture is a weird model and I’m not sure if it’s a good fit for the kind of data I tend to work with. But exposure to new options seems valuable and I’m content to low-key chew on this one for a while.
 
-If you’d like to learn more, do check out Bulmer’s original ([1974](#ref-bulmer1974OnFitting)) paper and the more recent OLRE paper by Harrison ([2014](#ref-harrison2014using)). The great [Ben Bolker](https://twitter.com/bolkerb) wrote up a vignette ([here](https://glmm.wdfiles.com/local--files/examples/overdispersion.pdf)) on how to fit the OLRE Poisson-lognormal with **lme4** ([Bates et al., 2021](#ref-R-lme4)) and Michael Clark wrote up a very quick example of the model with **brms** [here](https://m-clark.github.io/easy-bayes/posterior-predictive-checks.html).
+If you’d like to learn more, do check out Bulmer’s original ([1974](#ref-bulmer1974OnFitting)) paper and the more recent OLRE paper by Harrison ([2014](#ref-harrison2014using)). The great [Ben Bolker](https://twitter.com/bolkerb) wrote up a vignette ([here](https://glmm.wdfiles.com/local--files/examples/overdispersion.pdf)) on how to fit the OLRE Poisson-lognormal with **lme4** ([Bates et al., 2022](#ref-R-lme4)) and Michael Clark wrote up a very quick example of the model with **brms** [here](https://m-clark.github.io/easy-bayes/posterior-predictive-checks.html).
 
 Happy modeling.
 
@@ -594,99 +592,73 @@ Happy modeling.
 sessionInfo()
 ```
 
-    ## R version 4.2.0 (2022-04-22)
-    ## Platform: x86_64-apple-darwin17.0 (64-bit)
-    ## Running under: macOS Big Sur/Monterey 10.16
+    ## R version 4.4.2 (2024-10-31)
+    ## Platform: aarch64-apple-darwin20
+    ## Running under: macOS Ventura 13.4
     ## 
     ## Matrix products: default
-    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRblas.0.dylib
-    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRlapack.dylib
+    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/lib/libRblas.0.dylib 
+    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.0
     ## 
     ## locale:
     ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+    ## 
+    ## time zone: America/Chicago
+    ## tzcode source: internal
     ## 
     ## attached base packages:
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ##  [1] patchwork_1.1.2 tidybayes_3.0.2 forcats_0.5.1   stringr_1.4.1  
-    ##  [5] dplyr_1.0.10    purrr_0.3.4     readr_2.1.2     tidyr_1.2.1    
-    ##  [9] tibble_3.1.8    ggplot2_3.4.0   tidyverse_1.3.2 brms_2.18.0    
-    ## [13] Rcpp_1.0.9     
+    ##  [1] patchwork_1.3.0 tidybayes_3.0.7 lubridate_1.9.3 forcats_1.0.0  
+    ##  [5] stringr_1.5.1   dplyr_1.1.4     purrr_1.0.2     readr_2.1.5    
+    ##  [9] tidyr_1.3.1     tibble_3.2.1    ggplot2_3.5.1   tidyverse_2.0.0
+    ## [13] brms_2.22.0     Rcpp_1.0.13-1  
     ## 
     ## loaded via a namespace (and not attached):
-    ##   [1] readxl_1.4.1         backports_1.4.1      plyr_1.8.7          
-    ##   [4] igraph_1.3.4         svUnit_1.0.6         splines_4.2.0       
-    ##   [7] crosstalk_1.2.0      TH.data_1.1-1        rstantools_2.2.0    
-    ##  [10] inline_0.3.19        digest_0.6.30        htmltools_0.5.3     
-    ##  [13] fansi_1.0.3          magrittr_2.0.3       checkmate_2.1.0     
-    ##  [16] googlesheets4_1.0.1  tzdb_0.3.0           modelr_0.1.8        
-    ##  [19] RcppParallel_5.1.5   matrixStats_0.62.0   xts_0.12.1          
-    ##  [22] sandwich_3.0-2       prettyunits_1.1.1    colorspace_2.0-3    
-    ##  [25] rvest_1.0.2          ggdist_3.2.0         haven_2.5.1         
-    ##  [28] xfun_0.35            callr_3.7.3          crayon_1.5.2        
-    ##  [31] jsonlite_1.8.3       lme4_1.1-31          survival_3.4-0      
-    ##  [34] zoo_1.8-10           glue_1.6.2           gtable_0.3.1        
-    ##  [37] gargle_1.2.0         emmeans_1.8.0        distributional_0.3.1
-    ##  [40] pkgbuild_1.3.1       rstan_2.21.7         abind_1.4-5         
-    ##  [43] scales_1.2.1         mvtnorm_1.1-3        DBI_1.1.3           
-    ##  [46] miniUI_0.1.1.1       viridisLite_0.4.1    xtable_1.8-4        
-    ##  [49] stats4_4.2.0         StanHeaders_2.21.0-7 DT_0.24             
-    ##  [52] htmlwidgets_1.5.4    httr_1.4.4           threejs_0.3.3       
-    ##  [55] arrayhelpers_1.1-0   posterior_1.3.1      ellipsis_0.3.2      
-    ##  [58] pkgconfig_2.0.3      loo_2.5.1            farver_2.1.1        
-    ##  [61] sass_0.4.2           dbplyr_2.2.1         utf8_1.2.2          
-    ##  [64] labeling_0.4.2       tidyselect_1.1.2     rlang_1.0.6         
-    ##  [67] reshape2_1.4.4       later_1.3.0          munsell_0.5.0       
-    ##  [70] cellranger_1.1.0     tools_4.2.0          cachem_1.0.6        
-    ##  [73] cli_3.4.1            generics_0.1.3       broom_1.0.1         
-    ##  [76] ggridges_0.5.3       evaluate_0.18        fastmap_1.1.0       
-    ##  [79] yaml_2.3.5           processx_3.8.0       knitr_1.40          
-    ##  [82] fs_1.5.2             nlme_3.1-159         mime_0.12           
-    ##  [85] projpred_2.2.1       xml2_1.3.3           compiler_4.2.0      
-    ##  [88] bayesplot_1.9.0      shinythemes_1.2.0    rstudioapi_0.13     
-    ##  [91] gamm4_0.2-6          reprex_2.0.2         bslib_0.4.0         
-    ##  [94] stringi_1.7.8        highr_0.9            ps_1.7.2            
-    ##  [97] blogdown_1.15        Brobdingnag_1.2-8    lattice_0.20-45     
-    ## [100] Matrix_1.4-1         nloptr_2.0.3         markdown_1.1        
-    ## [103] shinyjs_2.1.0        tensorA_0.36.2       vctrs_0.5.0         
-    ## [106] pillar_1.8.1         lifecycle_1.0.3      jquerylib_0.1.4     
-    ## [109] bridgesampling_1.1-2 estimability_1.4.1   httpuv_1.6.5        
-    ## [112] R6_2.5.1             bookdown_0.28        promises_1.2.0.1    
-    ## [115] gridExtra_2.3        codetools_0.2-18     boot_1.3-28         
-    ## [118] colourpicker_1.1.1   MASS_7.3-58.1        gtools_3.9.3        
-    ## [121] assertthat_0.2.1     withr_2.5.0          shinystan_2.6.0     
-    ## [124] multcomp_1.4-20      mgcv_1.8-40          parallel_4.2.0      
-    ## [127] hms_1.1.1            grid_4.2.0           coda_0.19-4         
-    ## [130] minqa_1.2.5          rmarkdown_2.16       googledrive_2.0.0   
-    ## [133] shiny_1.7.2          lubridate_1.8.0      base64enc_0.1-3     
-    ## [136] dygraphs_1.1.1.6
+    ##  [1] svUnit_1.0.6         tidyselect_1.2.1     viridisLite_0.4.2   
+    ##  [4] farver_2.1.2         loo_2.8.0            fastmap_1.1.1       
+    ##  [7] TH.data_1.1-2        tensorA_0.36.2.1     blogdown_1.20       
+    ## [10] digest_0.6.37        estimability_1.5.1   timechange_0.3.0    
+    ## [13] lifecycle_1.0.4      StanHeaders_2.32.10  survival_3.7-0      
+    ## [16] magrittr_2.0.3       posterior_1.6.0      compiler_4.4.2      
+    ## [19] rlang_1.1.4          sass_0.4.9           tools_4.4.2         
+    ## [22] yaml_2.3.8           knitr_1.49           labeling_0.4.3      
+    ## [25] bridgesampling_1.1-2 pkgbuild_1.4.4       curl_6.0.1          
+    ## [28] plyr_1.8.9           multcomp_1.4-26      abind_1.4-8         
+    ## [31] withr_3.0.2          grid_4.4.2           stats4_4.4.2        
+    ## [34] xtable_1.8-4         colorspace_2.1-1     inline_0.3.19       
+    ## [37] emmeans_1.10.3       scales_1.3.0         MASS_7.3-61         
+    ## [40] cli_3.6.3            mvtnorm_1.2-5        rmarkdown_2.29      
+    ## [43] generics_0.1.3       RcppParallel_5.1.7   rstudioapi_0.16.0   
+    ## [46] reshape2_1.4.4       tzdb_0.4.0           cachem_1.0.8        
+    ## [49] rstan_2.32.6         splines_4.4.2        bayesplot_1.11.1    
+    ## [52] parallel_4.4.2       matrixStats_1.4.1    vctrs_0.6.5         
+    ## [55] V8_4.4.2             Matrix_1.7-1         sandwich_3.1-1      
+    ## [58] jsonlite_1.8.9       bookdown_0.40        hms_1.1.3           
+    ## [61] arrayhelpers_1.1-0   ggdist_3.3.2         jquerylib_0.1.4     
+    ## [64] glue_1.8.0           codetools_0.2-20     distributional_0.5.0
+    ## [67] stringi_1.8.4        gtable_0.3.6         QuickJSR_1.1.3      
+    ## [70] quadprog_1.5-8       munsell_0.5.1        pillar_1.10.1       
+    ## [73] htmltools_0.5.8.1    Brobdingnag_1.2-9    R6_2.5.1            
+    ## [76] evaluate_1.0.1       lattice_0.22-6       backports_1.5.0     
+    ## [79] bslib_0.7.0          rstantools_2.4.0     coda_0.19-4.1       
+    ## [82] gridExtra_2.3        nlme_3.1-166         checkmate_2.3.2     
+    ## [85] xfun_0.49            zoo_1.8-12           pkgconfig_2.0.3
 
 ## References
 
-<div id="refs" class="references csl-bib-body hanging-indent" line-spacing="2">
+<div id="refs" class="references csl-bib-body hanging-indent" entry-spacing="0" line-spacing="2">
 
 <div id="ref-R-lme4" class="csl-entry">
 
-Bates, D., Maechler, M., Bolker, B., & Steven Walker. (2021). *<span class="nocase">lme4</span>: Linear mixed-effects models using Eigen’ and S4*. <https://CRAN.R-project.org/package=lme4>
+Bates, D., Maechler, M., Bolker, B., & Steven Walker. (2022). *<span class="nocase">lme4</span>: Linear mixed-effects models using Eigen’ and S4*. <https://CRAN.R-project.org/package=lme4>
 
 </div>
 
 <div id="ref-bulmer1974OnFitting" class="csl-entry">
 
-Bulmer, M. (1974). On fitting the Poisson lognormal distribution to species-abundance data. *Biometrics*, *30*(1), 101–110. <https://doi.org/10.2307/2529621>
-
-</div>
-
-<div id="ref-Bürkner2021Distributional" class="csl-entry">
-
-Bürkner, P.-C. (2021a). *Estimating distributional models with brms*. <https://CRAN.R-project.org/package=brms/vignettes/brms_distreg.html>
-
-</div>
-
-<div id="ref-Bürkner2021Parameterization" class="csl-entry">
-
-Bürkner, P.-C. (2021b). *Parameterization of response distributions in brms*. <https://CRAN.R-project.org/package=brms/vignettes/brms_families.html>
+Bulmer, M. (1974). On fitting the Poisson lognormal distribution to species-abundance data. *Biometrics. Journal of the International Biometric Society*, *30*(1), 101–110. <https://doi.org/10.2307/2529621>
 
 </div>
 
@@ -699,6 +671,18 @@ Bürkner, P.-C. (2017). <span class="nocase">brms</span>: An R package for Bayes
 <div id="ref-burknerAdvancedBayesianMultilevel2018" class="csl-entry">
 
 Bürkner, P.-C. (2018). Advanced Bayesian multilevel modeling with the R package brms. *The R Journal*, *10*(1), 395–411. <https://doi.org/10.32614/RJ-2018-017>
+
+</div>
+
+<div id="ref-Bürkner2021Distributional" class="csl-entry">
+
+Bürkner, P.-C. (2021a). *Estimating distributional models with brms*. <https://CRAN.R-project.org/package=brms/vignettes/brms_distreg.html>
+
+</div>
+
+<div id="ref-Bürkner2021Parameterization" class="csl-entry">
+
+Bürkner, P.-C. (2021b). *Parameterization of response distributions in brms*. <https://CRAN.R-project.org/package=brms/vignettes/brms_families.html>
 
 </div>
 
@@ -734,19 +718,19 @@ Hilbe, J. M. (2011). *Negative binomial regression* (Second Edition). <https://d
 
 <div id="ref-R-tidybayes" class="csl-entry">
 
-Kay, M. (2022). *<span class="nocase">tidybayes</span>: Tidy data and ’geoms’ for Bayesian models*. <https://CRAN.R-project.org/package=tidybayes>
-
-</div>
-
-<div id="ref-mcelreathStatisticalRethinkingBayesian2020" class="csl-entry">
-
-McElreath, R. (2020). *Statistical rethinking: A Bayesian course with examples in R and Stan* (Second Edition). CRC Press. <https://xcelab.net/rm/statistical-rethinking/>
+Kay, M. (2023). *<span class="nocase">tidybayes</span>: Tidy data and ’geoms’ for Bayesian models*. <https://CRAN.R-project.org/package=tidybayes>
 
 </div>
 
 <div id="ref-R-rethinking" class="csl-entry">
 
-McElreath, R. (2020). *<span class="nocase">rethinking</span> R package*. <https://xcelab.net/rm/software/>
+McElreath, R. (2020a). *<span class="nocase">rethinking</span> R package*. <https://xcelab.net/rm/software/>
+
+</div>
+
+<div id="ref-mcelreathStatisticalRethinkingBayesian2020" class="csl-entry">
+
+McElreath, R. (2020b). *Statistical rethinking: A Bayesian course with examples in R and Stan* (Second Edition). CRC Press. <https://xcelab.net/rm/statistical-rethinking/>
 
 </div>
 
@@ -788,10 +772,12 @@ Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L. D., François, R., G
 
 </div>
 
-[^1]: That’s a lie. There was no pop quiz, last week.
+[^1]: Older versions of this post included an embedded link showing Mahr’s tweet. Mahr has since made his account private, and the code no longer works to share his tweet. Though this breaks the flow of the blog a little, and it removes some of the charm, I hope you can still follow the main point. Mahr said some smart things on social media, I found it surprising, and that exchange led to this blog post.
 
-[^2]: I’m making this number up, too, but it’s probably not far off. ☕ ☕ ☕
+[^2]: That’s a lie. There was no pop quiz, last week.
 
-[^3]: One could also, of course, express that model as `\(y_i = \beta_0 + \beta_1 x_i + \epsilon_i\)`, where `\(\epsilon_i \sim \operatorname{Normal}(0, \sigma)\)`. But come on. That’s weak sauce. For more on why, see page 84 in McElreath ([2020](#ref-mcelreathStatisticalRethinkingBayesian2020)).
+[^3]: I’m making this number up, too, but it’s probably not far off. ☕ ☕ ☕
 
-[^4]: I say “suggests” because a simple Poisson model can be good enough IF you have a set of high-quality predictors which can “explain” all that extra-looking variability. We, however, will be fitting intercept-only models.
+[^4]: One could also, of course, express that model as `\(y_i = \beta_0 + \beta_1 x_i + \epsilon_i\)`, where `\(\epsilon_i \sim \operatorname{Normal}(0, \sigma)\)`. But come on. That’s weak sauce. For more on why, see page 84 in McElreath ([2020b](#ref-mcelreathStatisticalRethinkingBayesian2020)).
+
+[^5]: I say “suggests” because a simple Poisson model can be good enough IF you have a set of high-quality predictors which can “explain” all that extra-looking variability. We, however, will be fitting intercept-only models.
