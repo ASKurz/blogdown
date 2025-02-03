@@ -55,7 +55,7 @@ I’m assuming readers have a basic background in experimental design. At a mini
 
 #### Matching for causal inference.
 
-Of the various skills required for these analysis, causal inference with matching is the new part for me, which means I’ll walk through those parts of the analysis with more attention to detail and pedagogy than others. For the basic matching workflow, I’ll be relying heavily on the documentation for the **MatchIt** ([Ho et al., 2011](#ref-ho2011MatchIt)) and **MatchThem** ([Pishgar et al., 2021](#ref-pishgar2021MatchThem)) packages. I also found the papers by Stuart ([2010](#ref-stuart2010matching)) and Greifer & Stuart ([2021](#ref-greifer2021matching)) were helpful introductions to the paradigm. For general introductions to causal inference, consider texts like Brumback ([2022](#ref-brumback2022Fundamentals)), Hernán & Robins ([2020](#ref-hernan2020CausalInference)), or Imbens & Rubin ([2015](#ref-imbensCausalInferenceStatistics2015)). If you prefer freely-accessible ebooks, check out Cunningham ([2021](#ref-cunningham2021causal)).
+Of the various skills required for these analysis, causal inference with matching is the new part for me, which means I’ll walk through those parts of the analysis with more attention to detail and pedagogy than others. For the basic matching workflow, I’ll be relying heavily on the documentation for the **MatchIt** ([Ho et al., 2011](#ref-ho2011MatchIt)) and **MatchThem** ([Pishgar et al., 2021](#ref-pishgar2021MatchThem)) packages. I also found the papers by Stuart ([2010](#ref-stuart2010matching)) and Greifer & Stuart ([2021b](#ref-greifer2021matching)) were helpful introductions to the paradigm. For general introductions to causal inference, consider texts like Brumback ([2022](#ref-brumback2022Fundamentals)), Cunningham ([2021](#ref-cunningham2021causal)), Hernán & Robins ([2020](#ref-hernan2020CausalInference)), or Imbens & Rubin ([2015](#ref-imbensCausalInferenceStatistics2015)).
 
 #### **R**.
 
@@ -157,7 +157,9 @@ imputed.datasets <- mice(d, print = FALSE)
 
 The default imputation method for `mice()` is generally predictive mean matching (execute `imputed.datasets$method`), which is attractive in how simple and general it is. If you’re not familiar with predictive mean matching, see [Section 3.4](https://stefvanbuuren.name/fimd/sec-pmm.html) in van Buuren ([2018](#ref-vanbuurenFlexibleImputationMissing2018)) for an introduction. I believe there are some concerns predictive mean matching doesn’t work as well with smaller sample sizes, but I think the `\(N = 2{,}585\)` data set here is large enough to discard those worries. Note though, the `mice()` function used polytomous logistic regression (`method = "polyreg"`) for the factor variable `race`, which I think is a great choice for that variable.
 
-By default, all variables are used to predict the missingness of all other variables in a simple linear model (execute `imputed.datasets$predictorMatrix`). However, there is some concern in the RCT literature that such a simple model may be inappropriate in that it would not be robust to possible treatment-by-covariate interactions, which could bias the results ([Sullivan et al., 2018](#ref-sullivan2018should)).[^5] This leaves us with two basic solutions: expand the predictor matrix to include all possible `osp`-by-covariate interactions, or impute the data sets separately by the two levels of `osp`. With a small number of rows, the second option might be worrisome, but I think splitting the data set into `\(n_{{\text{osp}} = 0} = 2{,}106\)` and `\(n_{{\text{osp}} = 1} = 479\)` should be fine.
+I might also explicitly mention that, yes, we are imputing the missing data for the criterion variable `koa`. Personally, I find this natural and sensible. But there has been some concern about imputing missing criterion values in some areas of the literature. If you share that concern, see the nice simulation study by Kontopantelis et al. ([2017](#ref-kontopantelis2017outcome)). In short, it’s fine.
+
+By default, all variables are used to predict the missingness of all other variables in a simple linear model (execute `imputed.datasets$predictorMatrix`). However, there is some concern in the RCT literature that such a simple model may be inappropriate in that it would not be robust to possible treatment-by-covariate interactions, which could bias the results ([Sullivan et al., 2018](#ref-sullivan2018should); [Zhang et al., 2023](#ref-zhang2023should)).[^5] This leaves us with two basic solutions: expand the predictor matrix to include all possible `osp`-by-covariate interactions, or impute the data sets separately by the two levels of `osp`. With a small number of rows, the second option might be worrisome, but I think splitting the data set into `\(n_{{\text{osp}} = 0} = 2{,}106\)` and `\(n_{{\text{osp}} = 1} = 479\)` should be fine.[^6]
 
 Toward that end, we first make two new versions of the `d` data set. The new `d0` subset only contains the cases for which `osp == 0`; the `d1` subset only contains the remaining cases for which `osp == 1`.
 
@@ -231,23 +233,27 @@ imputed.datasets |>
     ##  $ ignore         : logi [1:2585] FALSE FALSE FALSE FALSE FALSE FALSE ...
     ##  $ seed           : logi NA
     ##  $ iteration      : num 5
-    ##  $ lastSeedValue  : int [1:626] 10403 144 572103155 -1806920652 -375284517 464361388 1131814530 1688459416 -1207814412 1902940732 ...
-    ##  $ chainMean      : num [1:7, 1:5, 1:5] NaN NaN NaN NaN 0.536 ...
-    ##  $ chainVar       : num [1:7, 1:5, 1:5] NA NA NA NA 0.268 ...
+    ##  $ lastSeedValue  : int [1:626] 10403 567 609554489 -1561491313 75312635 1003853842 -1636020304 -460525899 -856562940 -2136089537 ...
+    ##  $ chainMean      : num [1:7, 1:5, 1:5] NaN NaN NaN NaN 0.429 ...
+    ##  $ chainVar       : num [1:7, 1:5, 1:5] NA NA NA NA 0.265 ...
     ##  $ loggedEvents   :'data.frame':	1 obs. of  5 variables:
     ##  $ version        :Classes 'package_version', 'numeric_version'  hidden list of 1
     ##  $ date           : Date[1:1], format: "2025-02-03"
 
 In the `str()` output, you’ll note how the data frame in the `data` section now has 2,585 rows (i.e., the full sample size), and that correct number of cases is also echoed in the `where` and `ignore` sections. `rbind()` worked!
 
-By default, `mice()` only imputes five data sets (i.e., `m = 5`). In my use case, it’d be better if we had a larger number like 20 or 100. For the sake of practice in this post, we’ll use `m = 10`. I’d also like to make my results more reproducible by setting my seed value by way of the `seed` argument. Finally, I continue setting `print = FALSE` for silent printing.
+By default, `mice()` only imputes five data sets (i.e., `m = 5`). In my use case, it’d be better if we had a larger number like 20 or 100. For the sake of practice in this post, we’ll use `m = 10`.
+
+Notice the `iteration` section. By default, `mice()` used 5 MCMC iterations when using multiple imputation. It’s a good idea to increase that number, which here we do by setting `maxit = 50`.
+
+I’d also like to make my results more reproducible by setting my seed value by way of the `seed` argument. Finally, I continue setting `print = FALSE` for silent printing.
 
 Here’s the full updated workflow.
 
 ``` r
 # Impute separately by `osp`
-imputed.datasets0 <- mice(d0, m = 10, print = FALSE, seed = 0)
-imputed.datasets1 <- mice(d1, m = 10, print = FALSE, seed = 1)
+imputed.datasets0 <- mice(d0, m = 10, maxit = 50, print = FALSE, seed = 0)
+imputed.datasets1 <- mice(d1, m = 10, maxit = 50, print = FALSE, seed = 1)
 
 # Combine
 imputed.datasets <- rbind(imputed.datasets0, imputed.datasets1)
@@ -261,7 +267,7 @@ plot(imputed.datasets)
 
 <img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-14-1.png" width="672" />
 
-To my eye, these look pretty good.
+To my eye, these look pretty good. For tips on how to interpret trace plots like this from `mice()`, see [Section 6.5.2](https://stefvanbuuren.name/fimd/sec-algoptions.html#sec:convergence) from van Buuren ([2018](#ref-vanbuurenFlexibleImputationMissing2018)).
 
 Once you’re imputed the data sets, it’s also a good idea to take a look at the results with summary statistics and/or plots. As a first step, you can extract the MI data sets with the `complete()` function. By setting `action = "long"`, all MI data sets will be returned in a long format with respect to the imputation number (`.imp`). Setting `include = TRUE` returns the results for the original un-imputed data set (`.imp == 0`), too.
 
@@ -296,16 +302,16 @@ imputed.datasets |>
     ##     .imp   `0`   `1`  `NA`
     ##    <int> <int> <int> <int>
     ##  1     0  1197  1195   193
-    ##  2     1  1295  1290    NA
-    ##  3     2  1283  1302    NA
-    ##  4     3  1289  1296    NA
-    ##  5     4  1300  1285    NA
-    ##  6     5  1285  1300    NA
-    ##  7     6  1286  1299    NA
-    ##  8     7  1286  1299    NA
-    ##  9     8  1286  1299    NA
-    ## 10     9  1284  1301    NA
-    ## 11    10  1290  1295    NA
+    ##  2     1  1280  1305    NA
+    ##  3     2  1280  1305    NA
+    ##  4     3  1292  1293    NA
+    ##  5     4  1277  1308    NA
+    ##  6     5  1287  1298    NA
+    ##  7     6  1290  1295    NA
+    ##  8     7  1289  1296    NA
+    ##  9     8  1294  1291    NA
+    ## 10     9  1292  1293    NA
+    ## 11    10  1295  1290    NA
 
 Here we compute the means of the standard deviations for `bmi` across the imputations, and then compare those statistics with the statistics for the complete cases in a faceted histogram.
 
@@ -360,7 +366,7 @@ Now we match. Were we using a single data set, we might match with the `matchit(
 
 In the `formula` argument, we use the confounder variables to predict the *treatment* variable `osp`. Here I use a simple approach where all confounder only have lower-order terms. But you might also consider adding interactions among the confounders, or even adding polynomial terms (see [Zhao et al., 2021](#ref-zhao2021propensity) for an extended example).
 
-The default for the `method` argument is `"nearest"` for *nearest neighbor matching*. In a personal consultation, Noah Greifer recommended I use the *genetic matching* approach for my use case, and so we use it here. You can learn about the various matching methods in Greifer’s [*Matching Methods* vignette](https://CRAN.R-project.org/package=MatchIt/vignettes/matching-methods.html), and you can specifically learn about the genetic algorithm used when you set `methoc = "genetic"` [here](https://CRAN.R-project.org/package=MatchIt/vignettes/matching-methods.html#genetic-matching-method-genetic). In short, the genetic algorithm optimizes balance among the confounders using the scaled generalized Mahalanobis distance via functions from the **Matching** package ([Sekhon, 2011](#ref-sekhon2011multivariate)).
+The default for the `method` argument is `"nearest"` for *nearest neighbor matching*. In a personal consultation, Noah Greifer recommended I use the *genetic matching* approach for my use case, and so we use it here. You can learn about the various matching methods in Greifer’s ([2025a](#ref-greifer2025matching)) vignette [*Matching Methods* vignette](https://CRAN.R-project.org/package=MatchIt/vignettes/matching-methods.html), and about the genetic algorithm in specific in Greifer’s ([2022](#ref-greifer2022genetic)) blog post [*Genetic Matching, from the Ground Up*](https://ngreifer.github.io/blog/genetic-matching/). In short, the genetic algorithm optimizes balance among the confounders using the scaled generalized Mahalanobis distance via functions from the **Matching** package ([Sekhon, 2011](#ref-sekhon2011multivariate)).
 
 Note the `pop.size` argument. If you run the code without that argument, you’ll get a warning message from **Matching** that the optimization parameters are at their default values, and that `pop.size` in particular might should be increased from its default setting of `100`. At the moment, I do not have a deep grasp of this setting, but for the sake of practice I have increased it to `200`.
 
@@ -381,7 +387,7 @@ t1 - t0
 
     ## Time difference of 9.274688 mins
 
-Note the `Sys.time()` calls and the `t1 - t0` algebra at the bottom of the code block. This is a method I often use to keep track of the computation time for longer operations. In this case this code block took just under ten minutes to complete on my laptop.[^6] YMMV.
+Note the `Sys.time()` calls and the `t1 - t0` algebra at the bottom of the code block. This is a method I often use to keep track of the computation time for longer operations. In this case this code block took just under ten minutes to complete on my laptop.[^7] YMMV.
 
 The output of `matchthem()` is an object of class `mimids`, which is a list of 4.
 
@@ -468,19 +474,19 @@ bal.tab(osp ~ male + race + smoker,
 
     ## Balance summary across all imputations
     ##          Type Min.Diff.Adj Mean.Diff.Adj Max.Diff.Adj
-    ## male   Binary       0.0000        0.0000            0
-    ## race_0 Binary       0.0000        0.0000            0
-    ## race_1 Binary       0.0000        0.0000            0
-    ## race_2 Binary       0.0000        0.0000            0
-    ## race_3 Binary       0.0000        0.0000            0
-    ## smoker Binary      -0.0042       -0.0004            0
+    ## male   Binary       0.0000        0.0000       0.0000
+    ## race_0 Binary       0.0000        0.0000       0.0000
+    ## race_1 Binary      -0.0021        0.0004       0.0021
+    ## race_2 Binary      -0.0021       -0.0002       0.0000
+    ## race_3 Binary      -0.0021       -0.0002       0.0021
+    ## smoker Binary      -0.0125        0.0002       0.0084
     ## 
     ## Average effective sample sizes across imputations
     ##               0   1
     ## Unadjusted 2106 479
     ## Adjusted    479 479
 
-In this case all the contrasts look great. The SMD’s are all below the conventional threshold for a *small* difference,[^7] and the proportion contrasts are about as close to zero as you could hope for.
+In this case all the contrasts look great. The SMD’s are all below the conventional threshold for a *small* difference,[^8] and the proportion contrasts are about as close to zero as you could hope for.
 
 Also note in the secondary tables we can see that whereas the total sample size for the `osp == 0` cases was 2,106, only 479 cases were matched with with the 479 available cases in the `osp == 1`. This is as expected.
 
@@ -630,7 +636,7 @@ We’re finally ready to fit the substantive model. Technically we could just fi
 
 `koa ~ osp`.
 
-Given our matching procedure, this simple model would be valid. However, there’s no inherent reason for us not to condition the substantive model on the covariate set. Doing so can help further control for confounding, particularly in the presence of imperfect matching, and it can also increase the precision of the estimate[^8] (see [Greifer & Stuart, 2021](#ref-greifer2021matching)). One approach would be the simple expansion:
+Given our matching procedure, this simple model would be valid. However, there’s no inherent reason for us not to condition the substantive model on the covariate set. Doing so can help further control for confounding, particularly in the presence of imperfect matching, and it can also increase the precision of the estimate[^9] (see [Greifer & Stuart, 2021b](#ref-greifer2021matching)). One approach would be the simple expansion:
 
 `koa ~ osp + age + male + bmi + race + smoker`,
 
@@ -692,11 +698,11 @@ matched.models |>
     ## 15 -925.27761624 958.08975071
     ## 16   -0.23224426   0.91547226
 
-However, in the *MatchIt: Getting Started* vignette, Greifer cautioned:
+However, in the ([2025b](#ref-greifer2025MatchIt)) [*MatchIt: Getting Started* vignette](https://CRAN.R-project.org/package=MatchIt/vignettes/MatchIt.html), Greifer cautioned:
 
 > The outcome model coefficients and tests should not be interpreted or reported.
 
-But rather, one should only report and interpret the causal estimand, which in our case is the ATT, the *average treatment effect for the treated*.[^9] We can compute the ATT with g-computation using the `avg_comparisons()` function from the **marginaleffects** package.[^10] Note how we can request cluster-robust standard errors with pair membership as the clustering variable by setting `vcov = ~subclass`. By setting `by = "osp"`, we compute both the ATU[^11] and the ATT. Our focus will be the ATT.
+But rather, one should only report and interpret the causal estimand, which in our case is the ATT, the *average treatment effect for the treated*.[^10] We can compute the ATT with g-computation using the `avg_comparisons()` function from the **marginaleffects** package.[^11] Note how we can request cluster-robust standard errors with pair membership as the clustering variable by setting `vcov = ~subclass`. By setting `by = "osp"`, we compute both the ATU[^12] and the ATT. Our focus will be the ATT.
 
 ``` r
 avg_comparisons(matched.models,
@@ -826,15 +832,39 @@ Gelman, A., Hill, J., & Vehtari, A. (2020). *Regression and other stories*. Camb
 
 </div>
 
+<div id="ref-greifer2022genetic" class="csl-entry">
+
+Greifer, N. (2022, October 8). *Genetic matching, from the ground up*. <https://ngreifer.github.io/blog/genetic-matching/>
+
+</div>
+
 <div id="ref-R-cobalt" class="csl-entry">
 
 Greifer, N. (2024). *<span class="nocase">cobalt</span>: Covariate balance tables and plots* \[Manual\]. <https://CRAN.R-project.org/package=cobalt>
 
 </div>
 
+<div id="ref-greifer2025matching" class="csl-entry">
+
+Greifer, N. (2025a, January 11). *Matching methods*. <https://CRAN.R-project.org/package=MatchIt/vignettes/matching-methods.html>
+
+</div>
+
+<div id="ref-greifer2025MatchIt" class="csl-entry">
+
+Greifer, N. (2025b, January 11). *MatchIt: Getting started*. <https://CRAN.R-project.org/package=MatchIt/vignettes/MatchIt.html>
+
+</div>
+
+<div id="ref-greifer2021choosing" class="csl-entry">
+
+Greifer, N., & Stuart, E. A. (2021a). *Choosing the causal estimand for propensity score analysis of observational studies*. <https://doi.org/10.48550/arXiv.2106.10577>
+
+</div>
+
 <div id="ref-greifer2021matching" class="csl-entry">
 
-Greifer, N., & Stuart, E. A. (2021). Matching methods for confounder adjustment: An addition to the epidemiologist’s toolbox. *Epidemiologic Reviews*, *43*(1), 118–129. <https://doi.org/10.1093/epirev/mxab003>
+Greifer, N., & Stuart, E. A. (2021b). Matching methods for confounder adjustment: An addition to the epidemiologist’s toolbox. *Epidemiologic Reviews*, *43*(1), 118–129. <https://doi.org/10.1093/epirev/mxab003>
 
 </div>
 
@@ -865,6 +895,12 @@ Ismay, C., & Kim, A. Y. (2022). *Statistical inference via data science; A moder
 <div id="ref-kazdin2017ResearchDesign" class="csl-entry">
 
 Kazdin, A. E. (2017). *Research design in clinical psychology, 5th Edition*. Pearson. <https://www.pearson.com/>
+
+</div>
+
+<div id="ref-kontopantelis2017outcome" class="csl-entry">
+
+Kontopantelis, E., White, I. R., Sperrin, M., & Buchan, I. (2017). Outcome-sensitive multiple imputation: A simulation study. *BMC Medical Research Methodology*, *17*, 2. <https://doi.org/10.1186/s12874-016-0281-5>
 
 </div>
 
@@ -994,6 +1030,12 @@ Ye, T., Shao, J., Yi, Y., & Zhao, Q. (2022). Toward better practice of covariate
 
 </div>
 
+<div id="ref-zhang2023should" class="csl-entry">
+
+Zhang, J., Dashti, S. G., Carlin, J. B., Lee, K. J., & Moreno-Betancur, M. (2023). Should multiple imputation be stratified by exposure group when estimating causal effects via outcome regression in observational studies? *BMC Medical Research Methodology*, *23*(1), 42. <https://doi.org/10.1186/s12874-023-01843-6>
+
+</div>
+
 <div id="ref-zhao2021propensity" class="csl-entry">
 
 Zhao, Q.-Y., Luo, J.-C., Su, Y., Zhang, Y.-J., Tu, G.-W., & Luo, Z. (2021). Propensity score matching with R: Conventional methods and new features. *Annals of Translational Medicine*, *9*(9). <https://doi.org/10.21037/atm-20-3998>
@@ -1012,14 +1054,16 @@ Zhao, Q.-Y., Luo, J.-C., Su, Y., Zhang, Y.-J., Tu, G.-W., & Luo, Z. (2021). Prop
 
 [^5]: Though we don’t have randomly-assigned groups in this example, I believe the basic concern is the same. The two groups may have different correlations among the covariates, and we want an imputation method that can handle such a pattern.
 
-[^6]: 2023 M2 chip MacBook Pro
+[^6]: As a third option, you could also use random forests to addresses possible interactions and nonlinear effects.
 
-[^7]: That is, they’re below `\(d = 0.2\)`. See Cohen ([1988](#ref-cohenStatisticalPowerAnalysis1988a))
+[^7]: 2023 M2 chip MacBook Pro
 
-[^8]: i.e., increase statistical power by decreasing the standard error.
+[^8]: That is, they’re below `\(d = 0.2\)`. See Cohen ([1988](#ref-cohenStatisticalPowerAnalysis1988a))
 
-[^9]: If you’re not familiar with the ATT, it was discussed a bit in Greifer & Stuart ([2021](#ref-greifer2021matching)), though instead by the term “average exposure effect in the exposed.” Greifer recommend the ATT for my real-world use case, which is why I use it here.
+[^9]: i.e., increase statistical power by decreasing the standard error.
 
-[^10]: If you’re not familiar with g-computation, boy do I have the blog series for you. Start [here](https://solomonkurz.netlify.app/blog/2023-04-12-boost-your-power-with-baseline-covariates/). You’ll want to read the first three posts. Sorry, but some topics take a little effort to walk out.
+[^10]: If you’re not familiar with the ATT, it was discussed a bit in Greifer & Stuart ([2021b](#ref-greifer2021matching)), though instead by the term “average exposure effect in the exposed.” Greifer recommend the ATT for my real-world use case, which is why I use it here. See also Greifer & Stuart ([2021a](#ref-greifer2021choosing)).
 
-[^11]: That is, the *average treatment effect for the untreated*.
+[^11]: If you’re not familiar with g-computation, boy do I have the blog series for you. Start [here](https://solomonkurz.netlify.app/blog/2023-04-12-boost-your-power-with-baseline-covariates/). You’ll want to read the first three posts. Sorry, but some topics take a little effort to walk out.
+
+[^12]: That is, the *average treatment effect for the untreated*.
