@@ -21,7 +21,7 @@ csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl
 link-citations: yes
 ---
 
-The other day, my Twitter feed informed me Penn Jillette just clocked in 1000 consecutive days of meditation using the Headspace app. Now he's considering checking out Sam Harris's new Waking Up meditation app. Sam left a congratulatory comment on Penn's tweet.
+The other day, my Twitter feed informed me Penn Jillette just clocked in 1000 consecutive days of meditation using the Headspace app. Now he's considering checking out Sam Harris's new Waking Up meditation app. Sam left a congratulatory comment on Penn's tweet.^[Back in the day, I used to include a link to the tweets. Sadly, Sam has since deleted his account, and the whole Twitter ecosystem has changed a lot since then. *Sigh* Remember the good ol days?]
 
 ```{r, eval = F}
 blogdown::shortcode('tweet', '1048730683940646914')

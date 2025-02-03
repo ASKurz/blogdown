@@ -21,7 +21,7 @@ csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl
 link-citations: yes
 ---
 
-The other day, my Twitter feed informed me Penn Jillette just clocked in 1000 consecutive days of meditation using the Headspace app. Now he’s considering checking out Sam Harris’s new Waking Up meditation app. Sam left a congratulatory comment on Penn’s tweet.
+The other day, my Twitter feed informed me Penn Jillette just clocked in 1000 consecutive days of meditation using the Headspace app. Now he’s considering checking out Sam Harris’s new Waking Up meditation app. Sam left a congratulatory comment on Penn’s tweet.[^1]
 
 ``` r
 blogdown::shortcode('tweet', '1048730683940646914')
@@ -107,3 +107,5 @@ Insight Timer allows you to download your data as a CSV file, which you can keep
 ## Parting thoughts
 
 Insight Timer has other functions, such as social networking and dharma talks. I just don’t care about those things, so you can learn about them on your own. But if you’re interested in learning about meditation or even if you’re a veteran meditator looking for a convenient app to augment your practice with, do consider Insight Timer. There’s no reason to spend your money on the alternatives before you capitalize on such a powerful resource that’s available to you for free.
+
+[^1]: Back in the day, I used to include a link to the tweets. Sadly, Sam has since deleted his account, and the whole Twitter ecosystem has changed a lot since then. *Sigh* Remember the good ol days?
