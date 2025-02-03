@@ -440,9 +440,9 @@ sd <-
 
 Now in our global `aes()` statement in the plot, we put `density` on the x and `response` on the y. We need to take a few other subtle steps:
 
--   Switch out `geom_line()` for `geom_path()` (see [here](https://ggplot2.tidyverse.org/reference/geom_path.html)).
--   Drop the `height` argument within `geom_jitter()` for `width`.
--   Switch out `scale_y_continuous()` for `scale_x_continuous()`.
+- Switch out `geom_line()` for `geom_path()` (see [here](https://ggplot2.tidyverse.org/reference/geom_path.html)).
+- Drop the `height` argument within `geom_jitter()` for `width`.
+- Switch out `scale_y_continuous()` for `scale_x_continuous()`.
 
 Though totally not necessary, we’ll add a little something extra by coloring the Gaussians by their means.
 
@@ -471,7 +471,7 @@ There you have it–Kruschke-style sideways Gaussians for your model plots.
 
 After releasing the initial version of this post, some of us had a lively twitter discussion on how to improve the code.
 
-{{% tweet "1076395687020056576" %}}
+{{% tweet user="SolomonKurz" id="1076112294290092032" %}}
 
 Part of that discussion had to do with the possibility of using functions from [Claus Wilke](https://twitter.com/ClausWilke/)’s great [ggridges package](https://github.com/clauswilke/ggridges). After some great efforts, especially from [Matthew Kay](https://twitter.com/mjskay/), we came up with solutions. In this section, we’ll cover them in some detail.
 
@@ -639,6 +639,9 @@ afd %>%
   coord_cartesian(ylim = c(1.25, 5.5))
 ```
 
+    ## Warning in geom_ridgeline(aes(height = density, group = interaction(condition, : Ignoring unknown
+    ## parameters: `size`
+
 <img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-30-1.png" width="384" />
 
 “But I wanted my Gaussians tipped to the left!”, you say. Yep, we can do that, too. Three things: First, we’ll want to adjust the `height` parameter to `-density`. We want our Gaussians to extend under their baselines. Along with that, we need to include `min_height = NA`. Finally, we’ll switch out `coord_cartesian()` for good old `coord_flip()`. And you can adjust your `ylim` parameters as desired.
@@ -655,6 +658,9 @@ afd %>%
   coord_flip(ylim = c(0.5, 4.75))
 ```
 
+    ## Warning in geom_ridgeline(aes(height = -density, group = interaction(condition, : Ignoring unknown
+    ## parameters: `size`
+
 <img src="{{< blogdown/postref >}}index_files/figure-html/unnamed-chunk-31-1.png" width="384" />
 
 I think it’s important to note that I’ve never met any of the people who helped me with this project. Academic twitter, man–it’s a good place to be.
@@ -665,59 +671,50 @@ I think it’s important to note that I’ve never met any of the people who hel
 sessionInfo()
 ```
 
-    ## R version 4.2.0 (2022-04-22)
-    ## Platform: x86_64-apple-darwin17.0 (64-bit)
-    ## Running under: macOS Big Sur/Monterey 10.16
+    ## R version 4.4.2 (2024-10-31)
+    ## Platform: aarch64-apple-darwin20
+    ## Running under: macOS Ventura 13.4
     ## 
     ## Matrix products: default
-    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRblas.0.dylib
-    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRlapack.dylib
+    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/lib/libRblas.0.dylib 
+    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.0
     ## 
     ## locale:
     ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+    ## 
+    ## time zone: America/Chicago
+    ## tzcode source: internal
     ## 
     ## attached base packages:
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ##  [1] ggridges_0.5.3  tidybayes_3.0.2 brms_2.18.0     Rcpp_1.0.9      forcats_0.5.1   stringr_1.4.1  
-    ##  [7] dplyr_1.0.10    purrr_0.3.4     readr_2.1.2     tidyr_1.2.1     tibble_3.1.8    ggplot2_3.4.0  
-    ## [13] tidyverse_1.3.2
+    ##  [1] ggridges_0.5.6  tidybayes_3.0.7 brms_2.22.0     Rcpp_1.0.13-1   lubridate_1.9.3 forcats_1.0.0  
+    ##  [7] stringr_1.5.1   dplyr_1.1.4     purrr_1.0.2     readr_2.1.5     tidyr_1.3.1     tibble_3.2.1   
+    ## [13] ggplot2_3.5.1   tidyverse_2.0.0
     ## 
     ## loaded via a namespace (and not attached):
-    ##   [1] readxl_1.4.1         backports_1.4.1      plyr_1.8.7           igraph_1.3.4        
-    ##   [5] svUnit_1.0.6         splines_4.2.0        crosstalk_1.2.0      TH.data_1.1-1       
-    ##   [9] rstantools_2.2.0     inline_0.3.19        digest_0.6.30        htmltools_0.5.3     
-    ##  [13] fansi_1.0.3          magrittr_2.0.3       checkmate_2.1.0      googlesheets4_1.0.1 
-    ##  [17] tzdb_0.3.0           modelr_0.1.8         RcppParallel_5.1.5   matrixStats_0.62.0  
-    ##  [21] xts_0.12.1           sandwich_3.0-2       prettyunits_1.1.1    colorspace_2.0-3    
-    ##  [25] rvest_1.0.2          ggdist_3.2.0         haven_2.5.1          xfun_0.35           
-    ##  [29] callr_3.7.3          crayon_1.5.2         jsonlite_1.8.3       lme4_1.1-31         
-    ##  [33] survival_3.4-0       zoo_1.8-10           glue_1.6.2           gtable_0.3.1        
-    ##  [37] gargle_1.2.0         emmeans_1.8.0        distributional_0.3.1 pkgbuild_1.3.1      
-    ##  [41] rstan_2.21.7         abind_1.4-5          scales_1.2.1         mvtnorm_1.1-3       
-    ##  [45] DBI_1.1.3            miniUI_0.1.1.1       viridisLite_0.4.1    xtable_1.8-4        
-    ##  [49] stats4_4.2.0         StanHeaders_2.21.0-7 DT_0.24              htmlwidgets_1.5.4   
-    ##  [53] httr_1.4.4           threejs_0.3.3        arrayhelpers_1.1-0   posterior_1.3.1     
-    ##  [57] ellipsis_0.3.2       pkgconfig_2.0.3      loo_2.5.1            farver_2.1.1        
-    ##  [61] sass_0.4.2           dbplyr_2.2.1         utf8_1.2.2           labeling_0.4.2      
-    ##  [65] tidyselect_1.1.2     rlang_1.0.6          reshape2_1.4.4       later_1.3.0         
-    ##  [69] munsell_0.5.0        cellranger_1.1.0     tools_4.2.0          cachem_1.0.6        
-    ##  [73] cli_3.4.1            generics_0.1.3       broom_1.0.1          evaluate_0.18       
-    ##  [77] fastmap_1.1.0        yaml_2.3.5           processx_3.8.0       knitr_1.40          
-    ##  [81] fs_1.5.2             nlme_3.1-159         mime_0.12            projpred_2.2.1      
-    ##  [85] xml2_1.3.3           compiler_4.2.0       bayesplot_1.9.0      shinythemes_1.2.0   
-    ##  [89] rstudioapi_0.13      gamm4_0.2-6          reprex_2.0.2         bslib_0.4.0         
-    ##  [93] stringi_1.7.8        highr_0.9            ps_1.7.2             blogdown_1.15       
-    ##  [97] Brobdingnag_1.2-8    lattice_0.20-45      Matrix_1.4-1         nloptr_2.0.3        
-    ## [101] markdown_1.1         shinyjs_2.1.0        tensorA_0.36.2       vctrs_0.5.0         
-    ## [105] pillar_1.8.1         lifecycle_1.0.3      jquerylib_0.1.4      bridgesampling_1.1-2
-    ## [109] estimability_1.4.1   httpuv_1.6.5         R6_2.5.1             bookdown_0.28       
-    ## [113] promises_1.2.0.1     gridExtra_2.3        codetools_0.2-18     boot_1.3-28         
-    ## [117] colourpicker_1.1.1   MASS_7.3-58.1        gtools_3.9.3         assertthat_0.2.1    
-    ## [121] withr_2.5.0          shinystan_2.6.0      multcomp_1.4-20      mgcv_1.8-40         
-    ## [125] parallel_4.2.0       hms_1.1.1            grid_4.2.0           coda_0.19-4         
-    ## [129] minqa_1.2.5          rmarkdown_2.16       googledrive_2.0.0    shiny_1.7.2         
-    ## [133] lubridate_1.8.0      base64enc_0.1-3      dygraphs_1.1.1.6
+    ##  [1] svUnit_1.0.6         tidyselect_1.2.1     viridisLite_0.4.2    farver_2.1.2        
+    ##  [5] loo_2.8.0            fastmap_1.1.1        TH.data_1.1-2        tensorA_0.36.2.1    
+    ##  [9] blogdown_1.20        digest_0.6.37        estimability_1.5.1   timechange_0.3.0    
+    ## [13] lifecycle_1.0.4      StanHeaders_2.32.10  survival_3.7-0       magrittr_2.0.3      
+    ## [17] posterior_1.6.0      compiler_4.4.2       rlang_1.1.4          sass_0.4.9          
+    ## [21] tools_4.4.2          utf8_1.2.4           yaml_2.3.8           knitr_1.49          
+    ## [25] labeling_0.4.3       bridgesampling_1.1-2 pkgbuild_1.4.4       curl_6.0.1          
+    ## [29] multcomp_1.4-26      abind_1.4-8          withr_3.0.2          grid_4.4.2          
+    ## [33] stats4_4.4.2         xtable_1.8-4         colorspace_2.1-1     inline_0.3.19       
+    ## [37] emmeans_1.10.3       scales_1.3.0         MASS_7.3-61          cli_3.6.3           
+    ## [41] mvtnorm_1.2-5        rmarkdown_2.29       generics_0.1.3       RcppParallel_5.1.7  
+    ## [45] rstudioapi_0.16.0    tzdb_0.4.0           cachem_1.0.8         rstan_2.32.6        
+    ## [49] splines_4.4.2        bayesplot_1.11.1     parallel_4.4.2       matrixStats_1.4.1   
+    ## [53] vctrs_0.6.5          V8_4.4.2             Matrix_1.7-1         sandwich_3.1-1      
+    ## [57] jsonlite_1.8.9       bookdown_0.40        arrayhelpers_1.1-0   hms_1.1.3           
+    ## [61] ggdist_3.3.2         jquerylib_0.1.4      glue_1.8.0           codetools_0.2-20    
+    ## [65] distributional_0.5.0 stringi_1.8.4        gtable_0.3.6         QuickJSR_1.1.3      
+    ## [69] munsell_0.5.1        pillar_1.10.1        htmltools_0.5.8.1    Brobdingnag_1.2-9   
+    ## [73] R6_2.5.1             evaluate_1.0.1       lattice_0.22-6       backports_1.5.0     
+    ## [77] bslib_0.7.0          rstantools_2.4.0     coda_0.19-4.1        gridExtra_2.3       
+    ## [81] nlme_3.1-166         checkmate_2.3.2      xfun_0.49            zoo_1.8-12          
+    ## [85] pkgconfig_2.0.3
 
 [^1]: I’ve made a lot of progress working through Kruschke’s material since the initial release of this blog post. You can find the results in an ebook, [here](https://bookdown.org/content/3686/).

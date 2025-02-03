@@ -407,7 +407,10 @@ There you have it--Kruschke-style sideways Gaussians for your model plots.
 After releasing the initial version of this post, some of us had a lively twitter discussion on how to improve the code.
 
 ```{r echo = FALSE}
-blogdown::shortcode('tweet', '1076395687020056576')
+blogdown::shortcode(
+  "tweet", 
+  user = "SolomonKurz",
+  id = "1076112294290092032")
 ```
 
 Part of that discussion had to do with the possibility of using functions from [Claus Wilke](https://twitter.com/ClausWilke/)'s great [ggridges package](https://github.com/clauswilke/ggridges). After some great efforts, especially from [Matthew Kay](https://twitter.com/mjskay/), we came up with solutions. In this section, we'll cover them in some detail.
