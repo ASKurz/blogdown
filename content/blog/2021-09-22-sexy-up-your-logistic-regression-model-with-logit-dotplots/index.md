@@ -15,9 +15,9 @@ tags:
 - tutorial
 lastmod: '2021-09-22T09:40:23-05:00'
 featured: no
-bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
-csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 ---
 
@@ -29,9 +29,9 @@ When you fit a logistic regression model, there are a lot of ways to display the
 
 For this post, I’m presuming some background knowledge:
 
--   You should be familiar with logistic regression. For introductions, I recommend Roback and Legler’s ([2021](#ref-roback2021beyond)) online text or James, Witten, Hastie, and Tibshirani’s ([2021](#ref-james2021AnIntroduction)) online text. Both texts are written from a frequentist perspective, which is also the framework we’ll be using in this blog post. For Bayesian introductions to logistic regression, I recommend either edition of McElreath’s text ([2020](#ref-mcelreathStatisticalRethinkingBayesian2020), [2015](#ref-mcelreathStatisticalRethinkingBayesian2015)); Kruschke’s ([2015](#ref-kruschkeDoingBayesianData2015)) text; or Gelman, Hill, and Vehtari’s ([2020](#ref-gelmanRegressionOtherStories2020)) text.
+- You should be familiar with logistic regression. For introductions, I recommend Roback and Legler’s ([2021](#ref-roback2021beyond)) online text or James, Witten, Hastie, and Tibshirani’s ([2021](#ref-james2021AnIntroduction)) online text. Both texts are written from a frequentist perspective, which is also the framework we’ll be using in this blog post. For Bayesian introductions to logistic regression, I recommend either edition of McElreath’s text ([2015](#ref-mcelreathStatisticalRethinkingBayesian2015), [2020](#ref-mcelreathStatisticalRethinkingBayesian2020)); Kruschke’s ([2015](#ref-kruschkeDoingBayesianData2015)) text; or Gelman, Hill, and Vehtari’s ([2020](#ref-gelmanRegressionOtherStories2020)) text.
 
--   All code is in **R** ([R Core Team, 2022](#ref-R-base)). Data wrangling and plotting were done with help from the **tidyverse** ([Wickham et al., 2019](#ref-wickhamWelcomeTidyverse2019); [Wickham, 2022](#ref-R-tidyverse)) and **broom** ([Robinson et al., 2022](#ref-R-broom)). The data are from the [**fivethirtyeight** package](https://github.com/debruine/faux) ([Kim et al., 2018](#ref-fivethirtyeight2018), [2020](#ref-R-fivethirtyeight)).
+- All code is in **R** ([R Core Team, 2022](#ref-R-base)). Data wrangling and plotting were done with help from the **tidyverse** ([Wickham et al., 2019](#ref-wickhamWelcomeTidyverse2019); [Wickham, 2022](#ref-R-tidyverse)) and **broom** ([Robinson et al., 2022](#ref-R-broom)). The data are from the [**fivethirtyeight** package](https://github.com/debruine/faux) ([Kim et al., 2018](#ref-fivethirtyeight2018), [2020](#ref-R-fivethirtyeight)).
 
 Here we load our primary **R** packages.
 
@@ -342,53 +342,51 @@ That’s a wrap, friends. No more lonely logistic curves absent data. Flaunt tho
 sessionInfo()
 ```
 
-    ## R version 4.2.0 (2022-04-22)
-    ## Platform: x86_64-apple-darwin17.0 (64-bit)
-    ## Running under: macOS Big Sur/Monterey 10.16
+    ## R version 4.4.2 (2024-10-31)
+    ## Platform: aarch64-apple-darwin20
+    ## Running under: macOS Ventura 13.4
     ## 
     ## Matrix products: default
-    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRblas.0.dylib
-    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRlapack.dylib
+    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/lib/libRblas.0.dylib 
+    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.0
     ## 
     ## locale:
     ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+    ## 
+    ## time zone: America/Chicago
+    ## tzcode source: internal
     ## 
     ## attached base packages:
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ##  [1] ggdist_3.2.0          broom_1.0.1           fivethirtyeight_0.6.2
-    ##  [4] forcats_0.5.1         stringr_1.4.1         dplyr_1.0.10         
-    ##  [7] purrr_0.3.4           readr_2.1.2           tidyr_1.2.1          
-    ## [10] tibble_3.1.8          ggplot2_3.4.0         tidyverse_1.3.2      
+    ##  [1] ggdist_3.3.2          broom_1.0.7           fivethirtyeight_0.6.2
+    ##  [4] lubridate_1.9.3       forcats_1.0.0         stringr_1.5.1        
+    ##  [7] dplyr_1.1.4           purrr_1.0.2           readr_2.1.5          
+    ## [10] tidyr_1.3.1           tibble_3.2.1          ggplot2_3.5.1        
+    ## [13] tidyverse_2.0.0      
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] lubridate_1.8.0      assertthat_0.2.1     digest_0.6.30       
-    ##  [4] utf8_1.2.2           R6_2.5.1             cellranger_1.1.0    
-    ##  [7] backports_1.4.1      reprex_2.0.2         evaluate_0.18       
-    ## [10] highr_0.9            httr_1.4.4           blogdown_1.15       
-    ## [13] pillar_1.8.1         rlang_1.0.6          googlesheets4_1.0.1 
-    ## [16] readxl_1.4.1         rstudioapi_0.13      jquerylib_0.1.4     
-    ## [19] rmarkdown_2.16       labeling_0.4.2       googledrive_2.0.0   
-    ## [22] munsell_0.5.0        compiler_4.2.0       modelr_0.1.8        
-    ## [25] xfun_0.35            pkgconfig_2.0.3      htmltools_0.5.3     
-    ## [28] tidyselect_1.1.2     bookdown_0.28        fansi_1.0.3         
-    ## [31] crayon_1.5.2         tzdb_0.3.0           dbplyr_2.2.1        
-    ## [34] withr_2.5.0          MASS_7.3-58.1        distributional_0.3.1
-    ## [37] grid_4.2.0           jsonlite_1.8.3       gtable_0.3.1        
-    ## [40] lifecycle_1.0.3      DBI_1.1.3            magrittr_2.0.3      
-    ## [43] scales_1.2.1         cli_3.4.1            stringi_1.7.8       
-    ## [46] cachem_1.0.6         farver_2.1.1         fs_1.5.2            
-    ## [49] xml2_1.3.3           bslib_0.4.0          ellipsis_0.3.2      
-    ## [52] generics_0.1.3       vctrs_0.5.0          tools_4.2.0         
-    ## [55] glue_1.6.2           hms_1.1.1            fastmap_1.1.0       
-    ## [58] yaml_2.3.5           colorspace_2.0-3     gargle_1.2.0        
-    ## [61] rvest_1.0.2          knitr_1.40           haven_2.5.1         
-    ## [64] sass_0.4.2
+    ##  [1] sass_0.4.9           utf8_1.2.4           generics_0.1.3      
+    ##  [4] blogdown_1.20        stringi_1.8.4        hms_1.1.3           
+    ##  [7] digest_0.6.37        magrittr_2.0.3       evaluate_1.0.1      
+    ## [10] grid_4.4.2           timechange_0.3.0     bookdown_0.40       
+    ## [13] fastmap_1.1.1        jsonlite_1.8.9       backports_1.5.0     
+    ## [16] scales_1.3.0         jquerylib_0.1.4      cli_3.6.3           
+    ## [19] rlang_1.1.4          munsell_0.5.1        withr_3.0.2         
+    ## [22] cachem_1.0.8         yaml_2.3.8           tools_4.4.2         
+    ## [25] tzdb_0.4.0           colorspace_2.1-1     vctrs_0.6.5         
+    ## [28] R6_2.5.1             lifecycle_1.0.4      pkgconfig_2.0.3     
+    ## [31] pillar_1.10.1        bslib_0.7.0          gtable_0.3.6        
+    ## [34] glue_1.8.0           Rcpp_1.0.13-1        xfun_0.49           
+    ## [37] tidyselect_1.2.1     rstudioapi_0.16.0    knitr_1.49          
+    ## [40] farver_2.1.2         htmltools_0.5.8.1    labeling_0.4.3      
+    ## [43] rmarkdown_2.29       compiler_4.4.2       quadprog_1.5-8      
+    ## [46] distributional_0.5.0
 
 ## References
 
-<div id="refs" class="references csl-bib-body hanging-indent" line-spacing="2">
+<div id="refs" class="references csl-bib-body hanging-indent" entry-spacing="0" line-spacing="2">
 
 <div id="ref-gelmanRegressionOtherStories2020" class="csl-entry">
 
@@ -426,15 +424,15 @@ Kruschke, J. K. (2015). *Doing Bayesian data analysis: A tutorial with R, JAGS, 
 
 </div>
 
-<div id="ref-mcelreathStatisticalRethinkingBayesian2020" class="csl-entry">
-
-McElreath, R. (2020). *Statistical rethinking: A Bayesian course with examples in R and Stan* (Second Edition). CRC Press. <https://xcelab.net/rm/statistical-rethinking/>
-
-</div>
-
 <div id="ref-mcelreathStatisticalRethinkingBayesian2015" class="csl-entry">
 
 McElreath, R. (2015). *Statistical rethinking: A Bayesian course with examples in R and Stan*. CRC press. <https://xcelab.net/rm/statistical-rethinking/>
+
+</div>
+
+<div id="ref-mcelreathStatisticalRethinkingBayesian2020" class="csl-entry">
+
+McElreath, R. (2020). *Statistical rethinking: A Bayesian course with examples in R and Stan* (Second Edition). CRC Press. <https://xcelab.net/rm/statistical-rethinking/>
 
 </div>
 
