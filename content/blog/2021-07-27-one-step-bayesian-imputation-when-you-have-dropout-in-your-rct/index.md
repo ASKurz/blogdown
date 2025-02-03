@@ -16,9 +16,9 @@ tags:
 - tutorial
 lastmod: '2021-07-27T11:32:52-05:00'
 featured: no
-bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
-csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 ---
 
@@ -34,13 +34,13 @@ Suppose you’ve got data from a randomized controlled trial (RCT) where partici
 
 For this post, I’m presuming you have a passing familiarity with the following:
 
--   You should be familiar with effect sizes, particularly with standardized mean differences. If you need to brush up, consider Cohen’s ([1988](#ref-cohenStatisticalPowerAnalysis1988a)) authoritative text, or Cummings newer ([2012](#ref-cummingUnderstandingTheNewStatistics2012)) text. For nice conceptual overview, I also recommend Kelley and Preacher’s ([2012](#ref-kelley2012effect)) paper, [*On effect size*](https://www3.nd.edu/~kkelley/publications/articles/Kelley_and_Preacher_Psychological_Methods_2012.pdf).
+- You should be familiar with effect sizes, particularly with standardized mean differences. If you need to brush up, consider Cohen’s ([1988](#ref-cohenStatisticalPowerAnalysis1988a)) authoritative text, or Cummings newer ([2012](#ref-cummingUnderstandingTheNewStatistics2012)) text. For nice conceptual overview, I also recommend Kelley and Preacher’s ([2012](#ref-kelley2012effect)) paper, [*On effect size*](https://www3.nd.edu/~kkelley/publications/articles/Kelley_and_Preacher_Psychological_Methods_2012.pdf).
 
--   You should be familiar with Bayesian regression. For thorough introductions, I recommend either edition of McElreath’s text ([2020](#ref-mcelreathStatisticalRethinkingBayesian2020), [2015](#ref-mcelreathStatisticalRethinkingBayesian2015)); Kruschke’s ([2015](#ref-kruschkeDoingBayesianData2015)) text; or Gelman, Hill, and Vehtari’s ([2020](#ref-gelmanRegressionOtherStories2020)) text. If you go with McElreath, he has a fine series of freely-available lectures [here](https://www.youtube.com/channel/UCNJK6_DZvcMqNSzQdEkzvzA/playlists).
+- You should be familiar with Bayesian regression. For thorough introductions, I recommend either edition of McElreath’s text ([2015](#ref-mcelreathStatisticalRethinkingBayesian2015), [2020](#ref-mcelreathStatisticalRethinkingBayesian2020)); Kruschke’s ([2015](#ref-kruschkeDoingBayesianData2015)) text; or Gelman, Hill, and Vehtari’s ([2020](#ref-gelmanRegressionOtherStories2020)) text. If you go with McElreath, he has a fine series of freely-available lectures [here](https://www.youtube.com/channel/UCNJK6_DZvcMqNSzQdEkzvzA/playlists).
 
--   Though we won’t be diving deep into it, here, you’ll want to have some familiarity with contemporary missing data theory. You can find brief overviews in the texts by McElreath and Gelman et al, above. For a deeper dive, I recommend Enders ([2010](#ref-enders2010applied)) or Little & Rubin ([2019](#ref-little2019statistical)). Also, heads up: [word on the street](https://twitter.com/AmandaKMontoya/status/1341936335301406722) is Enders is working on a second edition of his book.
+- Though we won’t be diving deep into it, here, you’ll want to have some familiarity with contemporary missing data theory. You can find brief overviews in the texts by McElreath and Gelman et al, above. For a deeper dive, I recommend Enders ([2010](#ref-enders2010applied)) or Little & Rubin ([2019](#ref-little2019statistical)). Also, heads up: [word on the street](https://twitter.com/AmandaKMontoya/status/1341936335301406722) is Enders is working on a second edition of his book.
 
--   All code is in **R** ([R Core Team, 2022](#ref-R-base)). Data wrangling and plotting were done with help from the **tidyverse** ([Wickham et al., 2019](#ref-wickhamWelcomeTidyverse2019); [Wickham, 2022](#ref-R-tidyverse)) and [**tidybayes**](https://mjskay.github.io/tidybayes/) ([Kay, 2022](#ref-R-tidybayes)). The data were simulated with help from the [**faux** package](https://github.com/debruine/faux) ([DeBruine, 2021](#ref-R-faux)) and the Bayesian models were fit using [**brms**](https://github.com/paul-buerkner/brms) ([Bürkner, 2017](#ref-burknerBrmsPackageBayesian2017), [2018](#ref-burknerAdvancedBayesianMultilevel2018), [2022](#ref-R-brms)).
+- All code is in **R** ([R Core Team, 2022](#ref-R-base)). Data wrangling and plotting were done with help from the **tidyverse** ([Wickham et al., 2019](#ref-wickhamWelcomeTidyverse2019); [Wickham, 2022](#ref-R-tidyverse)) and [**tidybayes**](https://mjskay.github.io/tidybayes/) ([Kay, 2023](#ref-R-tidybayes)). The data were simulated with help from the [**faux** package](https://github.com/debruine/faux) ([DeBruine, 2021](#ref-R-faux)) and the Bayesian models were fit using [**brms**](https://github.com/paul-buerkner/brms) ([Bürkner, 2017](#ref-burknerBrmsPackageBayesian2017), [2018](#ref-burknerAdvancedBayesianMultilevel2018), [2022](#ref-R-brms)).
 
 Here we load our primary **R** packages and adjust the global plotting theme defaults.
 
@@ -161,7 +161,7 @@ We’ll be analyzing the RCT data in two ways. First, we’ll fit a model on the
 
 ### Fit the models.
 
-There are a lot of ways to analyze pre/post RCT data. To get a sense of the various strategies, see [this chapter](https://www.middleprofessor.com/files/applied-biostatistics_bookdown/_book/models-for-longitudinal-experiments-pre-post-designs.html) in Jeffrey Walker’s free ([2018](#ref-walkerElementsOfStatisticalModeling2018)) text and my [complimentary blog post](https://solomonkurz.netlify.app/post/2020-12-29-regression-models-for-2-timepoint-non-experimental-data/) on pre/post non-experimental data. In this post, we’ll be taking the multivariate approach where we simultaneously model `pre` and `post` as bivariate normal, such that both the mean and standard deviation parameters for both vary depending on the experimental condition (`tx`). Importantly, the correlation between `pre` and `post` is captured in the correlation between the two residual standard deviation parameters.
+There are a lot of ways to analyze pre/post RCT data. To get a sense of the various strategies, see [this chapter](https://www.middleprofessor.com/files/applied-biostatistics_bookdown/_book/models-for-longitudinal-experiments-pre-post-designs.html) in Jeffrey Walker’s free ([2018](#ref-walkerElementsOfStatisticalModeling2018)) text and my [complimentary blog post](https://solomonkurz.netlify.app/blog/2020-12-29-regression-models-for-2-timepoint-non-experimental-data/) on pre/post non-experimental data. In this post, we’ll be taking the multivariate approach where we simultaneously model `pre` and `post` as bivariate normal, such that both the mean and standard deviation parameters for both vary depending on the experimental condition (`tx`). Importantly, the correlation between `pre` and `post` is captured in the correlation between the two residual standard deviation parameters.
 
 Here’s how to fit the model to the full data with **brms**.
 
@@ -199,7 +199,7 @@ print(fit1)
     ##   Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
     ##          total post-warmup draws = 4000
     ## 
-    ## Population-Level Effects: 
+    ## Regression Coefficients:
     ##                        Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
     ## pre_txtreatment            5.00      0.10     4.81     5.19 1.00     2801     3091
     ## pre_txcontrol              5.11      0.09     4.93     5.29 1.00     3300     2885
@@ -292,9 +292,9 @@ Since the `post_observed` data were missing completely at random (MCAR[^1]), it 
 
 At this point, you may be wondering why I didn’t use the familiar dummy-variable approach in either of the models and you might be further wondering why I bothered to allow the standard deviation parameters to vary. One of the sub-goals of this post is to show how to compute the model output into standardized effect sizes. My go-to standardized effect size is good old Cohen’s `\(d\)`, of which there are many variations. In the case of our pre/post RCT with two conditions, we actually have three `\(d\)`’s of interest:
 
--   the standardized mean difference for the treatment condition (which we hope is large),
--   the standardized mean difference for the control condition (which we hope is near zero), and
--   the difference in those first two standardized mean differences (which we also hope is large).
+- the standardized mean difference for the treatment condition (which we hope is large),
+- the standardized mean difference for the control condition (which we hope is near zero), and
+- the difference in those first two standardized mean differences (which we also hope is large).
 
 As with all standardized mean differences, it’s a big deal to choose a good value to standardize with. With data like ours, a good default choice is the pooled standard deviation between the two conditions at baseline, which we might define as
 
@@ -406,7 +406,7 @@ Using language perhaps more familiar to those from a structural equation modelin
 
 ## Would you like more?
 
-To my knowledge, the introductory material on applied missing data analysis seems awash with full-information maximum likelihood and multiple imputation. One-step Bayesian imputation methods haven’t made it into the mainstream, yet. McElreath covered the one-step approach in both editions of his text and since the way he covered the material was quite different in the two editions, I really recommend you check out both ([McElreath, 2020](#ref-mcelreathStatisticalRethinkingBayesian2020), [2015](#ref-mcelreathStatisticalRethinkingBayesian2015)). My ebook translations of McElreath’s texts covered that material from a **brms** + **tidyverse** perspective ([Kurz, 2021](#ref-kurzStatisticalRethinkingSecondEd2021), [2020b](#ref-kurzStatisticalRethinkingBrms2020)). Otherwise, you should check out Bürkner’s ([2021](#ref-Bürkner2021HandleMissingValues)) vignette, [*Handle missing values with brms*](https://CRAN.R-project.org/package=brms/vignettes/brms_missings.html).
+To my knowledge, the introductory material on applied missing data analysis seems awash with full-information maximum likelihood and multiple imputation. One-step Bayesian imputation methods haven’t made it into the mainstream, yet. McElreath covered the one-step approach in both editions of his text and since the way he covered the material was quite different in the two editions, I really recommend you check out both ([McElreath, 2015](#ref-mcelreathStatisticalRethinkingBayesian2015), [2020](#ref-mcelreathStatisticalRethinkingBayesian2020)). My ebook translations of McElreath’s texts covered that material from a **brms** + **tidyverse** perspective ([Kurz, 2020b](#ref-kurzStatisticalRethinkingBrms2020), [2021](#ref-kurzStatisticalRethinkingSecondEd2021)). Otherwise, you should check out Bürkner’s ([2021](#ref-Bürkner2021HandleMissingValues)) vignette, [*Handle missing values with brms*](https://CRAN.R-project.org/package=brms/vignettes/brms_missings.html).
 
 If you are aware of any other applied text books covering one-step Bayesian imputation, please drop a comment on this tweet.
 
@@ -418,63 +418,50 @@ If you are aware of any other applied text books covering one-step Bayesian impu
 sessionInfo()
 ```
 
-    ## R version 4.2.0 (2022-04-22)
-    ## Platform: x86_64-apple-darwin17.0 (64-bit)
-    ## Running under: macOS Big Sur/Monterey 10.16
+    ## R version 4.4.2 (2024-10-31)
+    ## Platform: aarch64-apple-darwin20
+    ## Running under: macOS Ventura 13.4
     ## 
     ## Matrix products: default
-    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRblas.0.dylib
-    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRlapack.dylib
+    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/lib/libRblas.0.dylib 
+    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.0
     ## 
     ## locale:
     ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+    ## 
+    ## time zone: America/Chicago
+    ## tzcode source: internal
     ## 
     ## attached base packages:
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ##  [1] brms_2.18.0     Rcpp_1.0.9      tidybayes_3.0.2 faux_1.1.0      forcats_0.5.1   stringr_1.4.1   dplyr_1.0.10   
-    ##  [8] purrr_0.3.4     readr_2.1.2     tidyr_1.2.1     tibble_3.1.8    ggplot2_3.4.0   tidyverse_1.3.2
+    ##  [1] brms_2.22.0     Rcpp_1.0.13-1   tidybayes_3.0.7 faux_1.2.1      lubridate_1.9.3 forcats_1.0.0   stringr_1.5.1  
+    ##  [8] dplyr_1.1.4     purrr_1.0.2     readr_2.1.5     tidyr_1.3.1     tibble_3.2.1    ggplot2_3.5.1   tidyverse_2.0.0
     ## 
     ## loaded via a namespace (and not attached):
-    ##   [1] readxl_1.4.1         backports_1.4.1      plyr_1.8.7           igraph_1.3.4         svUnit_1.0.6        
-    ##   [6] splines_4.2.0        crosstalk_1.2.0      TH.data_1.1-1        rstantools_2.2.0     inline_0.3.19       
-    ##  [11] digest_0.6.30        htmltools_0.5.3      fansi_1.0.3          magrittr_2.0.3       checkmate_2.1.0     
-    ##  [16] googlesheets4_1.0.1  tzdb_0.3.0           modelr_0.1.8         RcppParallel_5.1.5   matrixStats_0.62.0  
-    ##  [21] xts_0.12.1           sandwich_3.0-2       prettyunits_1.1.1    colorspace_2.0-3     rvest_1.0.2         
-    ##  [26] ggdist_3.2.0         haven_2.5.1          xfun_0.35            callr_3.7.3          crayon_1.5.2        
-    ##  [31] jsonlite_1.8.3       lme4_1.1-31          survival_3.4-0       zoo_1.8-10           glue_1.6.2          
-    ##  [36] gtable_0.3.1         gargle_1.2.0         emmeans_1.8.0        distributional_0.3.1 pkgbuild_1.3.1      
-    ##  [41] rstan_2.21.7         abind_1.4-5          scales_1.2.1         mvtnorm_1.1-3        DBI_1.1.3           
-    ##  [46] miniUI_0.1.1.1       viridisLite_0.4.1    xtable_1.8-4         stats4_4.2.0         StanHeaders_2.21.0-7
-    ##  [51] DT_0.24              htmlwidgets_1.5.4    httr_1.4.4           threejs_0.3.3        arrayhelpers_1.1-0  
-    ##  [56] posterior_1.3.1      ellipsis_0.3.2       pkgconfig_2.0.3      loo_2.5.1            farver_2.1.1        
-    ##  [61] sass_0.4.2           dbplyr_2.2.1         utf8_1.2.2           labeling_0.4.2       tidyselect_1.1.2    
-    ##  [66] rlang_1.0.6          reshape2_1.4.4       later_1.3.0          munsell_0.5.0        cellranger_1.1.0    
-    ##  [71] tools_4.2.0          cachem_1.0.6         cli_3.4.1            generics_0.1.3       broom_1.0.1         
-    ##  [76] ggridges_0.5.3       evaluate_0.18        fastmap_1.1.0        yaml_2.3.5           processx_3.8.0      
-    ##  [81] knitr_1.40           fs_1.5.2             nlme_3.1-159         mime_0.12            projpred_2.2.1      
-    ##  [86] xml2_1.3.3           compiler_4.2.0       bayesplot_1.9.0      shinythemes_1.2.0    rstudioapi_0.13     
-    ##  [91] gamm4_0.2-6          reprex_2.0.2         bslib_0.4.0          stringi_1.7.8        highr_0.9           
-    ##  [96] ps_1.7.2             blogdown_1.15        Brobdingnag_1.2-8    lattice_0.20-45      Matrix_1.4-1        
-    ## [101] nloptr_2.0.3         markdown_1.1         shinyjs_2.1.0        tensorA_0.36.2       vctrs_0.5.0         
-    ## [106] pillar_1.8.1         lifecycle_1.0.3      jquerylib_0.1.4      bridgesampling_1.1-2 estimability_1.4.1  
-    ## [111] httpuv_1.6.5         R6_2.5.1             bookdown_0.28        promises_1.2.0.1     gridExtra_2.3       
-    ## [116] codetools_0.2-18     boot_1.3-28          colourpicker_1.1.1   MASS_7.3-58.1        gtools_3.9.3        
-    ## [121] assertthat_0.2.1     withr_2.5.0          shinystan_2.6.0      multcomp_1.4-20      mgcv_1.8-40         
-    ## [126] parallel_4.2.0       hms_1.1.1            grid_4.2.0           coda_0.19-4          minqa_1.2.5         
-    ## [131] rmarkdown_2.16       googledrive_2.0.0    shiny_1.7.2          lubridate_1.8.0      base64enc_0.1-3     
-    ## [136] dygraphs_1.1.1.6
+    ##  [1] svUnit_1.0.6         tidyselect_1.2.1     viridisLite_0.4.2    farver_2.1.2         loo_2.8.0           
+    ##  [6] fastmap_1.1.1        TH.data_1.1-2        tensorA_0.36.2.1     blogdown_1.20        digest_0.6.37       
+    ## [11] estimability_1.5.1   timechange_0.3.0     lifecycle_1.0.4      StanHeaders_2.32.10  survival_3.7-0      
+    ## [16] magrittr_2.0.3       posterior_1.6.0      compiler_4.4.2       rlang_1.1.4          sass_0.4.9          
+    ## [21] tools_4.4.2          utf8_1.2.4           yaml_2.3.8           knitr_1.49           labeling_0.4.3      
+    ## [26] bridgesampling_1.1-2 pkgbuild_1.4.4       curl_6.0.1           plyr_1.8.9           multcomp_1.4-26     
+    ## [31] abind_1.4-8          withr_3.0.2          grid_4.4.2           stats4_4.4.2         xtable_1.8-4        
+    ## [36] colorspace_2.1-1     inline_0.3.19        emmeans_1.10.3       scales_1.3.0         MASS_7.3-61         
+    ## [41] cli_3.6.3            mvtnorm_1.2-5        rmarkdown_2.29       generics_0.1.3       RcppParallel_5.1.7  
+    ## [46] rstudioapi_0.16.0    reshape2_1.4.4       tzdb_0.4.0           cachem_1.0.8         rstan_2.32.6        
+    ## [51] splines_4.4.2        bayesplot_1.11.1     parallel_4.4.2       matrixStats_1.4.1    vctrs_0.6.5         
+    ## [56] V8_4.4.2             Matrix_1.7-1         sandwich_3.1-1       jsonlite_1.8.9       bookdown_0.40       
+    ## [61] arrayhelpers_1.1-0   hms_1.1.3            ggdist_3.3.2         jquerylib_0.1.4      glue_1.8.0          
+    ## [66] codetools_0.2-20     distributional_0.5.0 stringi_1.8.4        gtable_0.3.6         QuickJSR_1.1.3      
+    ## [71] munsell_0.5.1        pillar_1.10.1        htmltools_0.5.8.1    Brobdingnag_1.2-9    R6_2.5.1            
+    ## [76] evaluate_1.0.1       lattice_0.22-6       backports_1.5.0      bslib_0.7.0          rstantools_2.4.0    
+    ## [81] coda_0.19-4.1        gridExtra_2.3        nlme_3.1-166         checkmate_2.3.2      xfun_0.49           
+    ## [86] zoo_1.8-12           pkgconfig_2.0.3
 
 ## References
 
-<div id="refs" class="references csl-bib-body hanging-indent" line-spacing="2">
-
-<div id="ref-Bürkner2021HandleMissingValues" class="csl-entry">
-
-Bürkner, P.-C. (2021). *Handle missing values with brms*. <https://CRAN.R-project.org/package=brms/vignettes/brms_missings.html>
-
-</div>
+<div id="refs" class="references csl-bib-body hanging-indent" entry-spacing="0" line-spacing="2">
 
 <div id="ref-burknerBrmsPackageBayesian2017" class="csl-entry">
 
@@ -485,6 +472,12 @@ Bürkner, P.-C. (2017). <span class="nocase">brms</span>: An R package for Bayes
 <div id="ref-burknerAdvancedBayesianMultilevel2018" class="csl-entry">
 
 Bürkner, P.-C. (2018). Advanced Bayesian multilevel modeling with the R package brms. *The R Journal*, *10*(1), 395–411. <https://doi.org/10.32614/RJ-2018-017>
+
+</div>
+
+<div id="ref-Bürkner2021HandleMissingValues" class="csl-entry">
+
+Bürkner, P.-C. (2021). *Handle missing values with brms*. <https://CRAN.R-project.org/package=brms/vignettes/brms_missings.html>
 
 </div>
 
@@ -526,7 +519,7 @@ Gelman, A., Hill, J., & Vehtari, A. (2020). *Regression and other stories*. Camb
 
 <div id="ref-R-tidybayes" class="csl-entry">
 
-Kay, M. (2022). *<span class="nocase">tidybayes</span>: Tidy data and ’geoms’ for Bayesian models*. <https://CRAN.R-project.org/package=tidybayes>
+Kay, M. (2023). *<span class="nocase">tidybayes</span>: Tidy data and ’geoms’ for Bayesian models*. <https://CRAN.R-project.org/package=tidybayes>
 
 </div>
 
@@ -542,12 +535,6 @@ Kruschke, J. K. (2015). *Doing Bayesian data analysis: A tutorial with R, JAGS, 
 
 </div>
 
-<div id="ref-kurzStatisticalRethinkingSecondEd2021" class="csl-entry">
-
-Kurz, A. S. (2021). *Statistical rethinking with brms, <span class="nocase">ggplot2</span>, and the tidyverse: Second Edition* (version 0.2.0). <https://bookdown.org/content/4857/>
-
-</div>
-
 <div id="ref-kurzDoingBayesianData2021" class="csl-entry">
 
 Kurz, A. S. (2020a). *Doing Bayesian data analysis in brms and the tidyverse* (version 0.4.0). <https://bookdown.org/content/3686/>
@@ -560,21 +547,27 @@ Kurz, A. S. (2020b). *Statistical rethinking with brms, <span class="nocase">ggp
 
 </div>
 
-<div id="ref-little2019statistical" class="csl-entry">
+<div id="ref-kurzStatisticalRethinkingSecondEd2021" class="csl-entry">
 
-Little, R. J., & Rubin, D. B. (2019). *Statistical analysis with missing data* (third, Vol. 793). John Wiley & Sons. <https://www.wiley.com/en-us/Statistical+Analysis+with+Missing+Data%2C+3rd+Edition-p-9780470526798>
+Kurz, A. S. (2021). *Statistical rethinking with brms, <span class="nocase">ggplot2</span>, and the tidyverse: Second Edition* (version 0.2.0). <https://bookdown.org/content/4857/>
 
 </div>
 
-<div id="ref-mcelreathStatisticalRethinkingBayesian2020" class="csl-entry">
+<div id="ref-little2019statistical" class="csl-entry">
 
-McElreath, R. (2020). *Statistical rethinking: A Bayesian course with examples in R and Stan* (Second Edition). CRC Press. <https://xcelab.net/rm/statistical-rethinking/>
+Little, R. J., & Rubin, D. B. (2019). *Statistical analysis with missing data* (3rd ed., Vol. 793). John Wiley & Sons. <https://www.wiley.com/en-us/Statistical+Analysis+with+Missing+Data%2C+3rd+Edition-p-9780470526798>
 
 </div>
 
 <div id="ref-mcelreathStatisticalRethinkingBayesian2015" class="csl-entry">
 
 McElreath, R. (2015). *Statistical rethinking: A Bayesian course with examples in R and Stan*. CRC press. <https://xcelab.net/rm/statistical-rethinking/>
+
+</div>
+
+<div id="ref-mcelreathStatisticalRethinkingBayesian2020" class="csl-entry">
+
+McElreath, R. (2020). *Statistical rethinking: A Bayesian course with examples in R and Stan* (Second Edition). CRC Press. <https://xcelab.net/rm/statistical-rethinking/>
 
 </div>
 
