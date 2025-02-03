@@ -27,9 +27,9 @@ link-citations: yes
 
 I just self-published a book-length version of my project [*Statistical Rethinking* with brms, ggplot2, and the tidyverse](https://bookdown.org/content/3890/). By using Yihui Xie’s [bookdown package](https://bookdown.org), I was able to do it for free. If you’ve never heard of it, bookdown enables [R](https://bookdown.org/rdpeng/rprogdatascience/history-and-overview-of-r.html#what-is-r) users to write books and other long-form articles with [R Markdown](https://rmarkdown.rstudio.com). You can save your bookdown products in a variety of formats (e.g., PDF, HTML) and publish them in several ways, too. The purpose of this post is to give readers a sense of how I used bookdown to make my project. I propose there are three fundamental skill sets you need basic fluency in before playing with bookdown. Those three are
 
--   R and R Studio,
--   Scripts and R Markdown files, and
--   Git and GitHub.
+- R and R Studio,
+- Scripts and R Markdown files, and
+- Git and GitHub.
 
 ## Start with [R](https://cran.r-project.org)
 
@@ -69,9 +69,9 @@ I’d fooled around with GitHub a tiny bit before launching my [*Statistical Ret
 
 So far we’ve covered
 
--   R and R Studio
--   Scripts and R Markdown files
--   Git and GitHub
+- R and R Studio
+- Scripts and R Markdown files
+- Git and GitHub
 
 You don’t have become an expert, but you’ll need to become roughly fluent in all three to make good use of bookdown. Basically, if you are able to load data into R, document a rudimentary analysis in an R Notebook file, and then share the project in a non-embarrassing way in GitHub, you’re ready to use bookdown.
 
@@ -81,7 +81,7 @@ The complete version of my [*Statistical Rethinking* with brms, ggplot2, and the
 
 Although I didn’t use these resources while I was learning bookdown, you might also benefit from checking out
 
--   Sean Kross’s [*How to Start a Bookdown Book*](http://seankross.com/2016/11/17/How-to-Start-a-Bookdown-Book.html),
--   Karl Broman’s [*omg, bookdown!*](https://kbroman.org/blog/2017/05/31/omg-bookdown/),
--   Rachael Lappan’s [*Using Bookdown for tidy documentation*](https://rachaellappan.github.io/bookdown/), or
--   Pablo Casas’s [*How to self-publish a book: A handy list of resources*](https://blog.datascienceheroes.com/how-to-self-publish-a-book/).
+- Sean Kross’s [*How to Start a Bookdown Book*](http://seankross.com/2016/11/17/How-to-Start-a-Bookdown-Book.html),
+- Karl Broman’s [*omg, bookdown!*](https://kbroman.org/blog/2017/05/31/omg-bookdown/),
+- Rachael Lappan’s [*Using Bookdown for tidy documentation*](https://rachaellappan.github.io/bookdown/), or
+- Pablo Casas’s [*How to self-publish a book: A handy list of resources*](https://blog.datascienceheroes.com/how-to-self-publish-a-book/).
