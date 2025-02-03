@@ -37,7 +37,7 @@ Edited on December 12, 2022, to use the new `as_draws_df()` workflow.
 
 ## What?
 
-One of [Tristan Mahr](https://twitter.com/tjmahr)'s recent Twitter threads almost broke my brain.^[Older versions of this post included an embedded link showing Mahr's tweet. Mahr has since made his account private, and the code no longer works to share his tweet. Though this breaks the flow of the blog a little, and it removes some of the charm, I hope you can still follow the main point. Mahr said some smart things on social media, I found it surprising, and that exchange led to this blog post.]
+One of [Tristan Mahr](https://www.tjmahr.com/)'s recent Twitter threads almost broke my brain.^[Older versions of this post included an embedded link showing Mahr's tweet. Mahr has since made his account private, and the code no longer works to share his tweet. Though this breaks the flow of the blog a little, and it removes some of the charm, I hope you can still follow the main point. Mahr said some smart things on social media, I found it surprising, and that exchange led to this blog post.]
 
 ```{r echo = FALSE, eval = FALSE}
 blogdown::shortcode('tweet', user = "SolomonKurz", id = '1413186646783242242')
