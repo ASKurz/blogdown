@@ -17,9 +17,9 @@ tags:
 - tutorial
 lastmod: '2021-04-25T20:29:48-07:00'
 featured: no
-bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
-csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 ---
 
@@ -29,13 +29,13 @@ Edited on December 12, 2022, to use the new `as_draws_df()` workflow.
 
 ## Orientation
 
-This post is the second and final installment of a two-part series. In the [first post](https://solomonkurz.netlify.app/post/2021-01-26-effect-sizes-for-experimental-trials-analyzed-with-multilevel-growth-models-one-of-two/), we explored how one might compute an effect size for two-group experimental data with only `\(2\)` time points. In this second post, we fulfill our goal to show how to generalize this framework to experimental data collected over `\(3+\)` time points. The data and overall framework come from Feingold ([2009](#ref-feingoldEffectSizeForGMA2009)).
+This post is the second and final installment of a two-part series. In the [first post](https://solomonkurz.netlify.app/blog/2021-01-26-effect-sizes-for-experimental-trials-analyzed-with-multilevel-growth-models-one-of-two/), we explored how one might compute an effect size for two-group experimental data with only `\(2\)` time points. In this second post, we fulfill our goal to show how to generalize this framework to experimental data collected over `\(3+\)` time points. The data and overall framework come from Feingold ([2009](#ref-feingoldEffectSizeForGMA2009)).
 
 ### I still make assumptions.
 
-As with the [first post](https://solomonkurz.netlify.app/post/2021-01-26-effect-sizes-for-experimental-trials-analyzed-with-multilevel-growth-models-one-of-two/#i-make-assumptions.), I make a handful of assumptions about your background knowledge. Though I won’t spell them out again, here, I should stress that you’ll want to be familiar with multilevel models to get the most out of this post. To brush up, I recommend Raudenbush & Bryk ([2002](#ref-raudenbushHLM2002)), Singer & Willett ([2003](#ref-singerAppliedLongitudinalData2003)), or Hoffman ([2015](#ref-hoffmanLongitudinalAnalysisModeling2015)).
+As with the [first post](https://solomonkurz.netlify.app/blog/2021-01-26-effect-sizes-for-experimental-trials-analyzed-with-multilevel-growth-models-one-of-two/#i-make-assumptions.), I make a handful of assumptions about your background knowledge. Though I won’t spell them out again, here, I should stress that you’ll want to be familiar with multilevel models to get the most out of this post. To brush up, I recommend Raudenbush & Bryk ([2002](#ref-raudenbushHLM2002)), Singer & Willett ([2003](#ref-singerAppliedLongitudinalData2003)), or Hoffman ([2015](#ref-hoffmanLongitudinalAnalysisModeling2015)).
 
-As before, all code is in **R** ([R Core Team, 2022](#ref-R-base)). Here we load our primary **R** packages–[**brms**](https://github.com/paul-buerkner/brms) ([Bürkner, 2017](#ref-burknerBrmsPackageBayesian2017), [2018](#ref-burknerAdvancedBayesianMultilevel2018), [2022](#ref-R-brms)), [**tidybayes**](https://mjskay.github.io/tidybayes/) ([Kay, 2022](#ref-R-tidybayes)), and the [**tidyverse**](http://style.tidyverse.org) ([Wickham et al., 2019](#ref-wickhamWelcomeTidyverse2019); [Wickham, 2022](#ref-R-tidyverse))–and adjust the global plotting theme defaults.
+As before, all code is in **R** ([R Core Team, 2022](#ref-R-base)). Here we load our primary **R** packages–[**brms**](https://github.com/paul-buerkner/brms) ([Bürkner, 2017](#ref-burknerBrmsPackageBayesian2017), [2018](#ref-burknerAdvancedBayesianMultilevel2018), [2022](#ref-R-brms)), [**tidybayes**](https://mjskay.github.io/tidybayes/) ([Kay, 2023](#ref-R-tidybayes)), and the [**tidyverse**](http://style.tidyverse.org) ([Wickham et al., 2019](#ref-wickhamWelcomeTidyverse2019); [Wickham, 2022](#ref-R-tidyverse))–and adjust the global plotting theme defaults.
 
 ``` r
 library(brms)
@@ -211,21 +211,21 @@ print(fit1)
     ##   Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
     ##          total post-warmup draws = 4000
     ## 
-    ## Group-Level Effects: 
+    ## Multilevel Hyperparameters:
     ## ~id (Number of levels: 20) 
     ##                      Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
     ## sd(Intercept)            1.08      0.23     0.74     1.63 1.00     1466     2084
     ## sd(time0)                0.09      0.07     0.00     0.25 1.00     1250     2274
     ## cor(Intercept,time0)    -0.07      0.51    -0.92     0.91 1.00     3696     2094
     ## 
-    ## Population-Level Effects: 
+    ## Regression Coefficients:
     ##           Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
     ## Intercept     4.99      0.27     4.47     5.53 1.00     1099     1771
     ## time0         1.50      0.06     1.38     1.62 1.00     4311     2373
     ## tx           -0.01      0.56    -1.15     1.09 1.00     1117     1532
     ## time0:tx      1.00      0.12     0.76     1.24 1.00     4832     3164
     ## 
-    ## Family Specific Parameters: 
+    ## Further Distributional Parameters:
     ##       Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
     ## sigma     0.57      0.06     0.47     0.69 1.00     3269     3137
     ## 
@@ -359,7 +359,7 @@ sd_raw_pre_p
 
 Since Feingold’s synthetic data are a special case where `\(SD_\text{raw(pre-T)} = SD_\text{raw(pre-C)} = SD_\text{pooled}\)`, these distinctions might all seem dull and pedantic. Yet if your real-world data look anything like mine, this won’t be the case and you’ll need to understand how distinguish between and choose from among these options.
 
-Another thing to consider is that whereas Feingold’s synthetic data have the desirable quality where the sample sizes are the same across the experimental conditions ($n_\text{T} = n_\text{C} = 10$), this won’t always be the case. If you end up with unbalanced experimental data, you might consider the sample-size weighted pooled standard deviation, `\(SD_\text{pooled}^*\)`, which I believe has its origins in Hedges’ work ([1981, p. 110](#ref-hedgesDistributionTheoryforGlass1981)). It follows the formula
+Another thing to consider is that whereas Feingold’s synthetic data have the desirable quality where the sample sizes are the same across the experimental conditions (`\(n_\text{T} = n_\text{C} = 10\)`), this won’t always be the case. If you end up with unbalanced experimental data, you might consider the sample-size weighted pooled standard deviation, `\(SD_\text{pooled}^*\)`, which I believe has its origins in Hedges’ work ([1981, p. 110](#ref-hedgesDistributionTheoryforGlass1981)). It follows the formula
 
 `$$SD_\text{pooled}^* = \sqrt{\frac{(n_\text{T} - 1)SD_\text{raw(pre-T)}^2 + (n_\text{C} - 1)SD_\text{raw(pre-C)}^2}{n_\text{T} + n_\text{C} - 2}}.$$`
 
@@ -412,6 +412,10 @@ as_draws_df(fit1) %>%
   mutate_if(is.double, round, digits = 2)
 ```
 
+    ## Warning: Dropping 'draws_df' class as required metadata was removed.
+    ## Warning: Dropping 'draws_df' class as required metadata was removed.
+    ## Warning: Dropping 'draws_df' class as required metadata was removed.
+
     ## # A tibble: 1 × 6
     ##       d .lower .upper .width .point .interval
     ##   <dbl>  <dbl>  <dbl>  <dbl> <chr>  <chr>    
@@ -458,7 +462,7 @@ Notice how the summary values in the rows for `beta_11` and `d_GAM_raw` match up
 
 ### You may want options.
 
-Turns out there’s an other way to compute the standardized mean difference for experimental longitudinal data. You can just fit the model to the standardized data. As with our approach, above, the trick is to make sure you standardized the data with a defensible standardizer. I recommend you default to the pooled standard deviation at baseline ($SD_\text{pooled}$). To do so, we first compute the weighted mean at baseline.
+Turns out there’s an other way to compute the standardized mean difference for experimental longitudinal data. You can just fit the model to the standardized data. As with our approach, above, the trick is to make sure you standardized the data with a defensible standardizer. I recommend you default to the pooled standard deviation at baseline (`\(SD_\text{pooled}\)`). To do so, we first compute the weighted mean at baseline.
 
 ``` r
 # group-level baseline means
@@ -505,21 +509,21 @@ print(fit2)
     ##   Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
     ##          total post-warmup draws = 4000
     ## 
-    ## Group-Level Effects: 
+    ## Multilevel Hyperparameters:
     ## ~id (Number of levels: 20) 
     ##                      Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
     ## sd(Intercept)            0.94      0.20     0.64     1.40 1.00     1435     2257
     ## sd(time0)                0.08      0.06     0.00     0.23 1.01     1197     2220
     ## cor(Intercept,time0)    -0.07      0.50    -0.92     0.89 1.00     4118     2701
     ## 
-    ## Population-Level Effects: 
+    ## Regression Coefficients:
     ##           Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
     ## Intercept    -0.00      0.24    -0.47     0.46 1.00     1194     1948
     ## time0         1.30      0.06     1.19     1.41 1.00     5196     2624
     ## tx            0.01      0.48    -0.94     0.96 1.01     1136     1695
     ## time0:tx      0.87      0.11     0.65     1.09 1.00     4680     3001
     ## 
-    ## Family Specific Parameters: 
+    ## Further Distributional Parameters:
     ##       Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
     ## sigma     0.50      0.05     0.41     0.60 1.00     3452     2858
     ## 
@@ -583,57 +587,50 @@ $$
 sessionInfo()
 ```
 
-    ## R version 4.2.0 (2022-04-22)
-    ## Platform: x86_64-apple-darwin17.0 (64-bit)
-    ## Running under: macOS Big Sur/Monterey 10.16
+    ## R version 4.4.2 (2024-10-31)
+    ## Platform: aarch64-apple-darwin20
+    ## Running under: macOS Ventura 13.4
     ## 
     ## Matrix products: default
-    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRblas.0.dylib
-    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRlapack.dylib
+    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/lib/libRblas.0.dylib 
+    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.0
     ## 
     ## locale:
     ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+    ## 
+    ## time zone: America/Chicago
+    ## tzcode source: internal
     ## 
     ## attached base packages:
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ##  [1] forcats_0.5.1   stringr_1.4.1   dplyr_1.0.10    purrr_0.3.4     readr_2.1.2     tidyr_1.2.1     tibble_3.1.8   
-    ##  [8] ggplot2_3.4.0   tidyverse_1.3.2 tidybayes_3.0.2 brms_2.18.0     Rcpp_1.0.9     
+    ##  [1] lubridate_1.9.3 forcats_1.0.0   stringr_1.5.1   dplyr_1.1.4     purrr_1.0.2     readr_2.1.5     tidyr_1.3.1    
+    ##  [8] tibble_3.2.1    ggplot2_3.5.1   tidyverse_2.0.0 tidybayes_3.0.7 brms_2.22.0     Rcpp_1.0.13-1  
     ## 
     ## loaded via a namespace (and not attached):
-    ##   [1] readxl_1.4.1         backports_1.4.1      plyr_1.8.7           igraph_1.3.4         splines_4.2.0       
-    ##   [6] svUnit_1.0.6         crosstalk_1.2.0      TH.data_1.1-1        rstantools_2.2.0     inline_0.3.19       
-    ##  [11] digest_0.6.30        htmltools_0.5.3      fansi_1.0.3          magrittr_2.0.3       checkmate_2.1.0     
-    ##  [16] googlesheets4_1.0.1  tzdb_0.3.0           modelr_0.1.8         RcppParallel_5.1.5   matrixStats_0.62.0  
-    ##  [21] xts_0.12.1           sandwich_3.0-2       prettyunits_1.1.1    colorspace_2.0-3     rvest_1.0.2         
-    ##  [26] ggdist_3.2.0         haven_2.5.1          xfun_0.35            callr_3.7.3          crayon_1.5.2        
-    ##  [31] jsonlite_1.8.3       lme4_1.1-31          survival_3.4-0       zoo_1.8-10           glue_1.6.2          
-    ##  [36] gtable_0.3.1         gargle_1.2.0         emmeans_1.8.0        distributional_0.3.1 pkgbuild_1.3.1      
-    ##  [41] rstan_2.21.7         abind_1.4-5          scales_1.2.1         mvtnorm_1.1-3        DBI_1.1.3           
-    ##  [46] miniUI_0.1.1.1       viridisLite_0.4.1    xtable_1.8-4         stats4_4.2.0         StanHeaders_2.21.0-7
-    ##  [51] DT_0.24              httr_1.4.4           htmlwidgets_1.5.4    threejs_0.3.3        arrayhelpers_1.1-0  
-    ##  [56] posterior_1.3.1      ellipsis_0.3.2       pkgconfig_2.0.3      loo_2.5.1            farver_2.1.1        
-    ##  [61] sass_0.4.2           dbplyr_2.2.1         utf8_1.2.2           labeling_0.4.2       tidyselect_1.1.2    
-    ##  [66] rlang_1.0.6          reshape2_1.4.4       later_1.3.0          munsell_0.5.0        cellranger_1.1.0    
-    ##  [71] tools_4.2.0          cachem_1.0.6         cli_3.4.1            generics_0.1.3       broom_1.0.1         
-    ##  [76] ggridges_0.5.3       evaluate_0.18        fastmap_1.1.0        yaml_2.3.5           processx_3.8.0      
-    ##  [81] knitr_1.40           fs_1.5.2             nlme_3.1-159         mime_0.12            projpred_2.2.1      
-    ##  [86] xml2_1.3.3           compiler_4.2.0       bayesplot_1.9.0      shinythemes_1.2.0    rstudioapi_0.13     
-    ##  [91] gamm4_0.2-6          reprex_2.0.2         bslib_0.4.0          stringi_1.7.8        highr_0.9           
-    ##  [96] ps_1.7.2             blogdown_1.15        Brobdingnag_1.2-8    lattice_0.20-45      Matrix_1.4-1        
-    ## [101] nloptr_2.0.3         markdown_1.1         shinyjs_2.1.0        tensorA_0.36.2       vctrs_0.5.0         
-    ## [106] pillar_1.8.1         lifecycle_1.0.3      jquerylib_0.1.4      bridgesampling_1.1-2 estimability_1.4.1  
-    ## [111] httpuv_1.6.5         R6_2.5.1             bookdown_0.28        promises_1.2.0.1     gridExtra_2.3       
-    ## [116] codetools_0.2-18     boot_1.3-28          colourpicker_1.1.1   MASS_7.3-58.1        gtools_3.9.3        
-    ## [121] assertthat_0.2.1     withr_2.5.0          shinystan_2.6.0      multcomp_1.4-20      hms_1.1.1           
-    ## [126] mgcv_1.8-40          parallel_4.2.0       grid_4.2.0           coda_0.19-4          minqa_1.2.5         
-    ## [131] rmarkdown_2.16       googledrive_2.0.0    shiny_1.7.2          lubridate_1.8.0      base64enc_0.1-3     
-    ## [136] dygraphs_1.1.1.6
+    ##  [1] tidyselect_1.2.1     svUnit_1.0.6         viridisLite_0.4.2    farver_2.1.2         loo_2.8.0           
+    ##  [6] fastmap_1.1.1        TH.data_1.1-2        tensorA_0.36.2.1     blogdown_1.20        digest_0.6.37       
+    ## [11] estimability_1.5.1   timechange_0.3.0     lifecycle_1.0.4      StanHeaders_2.32.10  survival_3.7-0      
+    ## [16] magrittr_2.0.3       posterior_1.6.0      compiler_4.4.2       rlang_1.1.4          sass_0.4.9          
+    ## [21] tools_4.4.2          utf8_1.2.4           yaml_2.3.8           knitr_1.49           labeling_0.4.3      
+    ## [26] bridgesampling_1.1-2 pkgbuild_1.4.4       curl_6.0.1           plyr_1.8.9           multcomp_1.4-26     
+    ## [31] abind_1.4-8          withr_3.0.2          grid_4.4.2           stats4_4.4.2         xtable_1.8-4        
+    ## [36] colorspace_2.1-1     inline_0.3.19        emmeans_1.10.3       scales_1.3.0         MASS_7.3-61         
+    ## [41] cli_3.6.3            mvtnorm_1.2-5        rmarkdown_2.29       generics_0.1.3       RcppParallel_5.1.7  
+    ## [46] rstudioapi_0.16.0    reshape2_1.4.4       tzdb_0.4.0           cachem_1.0.8         rstan_2.32.6        
+    ## [51] splines_4.4.2        bayesplot_1.11.1     parallel_4.4.2       matrixStats_1.4.1    vctrs_0.6.5         
+    ## [56] V8_4.4.2             Matrix_1.7-1         sandwich_3.1-1       jsonlite_1.8.9       bookdown_0.40       
+    ## [61] hms_1.1.3            arrayhelpers_1.1-0   ggdist_3.3.2         jquerylib_0.1.4      glue_1.8.0          
+    ## [66] codetools_0.2-20     distributional_0.5.0 stringi_1.8.4        gtable_0.3.6         QuickJSR_1.1.3      
+    ## [71] munsell_0.5.1        pillar_1.10.1        htmltools_0.5.8.1    Brobdingnag_1.2-9    R6_2.5.1            
+    ## [76] evaluate_1.0.1       lattice_0.22-6       backports_1.5.0      bslib_0.7.0          rstantools_2.4.0    
+    ## [81] coda_0.19-4.1        gridExtra_2.3        nlme_3.1-166         checkmate_2.3.2      mgcv_1.9-1          
+    ## [86] xfun_0.49            zoo_1.8-12           pkgconfig_2.0.3
 
 ## References
 
-<div id="refs" class="references csl-bib-body hanging-indent" line-spacing="2">
+<div id="refs" class="references csl-bib-body hanging-indent" entry-spacing="0" line-spacing="2">
 
 <div id="ref-burknerBrmsPackageBayesian2017" class="csl-entry">
 
@@ -691,13 +688,13 @@ Hedges, L. V. (1981). Distribution theory for Glass’s estimator of effect size
 
 <div id="ref-hoffmanLongitudinalAnalysisModeling2015" class="csl-entry">
 
-Hoffman, L. (2015). *Longitudinal analysis: Modeling within-person fluctuation and change* (1 edition). Routledge. <https://www.routledge.com/Longitudinal-Analysis-Modeling-Within-Person-Fluctuation-and-Change/Hoffman/p/book/9780415876025>
+Hoffman, L. (2015). *Longitudinal analysis: Modeling within-Person fluctuation and change* (1 edition). Routledge. <https://www.routledge.com/Longitudinal-Analysis-Modeling-Within-Person-Fluctuation-and-Change/Hoffman/p/book/9780415876025>
 
 </div>
 
 <div id="ref-R-tidybayes" class="csl-entry">
 
-Kay, M. (2022). *<span class="nocase">tidybayes</span>: Tidy data and ’geoms’ for Bayesian models*. <https://CRAN.R-project.org/package=tidybayes>
+Kay, M. (2023). *<span class="nocase">tidybayes</span>: Tidy data and ’geoms’ for Bayesian models*. <https://CRAN.R-project.org/package=tidybayes>
 
 </div>
 
