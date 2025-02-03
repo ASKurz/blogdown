@@ -487,7 +487,21 @@ Each matched pair contains one of each of the two levels of the treatment variab
 
 ## Fit the primary model and compute the estimand
 
-We're finally ready to fit the substantive model. Technically we could just fit the simple univariable model `koa ~ osp`.^[An ANOVA.] However, there's no inherent reason for us not to condition the substantive model on the covariate set, and doing so can help further control for confounding, particularly in the presence of imperfect matching [see @greifer2021matching]. One approach would be the simple expansion `koa ~ osp + age + male + bmi + race + smoker`.^[An ANCOVA.] But we could go even further to protect against any treatment-by-covariate interactions with the fuller  `koa ~ osp * (age + male + bmi + race + smoker)`.^[An ANHECOVA, an analysis of *heterogeneous* covariance.] We use the `with()` function to fit the model to the matched MI data sets.
+We're finally ready to fit the substantive model. Technically we could just fit the simple univariable model, which we might also call an ANOVA. In formula syntax, that would be:
+
+`koa ~ osp`.
+
+Given our matching procedure, this simple model would be valid. However, there's no inherent reason for us not to condition the substantive model on the covariate set. Doing so can help further control for confounding, particularly in the presence of imperfect matching, and it can also increase the precision of the estimate^[i.e., increase statistical power by decreasing the standard error.] [see @greifer2021matching]. One approach would be the simple expansion:
+
+`koa ~ osp + age + male + bmi + race + smoker`,
+
+which is often described as an ANCOVA. But we could go even further to protect against any treatment-by-covariate interactions with the fuller  
+
+`koa ~ osp * (age + male + bmi + race + smoker)`.
+
+In some of the more recent literature, this has been called an ANHECOVA, an analysis of *heterogeneous* covariance [e.g., @ye2022toward].  
+
+In practice, we use the `with()` function to fit the ANHECOVA model to the matched MI data sets.
 
 ```{r}
 matched.models <- with(

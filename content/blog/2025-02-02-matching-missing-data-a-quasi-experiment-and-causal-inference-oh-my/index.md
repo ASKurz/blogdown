@@ -231,9 +231,9 @@ imputed.datasets |>
     ##  $ ignore         : logi [1:2585] FALSE FALSE FALSE FALSE FALSE FALSE ...
     ##  $ seed           : logi NA
     ##  $ iteration      : num 5
-    ##  $ lastSeedValue  : int [1:626] 10403 358 1582094929 1937548406 1383918287 1862653681 -786695623 890661574 -1471511402 1924618058 ...
-    ##  $ chainMean      : num [1:7, 1:5, 1:5] NaN NaN NaN NaN 0.321 ...
-    ##  $ chainVar       : num [1:7, 1:5, 1:5] NA NA NA NA 0.214 ...
+    ##  $ lastSeedValue  : int [1:626] 10403 144 572103155 -1806920652 -375284517 464361388 1131814530 1688459416 -1207814412 1902940732 ...
+    ##  $ chainMean      : num [1:7, 1:5, 1:5] NaN NaN NaN NaN 0.536 ...
+    ##  $ chainVar       : num [1:7, 1:5, 1:5] NA NA NA NA 0.268 ...
     ##  $ loggedEvents   :'data.frame':	1 obs. of  5 variables:
     ##  $ version        :Classes 'package_version', 'numeric_version'  hidden list of 1
     ##  $ date           : Date[1:1], format: "2025-02-03"
@@ -626,7 +626,21 @@ Each matched pair contains one of each of the two levels of the treatment variab
 
 ## Fit the primary model and compute the estimand
 
-We’re finally ready to fit the substantive model. Technically we could just fit the simple univariable model `koa ~ osp`.[^8] However, there’s no inherent reason for us not to condition the substantive model on the covariate set, and doing so can help further control for confounding, particularly in the presence of imperfect matching (see [Greifer & Stuart, 2021](#ref-greifer2021matching)). One approach would be the simple expansion `koa ~ osp + age + male + bmi + race + smoker`.[^9] But we could go even further to protect against any treatment-by-covariate interactions with the fuller `koa ~ osp * (age + male + bmi + race + smoker)`.[^10] We use the `with()` function to fit the model to the matched MI data sets.
+We’re finally ready to fit the substantive model. Technically we could just fit the simple univariable model, which we might also call an ANOVA. In formula syntax, that would be:
+
+`koa ~ osp`.
+
+Given our matching procedure, this simple model would be valid. However, there’s no inherent reason for us not to condition the substantive model on the covariate set. Doing so can help further control for confounding, particularly in the presence of imperfect matching, and it can also increase the precision of the estimate[^8] (see [Greifer & Stuart, 2021](#ref-greifer2021matching)). One approach would be the simple expansion:
+
+`koa ~ osp + age + male + bmi + race + smoker`,
+
+which is often described as an ANCOVA. But we could go even further to protect against any treatment-by-covariate interactions with the fuller
+
+`koa ~ osp * (age + male + bmi + race + smoker)`.
+
+In some of the more recent literature, this has been called an ANHECOVA, an analysis of *heterogeneous* covariance (e.g., [Ye et al., 2022](#ref-ye2022toward)).
+
+In practice, we use the `with()` function to fit the ANHECOVA model to the matched MI data sets.
 
 ``` r
 matched.models <- with(
@@ -682,7 +696,7 @@ However, in the *MatchIt: Getting Started* vignette, Greifer cautioned:
 
 > The outcome model coefficients and tests should not be interpreted or reported.
 
-But rather, one should only report and interpret the causal estimand, which in our case is the ATT, the *average treatment effect for the treated*.[^11] We can compute the ATT with g-computation using the `avg_comparisons()` function from the **marginaleffects** package.[^12] Note how we can request cluster-robust standard errors with pair membership as the clustering variable by setting `vcov = ~subclass`. By setting `by = "osp"`, we compute both the ATU[^13] and the ATT. Our focus will be the ATT.
+But rather, one should only report and interpret the causal estimand, which in our case is the ATT, the *average treatment effect for the treated*.[^9] We can compute the ATT with g-computation using the `avg_comparisons()` function from the **marginaleffects** package.[^10] Note how we can request cluster-robust standard errors with pair membership as the clustering variable by setting `vcov = ~subclass`. By setting `by = "osp"`, we compute both the ATU[^11] and the ATT. Our focus will be the ATT.
 
 ``` r
 avg_comparisons(matched.models,
@@ -974,6 +988,12 @@ Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L. D., François, R., G
 
 </div>
 
+<div id="ref-ye2022toward" class="csl-entry">
+
+Ye, T., Shao, J., Yi, Y., & Zhao, Q. (2022). Toward better practice of covariate adjustment in analyzing randomized clinical trials. *Journal of the American Statistical Association*, 1–13. <https://doi.org/10.1080/01621459.2022.2049278>
+
+</div>
+
 <div id="ref-zhao2021propensity" class="csl-entry">
 
 Zhao, Q.-Y., Luo, J.-C., Su, Y., Zhang, Y.-J., Tu, G.-W., & Luo, Z. (2021). Propensity score matching with R: Conventional methods and new features. *Annals of Translational Medicine*, *9*(9). <https://doi.org/10.21037/atm-20-3998>
@@ -996,14 +1016,10 @@ Zhao, Q.-Y., Luo, J.-C., Su, Y., Zhang, Y.-J., Tu, G.-W., & Luo, Z. (2021). Prop
 
 [^7]: That is, they’re below `\(d = 0.2\)`. See Cohen ([1988](#ref-cohenStatisticalPowerAnalysis1988a))
 
-[^8]: An ANOVA.
+[^8]: i.e., increase statistical power by decreasing the standard error.
 
-[^9]: An ANCOVA.
+[^9]: If you’re not familiar with the ATT, it was discussed a bit in Greifer & Stuart ([2021](#ref-greifer2021matching)), though instead by the term “average exposure effect in the exposed.” Greifer recommend the ATT for my real-world use case, which is why I use it here.
 
-[^10]: An ANHECOVA, an analysis of *heterogeneous* covariance.
+[^10]: If you’re not familiar with g-computation, boy do I have the blog series for you. Start [here](https://solomonkurz.netlify.app/blog/2023-04-12-boost-your-power-with-baseline-covariates/). You’ll want to read the first three posts. Sorry, but some topics take a little effort to walk out.
 
-[^11]: If you’re not familiar with the ATT, it was discussed a bit in Greifer & Stuart ([2021](#ref-greifer2021matching)), though instead by the term “average exposure effect in the exposed.” Greifer recommend the ATT for my real-world use case, which is why I use it here.
-
-[^12]: If you’re not familiar with g-computation, boy do I have the blog series for you. Start [here](https://solomonkurz.netlify.app/blog/2023-04-12-boost-your-power-with-baseline-covariates/). You’ll want to read the first three posts. Sorry, but some topics take a little effort to walk out.
-
-[^13]: That is, the *average treatment effect for the untreated*.
+[^11]: That is, the *average treatment effect for the untreated*.
