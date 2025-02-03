@@ -15,9 +15,9 @@ tags:
 - tutorial
 lastmod: '2021-10-21T16:12:29-05:00'
 featured: no
-bibliography: /Users/solomonkurz/Dropbox/blogdown/content/post/my_blog.bib
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
 biblio-style: apalike
-csl: /Users/solomonkurz/Dropbox/blogdown/content/post/apa.csl  
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 ---
 
@@ -29,9 +29,9 @@ Edited on October 9, 2022. Doctoral candidate [Reinier van Linschoten](https://w
 
 If you’re in the know, you know there are three major ways to handle missing data:
 
--   full-information maximum likelihood,
--   multiple imputation, and
--   one-step full-luxury[^1] Bayesian imputation.
+- full-information maximum likelihood,
+- multiple imputation, and
+- one-step full-luxury[^1] Bayesian imputation.
 
 If you’re a frequentist, you only have the first two options. If you’re an **R** ([R Core Team, 2022](#ref-R-base)) user and like multiple imputation, you probably know all about the **mice** package ([van Buuren & Groothuis-Oudshoorn, 2011](#ref-mice2011), [2021](#ref-R-mice)), which generally works great. The bummer is there are no built-in ways to plot the fitted lines from models fit from multiply-imputed data using van Buuren’s **mice**-oriented workflow (see [GitHub issue \#82](https://github.com/amices/mice/issues/82)). However, there is a way to plot your fitted lines by hand and in this blog post I’ll show you how.
 
@@ -39,11 +39,11 @@ If you’re a frequentist, you only have the first two options. If you’re an *
 
 For this post, I’m presuming some background knowledge:
 
--   You should be familiar with regression. For frequentist introductions, I recommend Roback and Legler’s ([2021](#ref-roback2021beyond)) online text or James, Witten, Hastie, and Tibshirani’s ([2021](#ref-james2021AnIntroduction)) online text. For Bayesian introductions, I recommend either edition of McElreath’s text ([2020](#ref-mcelreathStatisticalRethinkingBayesian2020), [2015](#ref-mcelreathStatisticalRethinkingBayesian2015)); Kruschke’s ([2015](#ref-kruschkeDoingBayesianData2015)) text; or Gelman, Hill, and Vehtari’s ([2020](#ref-gelmanRegressionOtherStories2020)) text.
+- You should be familiar with regression. For frequentist introductions, I recommend Roback and Legler’s ([2021](#ref-roback2021beyond)) online text or James, Witten, Hastie, and Tibshirani’s ([2021](#ref-james2021AnIntroduction)) online text. For Bayesian introductions, I recommend either edition of McElreath’s text ([2015](#ref-mcelreathStatisticalRethinkingBayesian2015), [2020](#ref-mcelreathStatisticalRethinkingBayesian2020)); Kruschke’s ([2015](#ref-kruschkeDoingBayesianData2015)) text; or Gelman, Hill, and Vehtari’s ([2020](#ref-gelmanRegressionOtherStories2020)) text.
 
--   You should be familiar with contemporary missing data theory. You can find brief overviews in the texts by McElreath and Gelman et al, above. For a deeper dive, I recommend Enders ([2022](#ref-enders2022applied)), Little & Rubin ([2019](#ref-little2019statistical)), or van Buuren ([2018](#ref-vanbuurenFlexibleImputationMissing2018)).
+- You should be familiar with contemporary missing data theory. You can find brief overviews in the texts by McElreath and Gelman et al, above. For a deeper dive, I recommend Enders ([2022](#ref-enders2022applied)), Little & Rubin ([2019](#ref-little2019statistical)), or van Buuren ([2018](#ref-vanbuurenFlexibleImputationMissing2018)).
 
--   All code is in **R**. Data wrangling and plotting were done with help from the **tidyverse** ([Wickham et al., 2019](#ref-wickhamWelcomeTidyverse2019); [Wickham, 2022](#ref-R-tidyverse)) and **GGally** ([Schloerke et al., 2021](#ref-R-GGally)). The data and multiple-imputation workflow are from the [**mice** package](https://CRAN.R-project.org/package=mice).
+- All code is in **R**. Data wrangling and plotting were done with help from the **tidyverse** ([Wickham et al., 2019](#ref-wickhamWelcomeTidyverse2019); [Wickham, 2022](#ref-R-tidyverse)) and **GGally** ([Schloerke et al., 2021](#ref-R-GGally)). The data and multiple-imputation workflow are from the [**mice** package](https://CRAN.R-project.org/package=mice).
 
 Here we load our primary **R** packages.
 
@@ -208,7 +208,7 @@ fit$analyses[[7]] %>%
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
     ## Residual standard error: 2.024 on 48 degrees of freedom
-    ## Multiple R-squared:  0.2689, Adjusted R-squared:  0.2536 
+    ## Multiple R-squared:  0.2689,	Adjusted R-squared:  0.2536 
     ## F-statistic: 17.65 on 1 and 48 DF,  p-value: 0.0001146
 
 All we needed to do was use the double-bracket indexing. If you’re not up on how to do that, Hadley Wickham has a [famous tweet](https://twitter.com/hadleywickham/status/643381054758363136) on the subject and Jenny Bryan has a [great talk](https://www.youtube.com/watch?v=4MfUCX_KpdE&t=615s&frags=pl%2Cwn) discussing the role of lists within data wrangling. With the double-bracket indexing trick, you can use `fitted()` or `predict()` one model iteration at a time. E.g.,
@@ -367,7 +367,7 @@ fitted_lines %>%
     ##  8  -7.98  -0.989
     ##  9  -6.74  -0.835
     ## 10  -5.49  -0.681
-    ## # … with 20 more rows
+    ## # ℹ 20 more rows
 
 Though the expected values are pretty easy to compute, it’ll take a little more effort to express the uncertainty around those expectations because we have to account for both within- and between-imputation variance. We can define the within-imputation variance `\(V_W\)` as
 
@@ -395,7 +395,7 @@ fitted_lines %>%
     ##  8  -7.98  -0.989 0.112 
     ##  9  -6.74  -0.835 0.100 
     ## 10  -5.49  -0.681 0.0908
-    ## # … with 20 more rows
+    ## # ℹ 20 more rows
 
 We can define the between imputation variance `\(V_B\)` as
 
@@ -427,7 +427,7 @@ fitted_lines %>%
     ##  8  -7.98  -0.989 0.112  0.0336
     ##  9  -6.74  -0.835 0.100  0.0293
     ## 10  -5.49  -0.681 0.0908 0.0256
-    ## # … with 20 more rows
+    ## # ℹ 20 more rows
 
 We can define the total variance of the prediction `\(V_{\bar p}\)` as
 
@@ -458,7 +458,7 @@ fitted_lines %>%
     ##  8  -7.98  -0.989 0.112  0.0336 0.149 0.385
     ##  9  -6.74  -0.835 0.100  0.0293 0.132 0.364
     ## 10  -5.49  -0.681 0.0908 0.0256 0.119 0.345
-    ## # … with 20 more rows
+    ## # ℹ 20 more rows
 
 Now we finally have both `\(\bar p\)` and `\(V_{\bar p}\)` for each desired level of `ses`, we can use the conventional normal-theory approach to compute the pooled 95% confidence intervals.
 
@@ -519,53 +519,51 @@ There it is, friends. We have the pooled fitted line and its pooled 95% confiden
 sessionInfo()
 ```
 
-    ## R version 4.2.0 (2022-04-22)
-    ## Platform: x86_64-apple-darwin17.0 (64-bit)
-    ## Running under: macOS Big Sur/Monterey 10.16
+    ## R version 4.4.2 (2024-10-31)
+    ## Platform: aarch64-apple-darwin20
+    ## Running under: macOS Ventura 13.4
     ## 
     ## Matrix products: default
-    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRblas.0.dylib
-    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRlapack.dylib
+    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/lib/libRblas.0.dylib 
+    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.0
     ## 
     ## locale:
     ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+    ## 
+    ## time zone: America/Chicago
+    ## tzcode source: internal
     ## 
     ## attached base packages:
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ##  [1] mice_3.14.0     GGally_2.1.2    forcats_0.5.1   stringr_1.4.1  
-    ##  [5] dplyr_1.0.10    purrr_0.3.4     readr_2.1.2     tidyr_1.2.1    
-    ##  [9] tibble_3.1.8    ggplot2_3.4.0   tidyverse_1.3.2
+    ##  [1] mice_3.16.0     GGally_2.2.1    lubridate_1.9.3 forcats_1.0.0  
+    ##  [5] stringr_1.5.1   dplyr_1.1.4     purrr_1.0.2     readr_2.1.5    
+    ##  [9] tidyr_1.3.1     tibble_3.2.1    ggplot2_3.5.1   tidyverse_2.0.0
     ## 
     ## loaded via a namespace (and not attached):
-    ##  [1] Rcpp_1.0.9          lattice_0.20-45     lubridate_1.8.0    
-    ##  [4] assertthat_0.2.1    digest_0.6.30       utf8_1.2.2         
-    ##  [7] plyr_1.8.7          R6_2.5.1            cellranger_1.1.0   
-    ## [10] backports_1.4.1     reprex_2.0.2        evaluate_0.18      
-    ## [13] highr_0.9           httr_1.4.4          blogdown_1.15      
-    ## [16] pillar_1.8.1        rlang_1.0.6         googlesheets4_1.0.1
-    ## [19] readxl_1.4.1        rstudioapi_0.13     jquerylib_0.1.4    
-    ## [22] rmarkdown_2.16      labeling_0.4.2      googledrive_2.0.0  
-    ## [25] munsell_0.5.0       broom_1.0.1         compiler_4.2.0     
-    ## [28] modelr_0.1.8        xfun_0.35           pkgconfig_2.0.3    
-    ## [31] htmltools_0.5.3     tidyselect_1.1.2    bookdown_0.28      
-    ## [34] emo_0.0.0.9000      reshape_0.8.9       fansi_1.0.3        
-    ## [37] crayon_1.5.2        tzdb_0.3.0          dbplyr_2.2.1       
-    ## [40] withr_2.5.0         grid_4.2.0          jsonlite_1.8.3     
-    ## [43] gtable_0.3.1        lifecycle_1.0.3     DBI_1.1.3          
-    ## [46] magrittr_2.0.3      scales_1.2.1        cli_3.4.1          
-    ## [49] stringi_1.7.8       cachem_1.0.6        farver_2.1.1       
-    ## [52] fs_1.5.2            xml2_1.3.3          bslib_0.4.0        
-    ## [55] ellipsis_0.3.2      generics_0.1.3      vctrs_0.5.0        
-    ## [58] RColorBrewer_1.1-3  tools_4.2.0         glue_1.6.2         
-    ## [61] hms_1.1.1           fastmap_1.1.0       yaml_2.3.5         
-    ## [64] colorspace_2.0-3    gargle_1.2.0        rvest_1.0.2        
-    ## [67] knitr_1.40          haven_2.5.1         sass_0.4.2
+    ##  [1] gtable_0.3.6       shape_1.4.6.1      xfun_0.49          bslib_0.7.0       
+    ##  [5] lattice_0.22-6     tzdb_0.4.0         vctrs_0.6.5        tools_4.4.2       
+    ##  [9] generics_0.1.3     pan_1.9            pkgconfig_2.0.3    jomo_2.7-6        
+    ## [13] Matrix_1.7-1       RColorBrewer_1.1-3 assertthat_0.2.1   lifecycle_1.0.4   
+    ## [17] farver_2.1.2       compiler_4.4.2     munsell_0.5.1      codetools_0.2-20  
+    ## [21] htmltools_0.5.8.1  sass_0.4.9         yaml_2.3.8         glmnet_4.1-8      
+    ## [25] crayon_1.5.3       nloptr_2.0.3       pillar_1.10.1      jquerylib_0.1.4   
+    ## [29] MASS_7.3-61        cachem_1.0.8       iterators_1.0.14   rpart_4.1.23      
+    ## [33] boot_1.3-31        foreach_1.5.2      mitml_0.4-5        nlme_3.1-166      
+    ## [37] ggstats_0.6.0      tidyselect_1.2.1   digest_0.6.37      stringi_1.8.4     
+    ## [41] bookdown_0.40      labeling_0.4.3     splines_4.4.2      fastmap_1.1.1     
+    ## [45] grid_4.4.2         colorspace_2.1-1   cli_3.6.3          magrittr_2.0.3    
+    ## [49] emo_0.0.0.9000     survival_3.7-0     broom_1.0.7        withr_3.0.2       
+    ## [53] scales_1.3.0       backports_1.5.0    timechange_0.3.0   rmarkdown_2.29    
+    ## [57] nnet_7.3-19        lme4_1.1-35.3      blogdown_1.20      hms_1.1.3         
+    ## [61] evaluate_1.0.1     knitr_1.49         rlang_1.1.4        Rcpp_1.0.13-1     
+    ## [65] glue_1.8.0         minqa_1.2.6        rstudioapi_0.16.0  jsonlite_1.8.9    
+    ## [69] R6_2.5.1           plyr_1.8.9
 
 ## References
 
-<div id="refs" class="references csl-bib-body hanging-indent" line-spacing="2">
+<div id="refs" class="references csl-bib-body hanging-indent" entry-spacing="0" line-spacing="2">
 
 <div id="ref-brandsma1989effects" class="csl-entry">
 
@@ -599,19 +597,19 @@ Kruschke, J. K. (2015). *Doing Bayesian data analysis: A tutorial with R, JAGS, 
 
 <div id="ref-little2019statistical" class="csl-entry">
 
-Little, R. J., & Rubin, D. B. (2019). *Statistical analysis with missing data* (third, Vol. 793). John Wiley & Sons. <https://www.wiley.com/en-us/Statistical+Analysis+with+Missing+Data%2C+3rd+Edition-p-9780470526798>
-
-</div>
-
-<div id="ref-mcelreathStatisticalRethinkingBayesian2020" class="csl-entry">
-
-McElreath, R. (2020). *Statistical rethinking: A Bayesian course with examples in R and Stan* (Second Edition). CRC Press. <https://xcelab.net/rm/statistical-rethinking/>
+Little, R. J., & Rubin, D. B. (2019). *Statistical analysis with missing data* (3rd ed., Vol. 793). John Wiley & Sons. <https://www.wiley.com/en-us/Statistical+Analysis+with+Missing+Data%2C+3rd+Edition-p-9780470526798>
 
 </div>
 
 <div id="ref-mcelreathStatisticalRethinkingBayesian2015" class="csl-entry">
 
 McElreath, R. (2015). *Statistical rethinking: A Bayesian course with examples in R and Stan*. CRC press. <https://xcelab.net/rm/statistical-rethinking/>
+
+</div>
+
+<div id="ref-mcelreathStatisticalRethinkingBayesian2020" class="csl-entry">
+
+McElreath, R. (2020). *Statistical rethinking: A Bayesian course with examples in R and Stan* (Second Edition). CRC Press. <https://xcelab.net/rm/statistical-rethinking/>
 
 </div>
 
@@ -671,6 +669,6 @@ Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L. D., François, R., G
 
 </div>
 
-[^1]: Be warned that “full-luxury Bayesian …” isn’t a real term. Rather, it’s a playful descriptor coined by the great Richard McElreath. To hear him use it in action, check out his [nifty talk](https://www.youtube.com/watch?v=KNPYUVmY3NM) on causal inference. One-step Bayesian imputation is a real thing, though. McElreath covered it in both editions of his text and I’ve even blogged about it [here](https://solomonkurz.netlify.app/post/2021-07-27-one-step-bayesian-imputation-when-you-have-dropout-in-your-rct/).
+[^1]: Be warned that “full-luxury Bayesian …” isn’t a real term. Rather, it’s a playful descriptor coined by the great Richard McElreath. To hear him use it in action, check out his [nifty talk](https://www.youtube.com/watch?v=KNPYUVmY3NM) on causal inference. One-step Bayesian imputation is a real thing, though. McElreath covered it in both editions of his text and I’ve even blogged about it [here](https://solomonkurz.netlify.app/blog/2021-07-27-one-step-bayesian-imputation-when-you-have-dropout-in-your-rct/).
 
 [^2]: When you do this on your own, you might instead name the `.imp` column as `m`, which goes nicely with Miles’s notation. In this post and in some of my personal work, I used `.imp` because it lines up nicely with the output from some of the **mice** functions.
