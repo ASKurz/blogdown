@@ -26,7 +26,7 @@ Edited on December 12, 2022, to use the new `as_draws_df()` workflow.
 
 ## Preamble
 
-In [Section 14.3](https://bookdown.org/content/3890/missing-data-and-other-opportunities.html#summary-bonus-meta-analysis) of my ([2020](#ref-kurzStatisticalRethinkingBrms2020)) translation of the first edition of McElreath’s ([2015](#ref-mcelreathStatisticalRethinkingBayesian2015)) *Statistical rethinking*, I included a bonus section covering Bayesian meta-analysis. For my ([2020](#ref-kurzStatisticalRethinkingSecondEd2020)) translation of the second edition of the text ([McElreath, 2020](#ref-mcelreathStatisticalRethinkingBayesian2020)), I’d like to include another section on the topic, but from a different perspective. The first time around, we focused on standardized mean differences. This time, I’d like to tackle odds ratios and, while we’re at it, give a little bit of a plug for open science practices.
+In [Section 14.3](https://bookdown.org/content/3890/missing-data-and-other-opportunities.html#summary-bonus-meta-analysis) of my ([2020b](#ref-kurzStatisticalRethinkingBrms2020)) translation of the first edition of McElreath’s ([2015](#ref-mcelreathStatisticalRethinkingBayesian2015)) *Statistical rethinking*, I included a bonus section covering Bayesian meta-analysis. For my ([2020a](#ref-kurzStatisticalRethinkingSecondEd2020)) translation of the second edition of the text ([McElreath, 2020](#ref-mcelreathStatisticalRethinkingBayesian2020)), I’d like to include another section on the topic, but from a different perspective. The first time around, we focused on standardized mean differences. This time, I’d like to tackle odds ratios and, while we’re at it, give a little bit of a plug for open science practices.
 
 The purpose of this post is to present a rough draft of the section. I intend to tack this section onto the end of Chapter 15 (*Missing Data and Other Opportunities*), which covers measurement error. If you have any constrictive criticisms, please pass them along either in the [GitHub issues for the ebook](https://github.com/ASKurz/Statistical_Rethinking_with_brms_ggplot2_and_the_tidyverse_2_ed/issues) or on [Twitter](https://twitter.com/SolomonKurz/status/1317854064839958531).
 
@@ -180,7 +180,7 @@ h %>%
     ##  8 Department of Psychology, Pennsylvania State University Abington, Abington, PA 19001          166
     ##  9 American University of Sharjah, United Arab Emirates                                          162
     ## 10 University of British Columbia, Vancouver, Canada                                             147
-    ## # … with 49 more rows
+    ## # ℹ 49 more rows
 
 ### Our effect size will be an odds ratio.
 
@@ -218,10 +218,6 @@ summary(glm0)
     ## Call:
     ## glm(formula = y ~ factor, family = binomial(logit), data = h %>% 
     ##     filter(loc == 1))
-    ## 
-    ## Deviance Residuals: 
-    ##     Min       1Q   Median       3Q      Max  
-    ## -1.5227  -0.6231  -0.6231   0.8677   1.8626  
     ## 
     ## Coefficients:
     ##                  Estimate Std. Error z value Pr(>|z|)    
@@ -306,7 +302,7 @@ glms %>%
     ##  8 8     factorSideEffect     1.78     0.459      3.87       0
     ##  9 9     factorSideEffect     1.81     0.378      4.79       0
     ## 10 10    factorSideEffect     2.37     0.495      4.79       0
-    ## # … with 49 more rows
+    ## # ℹ 49 more rows
 
 In the `estimate` column we have all the `\(y_j\)` values and `std.error` contains the corresponding `\(\sigma_j\)` values. Here they are in a plot.
 
@@ -356,16 +352,16 @@ print(me0)
     ##   Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
     ##          total post-warmup draws = 4000
     ## 
-    ## Group-Level Effects: 
+    ## Multilevel Hyperparameters:
     ## ~loc (Number of levels: 59) 
     ##               Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
     ## sd(Intercept)     0.43      0.09     0.26     0.61 1.00     1700     2556
     ## 
-    ## Population-Level Effects: 
+    ## Regression Coefficients:
     ##           Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
     ## Intercept     2.55      0.09     2.38     2.72 1.00     2366     2808
     ## 
-    ## Family Specific Parameters: 
+    ## Further Distributional Parameters:
     ##       Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
     ## sigma     0.00      0.00     0.00     0.00   NA       NA       NA
     ## 
@@ -390,7 +386,7 @@ We said earlier that meta-analysis is just a special case of the multilevel mode
 
 \`\`
 
-where the criterion variable, `\(y\)`, is nested in `\(i\)` participants within `\(j\)` locations. The `\(\beta\)` parameter is analogous to the meta-analytic effect ($\mu$) and `\(\sigma_\beta\)` is analogous to the expression of heterogeneity in the meta-analytic effect ($\tau$). Here is how to fit the model with **brms**.
+where the criterion variable, `\(y\)`, is nested in `\(i\)` participants within `\(j\)` locations. The `\(\beta\)` parameter is analogous to the meta-analytic effect (`\(\mu\)`) and `\(\sigma_\beta\)` is analogous to the expression of heterogeneity in the meta-analytic effect (`\(\tau\)`). Here is how to fit the model with **brms**.
 
 ``` r
 me1 <- 
@@ -417,14 +413,14 @@ print(me1)
     ##   Draws: 4 chains, each with iter = 2000; warmup = 1000; thin = 1;
     ##          total post-warmup draws = 4000
     ## 
-    ## Group-Level Effects: 
+    ## Multilevel Hyperparameters:
     ## ~loc (Number of levels: 59) 
     ##                                 Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
     ## sd(Intercept)                       0.42      0.07     0.30     0.57 1.00     1593     2426
     ## sd(factorSideEffect)                0.48      0.09     0.32     0.67 1.00      918     1642
     ## cor(Intercept,factorSideEffect)    -0.31      0.19    -0.63     0.09 1.01     1014     1909
     ## 
-    ## Population-Level Effects: 
+    ## Regression Coefficients:
     ##                  Estimate Est.Error l-95% CI u-95% CI Rhat Bulk_ESS Tail_ESS
     ## Intercept           -1.67      0.08    -1.82    -1.53 1.00     1516     1806
     ## factorSideEffect     2.57      0.09     2.40     2.75 1.00     1509     1846
@@ -688,66 +684,57 @@ If you’d like to learn more about these methods, do check out Vourre’s [*Met
 sessionInfo()
 ```
 
-    ## R version 4.2.0 (2022-04-22)
-    ## Platform: x86_64-apple-darwin17.0 (64-bit)
-    ## Running under: macOS Big Sur/Monterey 10.16
+    ## R version 4.4.2 (2024-10-31)
+    ## Platform: aarch64-apple-darwin20
+    ## Running under: macOS Ventura 13.4
     ## 
     ## Matrix products: default
-    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRblas.0.dylib
-    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.2/Resources/lib/libRlapack.dylib
+    ## BLAS:   /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/lib/libRblas.0.dylib 
+    ## LAPACK: /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/lib/libRlapack.dylib;  LAPACK version 3.12.0
     ## 
     ## locale:
     ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
+    ## 
+    ## time zone: America/Chicago
+    ## tzcode source: internal
     ## 
     ## attached base packages:
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ##  [1] tidybayes_3.0.2   broom_1.0.1       viridis_0.6.2     viridisLite_0.4.1 ggdark_0.2.1     
-    ##  [6] brms_2.18.0       Rcpp_1.0.9        forcats_0.5.1     stringr_1.4.1     dplyr_1.0.10     
-    ## [11] purrr_0.3.4       readr_2.1.2       tidyr_1.2.1       tibble_3.1.8      ggplot2_3.4.0    
-    ## [16] tidyverse_1.3.2  
+    ##  [1] tidybayes_3.0.7   broom_1.0.7       viridis_0.6.5     viridisLite_0.4.2 ggdark_0.2.1     
+    ##  [6] brms_2.22.0       Rcpp_1.0.13-1     lubridate_1.9.3   forcats_1.0.0     stringr_1.5.1    
+    ## [11] dplyr_1.1.4       purrr_1.0.2       readr_2.1.5       tidyr_1.3.1       tibble_3.2.1     
+    ## [16] ggplot2_3.5.1     tidyverse_2.0.0  
     ## 
     ## loaded via a namespace (and not attached):
-    ##   [1] readxl_1.4.1         backports_1.4.1      plyr_1.8.7           igraph_1.3.4        
-    ##   [5] svUnit_1.0.6         splines_4.2.0        crosstalk_1.2.0      TH.data_1.1-1       
-    ##   [9] rstantools_2.2.0     inline_0.3.19        digest_0.6.30        htmltools_0.5.3     
-    ##  [13] fansi_1.0.3          magrittr_2.0.3       checkmate_2.1.0      googlesheets4_1.0.1 
-    ##  [17] tzdb_0.3.0           modelr_0.1.8         RcppParallel_5.1.5   matrixStats_0.62.0  
-    ##  [21] vroom_1.5.7          xts_0.12.1           sandwich_3.0-2       prettyunits_1.1.1   
-    ##  [25] colorspace_2.0-3     rvest_1.0.2          ggdist_3.2.0         haven_2.5.1         
-    ##  [29] xfun_0.35            callr_3.7.3          crayon_1.5.2         jsonlite_1.8.3      
-    ##  [33] lme4_1.1-31          survival_3.4-0       zoo_1.8-10           glue_1.6.2          
-    ##  [37] gtable_0.3.1         gargle_1.2.0         emmeans_1.8.0        distributional_0.3.1
-    ##  [41] pkgbuild_1.3.1       rstan_2.21.7         abind_1.4-5          scales_1.2.1        
-    ##  [45] mvtnorm_1.1-3        DBI_1.1.3            miniUI_0.1.1.1       xtable_1.8-4        
-    ##  [49] bit_4.0.4            stats4_4.2.0         StanHeaders_2.21.0-7 DT_0.24             
-    ##  [53] htmlwidgets_1.5.4    httr_1.4.4           threejs_0.3.3        arrayhelpers_1.1-0  
-    ##  [57] posterior_1.3.1      ellipsis_0.3.2       pkgconfig_2.0.3      loo_2.5.1           
-    ##  [61] farver_2.1.1         sass_0.4.2           dbplyr_2.2.1         utf8_1.2.2          
-    ##  [65] labeling_0.4.2       tidyselect_1.1.2     rlang_1.0.6          reshape2_1.4.4      
-    ##  [69] later_1.3.0          munsell_0.5.0        cellranger_1.1.0     tools_4.2.0         
-    ##  [73] cachem_1.0.6         cli_3.4.1            generics_0.1.3       ggridges_0.5.3      
-    ##  [77] evaluate_0.18        fastmap_1.1.0        yaml_2.3.5           bit64_4.0.5         
-    ##  [81] processx_3.8.0       knitr_1.40           fs_1.5.2             nlme_3.1-159        
-    ##  [85] mime_0.12            projpred_2.2.1       xml2_1.3.3           compiler_4.2.0      
-    ##  [89] bayesplot_1.9.0      shinythemes_1.2.0    rstudioapi_0.13      curl_4.3.2          
-    ##  [93] gamm4_0.2-6          reprex_2.0.2         bslib_0.4.0          stringi_1.7.8       
-    ##  [97] highr_0.9            ps_1.7.2             blogdown_1.15        Brobdingnag_1.2-8   
-    ## [101] lattice_0.20-45      Matrix_1.4-1         nloptr_2.0.3         markdown_1.1        
-    ## [105] shinyjs_2.1.0        tensorA_0.36.2       vctrs_0.5.0          pillar_1.8.1        
-    ## [109] lifecycle_1.0.3      jquerylib_0.1.4      bridgesampling_1.1-2 estimability_1.4.1  
-    ## [113] httpuv_1.6.5         R6_2.5.1             bookdown_0.28        promises_1.2.0.1    
-    ## [117] gridExtra_2.3        codetools_0.2-18     boot_1.3-28          colourpicker_1.1.1  
-    ## [121] MASS_7.3-58.1        gtools_3.9.3         assertthat_0.2.1     withr_2.5.0         
-    ## [125] shinystan_2.6.0      multcomp_1.4-20      mgcv_1.8-40          parallel_4.2.0      
-    ## [129] hms_1.1.1            grid_4.2.0           coda_0.19-4          minqa_1.2.5         
-    ## [133] rmarkdown_2.16       googledrive_2.0.0    shiny_1.7.2          lubridate_1.8.0     
-    ## [137] base64enc_0.1-3      dygraphs_1.1.1.6
+    ##  [1] svUnit_1.0.6         tidyselect_1.2.1     farver_2.1.2         loo_2.8.0           
+    ##  [5] fastmap_1.1.1        TH.data_1.1-2        tensorA_0.36.2.1     blogdown_1.20       
+    ##  [9] digest_0.6.37        estimability_1.5.1   timechange_0.3.0     lifecycle_1.0.4     
+    ## [13] StanHeaders_2.32.10  survival_3.7-0       magrittr_2.0.3       posterior_1.6.0     
+    ## [17] compiler_4.4.2       rlang_1.1.4          sass_0.4.9           tools_4.4.2         
+    ## [21] utf8_1.2.4           yaml_2.3.8           knitr_1.49           labeling_0.4.3      
+    ## [25] bridgesampling_1.1-2 bit_4.0.5            pkgbuild_1.4.4       curl_6.0.1          
+    ## [29] plyr_1.8.9           multcomp_1.4-26      abind_1.4-8          withr_3.0.2         
+    ## [33] grid_4.4.2           stats4_4.4.2         xtable_1.8-4         colorspace_2.1-1    
+    ## [37] inline_0.3.19        emmeans_1.10.3       scales_1.3.0         MASS_7.3-61         
+    ## [41] cli_3.6.3            mvtnorm_1.2-5        crayon_1.5.3         rmarkdown_2.29      
+    ## [45] generics_0.1.3       RcppParallel_5.1.7   rstudioapi_0.16.0    reshape2_1.4.4      
+    ## [49] tzdb_0.4.0           cachem_1.0.8         rstan_2.32.6         splines_4.4.2       
+    ## [53] bayesplot_1.11.1     parallel_4.4.2       matrixStats_1.4.1    vctrs_0.6.5         
+    ## [57] V8_4.4.2             Matrix_1.7-1         sandwich_3.1-1       jsonlite_1.8.9      
+    ## [61] bookdown_0.40        arrayhelpers_1.1-0   hms_1.1.3            bit64_4.0.5         
+    ## [65] ggdist_3.3.2         jquerylib_0.1.4      glue_1.8.0           codetools_0.2-20    
+    ## [69] distributional_0.5.0 stringi_1.8.4        gtable_0.3.6         QuickJSR_1.1.3      
+    ## [73] quadprog_1.5-8       munsell_0.5.1        pillar_1.10.1        htmltools_0.5.8.1   
+    ## [77] Brobdingnag_1.2-9    R6_2.5.1             vroom_1.6.5          evaluate_1.0.1      
+    ## [81] lattice_0.22-6       backports_1.5.0      bslib_0.7.0          rstantools_2.4.0    
+    ## [85] coda_0.19-4.1        gridExtra_2.3        nlme_3.1-166         checkmate_2.3.2     
+    ## [89] xfun_0.49            zoo_1.8-12           pkgconfig_2.0.3
 
 ## References
 
-<div id="refs" class="references csl-bib-body hanging-indent" line-spacing="2">
+<div id="refs" class="references csl-bib-body hanging-indent" entry-spacing="0" line-spacing="2">
 
 <div id="ref-gelman2013bayesian" class="csl-entry">
 
@@ -769,25 +756,25 @@ Klein, R. A., Vianello, M., Hasselman, F., Adams, B. G., Adams, R. B., Alper, S.
 
 <div id="ref-kurzStatisticalRethinkingSecondEd2020" class="csl-entry">
 
-Kurz, A. S. (2020). *Statistical rethinking with brms, Ggplot2, and the tidyverse: Second edition* (version 0.1.1). <https://bookdown.org/content/4857/>
+Kurz, A. S. (2020a). *Statistical rethinking with brms, Ggplot2, and the tidyverse: Second edition* (version 0.1.1). <https://bookdown.org/content/4857/>
 
 </div>
 
 <div id="ref-kurzStatisticalRethinkingBrms2020" class="csl-entry">
 
-Kurz, A. S. (2020). *Statistical rethinking with brms, <span class="nocase">ggplot2</span>, and the tidyverse* (version 1.2.0). <https://doi.org/10.5281/zenodo.3693202>
-
-</div>
-
-<div id="ref-mcelreathStatisticalRethinkingBayesian2020" class="csl-entry">
-
-McElreath, R. (2020). *Statistical rethinking: A Bayesian course with examples in R and Stan* (Second Edition). CRC Press. <https://xcelab.net/rm/statistical-rethinking/>
+Kurz, A. S. (2020b). *Statistical rethinking with brms, <span class="nocase">ggplot2</span>, and the tidyverse* (version 1.2.0). <https://doi.org/10.5281/zenodo.3693202>
 
 </div>
 
 <div id="ref-mcelreathStatisticalRethinkingBayesian2015" class="csl-entry">
 
 McElreath, R. (2015). *Statistical rethinking: A Bayesian course with examples in R and Stan*. CRC press. <https://xcelab.net/rm/statistical-rethinking/>
+
+</div>
+
+<div id="ref-mcelreathStatisticalRethinkingBayesian2020" class="csl-entry">
+
+McElreath, R. (2020). *Statistical rethinking: A Bayesian course with examples in R and Stan* (Second Edition). CRC Press. <https://xcelab.net/rm/statistical-rethinking/>
 
 </div>
 
