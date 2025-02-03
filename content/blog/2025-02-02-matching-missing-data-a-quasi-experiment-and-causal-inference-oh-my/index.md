@@ -33,7 +33,7 @@ link-citations: yes
 
 ## Context
 
-I have a project for work where the goal is to compare two non-randomized groups. One group received and experimental intervention, and we’d like to compare them to their peers who were not offered the same intervention. We have access to data from folks from the broader population during the same time period, so the goal isn’t so bad as far as quasi-experiments go. The team would like to improve the comparisons by using matching, and we have some missing data issues in the matching covariate set. I haven’t done an analysis quite like this before, so this post is a walk through of the basic statistical procedure as I see it.
+I have a project for work where the goal is to compare two non-randomized groups. One group received and experimental intervention, and we’d like to compare them to their peers who were not offered the same intervention. We have access to data from folks from the broader population during the same time period, so the goal isn’t so bad as far as quasi-experiments go.[^1] The team would like to improve the comparisons by using matching, and we have some missing data issues in the matching covariate set. I haven’t done an analysis quite like this before, so this post is a walk through of the basic statistical procedure as I see it.
 
 You are welcome to give feedback in the comments section.
 
@@ -123,7 +123,7 @@ head(d)
     ## 8  72    0 25.9    1      0   0   1
     ## 9  61    0 36.5    2      1   0   1
 
-As in Pishgar et al. ([2021](#ref-pishgar2021MatchThem)), the criterion variable is knee osteoarthritis in the follow-up time period, `koa`. The focal *treatment* variable[^1] is osteoporosis at baseline, `osp`. The remaining variables are potential confounders. Thus the research question for this blog is: *What is the causal effect of baseline osteoporosis status on follow-up knee osteoarthritis status?* For my real-world use case, the research question is more like: *What is the causal effect of our new treatment, relative to business as usual?*
+As in Pishgar et al. ([2021](#ref-pishgar2021MatchThem)), the criterion variable is knee osteoarthritis in the follow-up time period, `koa`. The focal *treatment* variable[^2] is osteoporosis at baseline, `osp`. The remaining variables are potential confounders. Thus the research question for this blog is: *What is the causal effect of baseline osteoporosis status on follow-up knee osteoarthritis status?* For my real-world use case, the research question is more like: *What is the causal effect of our new treatment, relative to business as usual?*
 
 ## Missing data
 
@@ -149,7 +149,7 @@ The top row indicates most cases (2,363 out of 2,585) had no missing data. Thoug
 
 ## Impute with `mice()`
 
-We’ll start the imputation discussion with an initial default[^2] call to `mice()`, the primary function from the **mice** package, and we save the results as `imputed.datasets`.[^3]
+We’ll start the imputation discussion with an initial default[^3] call to `mice()`, the primary function from the **mice** package, and we save the results as `imputed.datasets`.[^4]
 
 ``` r
 imputed.datasets <- mice(d, print = FALSE)
@@ -157,7 +157,7 @@ imputed.datasets <- mice(d, print = FALSE)
 
 The default imputation method for `mice()` is generally predictive mean matching (execute `imputed.datasets$method`), which is attractive in how simple and general it is. If you’re not familiar with predictive mean matching, see [Section 3.4](https://stefvanbuuren.name/fimd/sec-pmm.html) in van Buuren ([2018](#ref-vanbuurenFlexibleImputationMissing2018)) for an introduction. I believe there are some concerns predictive mean matching doesn’t work as well with smaller sample sizes, but I think the `\(N = 2{,}585\)` data set here is large enough to discard those worries. Note though, the `mice()` function used polytomous logistic regression (`method = "polyreg"`) for the factor variable `race`, which I think is a great choice for that variable.
 
-By default, all variables are used to predict the missingness of all other variables in a simple linear model (execute `imputed.datasets$predictorMatrix`). However, there is some concern in the RCT literature that such a simple model may be inappropriate in that it would not be robust to possible treatment-by-covariate interactions, which could bias the results ([Sullivan et al., 2018](#ref-sullivan2018should)).[^4] This leaves us with two basic solutions: expand the predictor matrix to include all possible `osp`-by-covariate interactions, or impute the data sets separately by the two levels of `osp`. With a small number of rows, the second option might be worrisome, but I think splitting the data set into `\(n_{{\text{osp}} = 0} = 2{,}106\)` and `\(n_{{\text{osp}} = 1} = 479\)` should be fine.
+By default, all variables are used to predict the missingness of all other variables in a simple linear model (execute `imputed.datasets$predictorMatrix`). However, there is some concern in the RCT literature that such a simple model may be inappropriate in that it would not be robust to possible treatment-by-covariate interactions, which could bias the results ([Sullivan et al., 2018](#ref-sullivan2018should)).[^5] This leaves us with two basic solutions: expand the predictor matrix to include all possible `osp`-by-covariate interactions, or impute the data sets separately by the two levels of `osp`. With a small number of rows, the second option might be worrisome, but I think splitting the data set into `\(n_{{\text{osp}} = 0} = 2{,}106\)` and `\(n_{{\text{osp}} = 1} = 479\)` should be fine.
 
 Toward that end, we first make two new versions of the `d` data set. The new `d0` subset only contains the cases for which `osp == 0`; the `d1` subset only contains the remaining cases for which `osp == 1`.
 
@@ -231,12 +231,12 @@ imputed.datasets |>
     ##  $ ignore         : logi [1:2585] FALSE FALSE FALSE FALSE FALSE FALSE ...
     ##  $ seed           : logi NA
     ##  $ iteration      : num 5
-    ##  $ lastSeedValue  : int [1:626] 10403 420 -496696127 234920646 -232745372 -1102664004 1851737984 1329998351 168018391 -632764724 ...
-    ##  $ chainMean      : num [1:7, 1:5, 1:5] NaN NaN NaN NaN 0.393 ...
-    ##  $ chainVar       : num [1:7, 1:5, 1:5] NA NA NA NA 0.229 ...
+    ##  $ lastSeedValue  : int [1:626] 10403 358 1582094929 1937548406 1383918287 1862653681 -786695623 890661574 -1471511402 1924618058 ...
+    ##  $ chainMean      : num [1:7, 1:5, 1:5] NaN NaN NaN NaN 0.321 ...
+    ##  $ chainVar       : num [1:7, 1:5, 1:5] NA NA NA NA 0.214 ...
     ##  $ loggedEvents   :'data.frame':	1 obs. of  5 variables:
     ##  $ version        :Classes 'package_version', 'numeric_version'  hidden list of 1
-    ##  $ date           : Date[1:1], format: "2025-02-02"
+    ##  $ date           : Date[1:1], format: "2025-02-03"
 
 In the `str()` output, you’ll note how the data frame in the `data` section now has 2,585 rows (i.e., the full sample size), and that correct number of cases is also echoed in the `where` and `ignore` sections. `rbind()` worked!
 
@@ -381,7 +381,7 @@ t1 - t0
 
     ## Time difference of 9.274688 mins
 
-Note the `Sys.time()` calls and the `t1 - t0` algebra at the bottom of the code block. This is a method I often use to keep track of the computation time for longer operations. In this case this code block took just under ten minutes to complete on my laptop.[^5] YMMV.
+Note the `Sys.time()` calls and the `t1 - t0` algebra at the bottom of the code block. This is a method I often use to keep track of the computation time for longer operations. In this case this code block took just under ten minutes to complete on my laptop.[^6] YMMV.
 
 The output of `matchthem()` is an object of class `mimids`, which is a list of 4.
 
@@ -480,7 +480,7 @@ bal.tab(osp ~ male + race + smoker,
     ## Unadjusted 2106 479
     ## Adjusted    479 479
 
-In this case all the contrasts look great. The SMD’s are all below the conventional threshold for a *small* difference,[^6] and the proportion contrasts are about as close to zero as you could hope for.
+In this case all the contrasts look great. The SMD’s are all below the conventional threshold for a *small* difference,[^7] and the proportion contrasts are about as close to zero as you could hope for.
 
 Also note in the secondary tables we can see that whereas the total sample size for the `osp == 0` cases was 2,106, only 479 cases were matched with with the 479 available cases in the `osp == 1`. This is as expected.
 
@@ -626,7 +626,7 @@ Each matched pair contains one of each of the two levels of the treatment variab
 
 ## Fit the primary model and compute the estimand
 
-We’re finally ready to fit the substantive model. Technically we could just fit the simple univariable model `koa ~ osp`.[^7] However, there’s no inherent reason for us not to condition the substantive model on the covariate set, and doing so can help further control for confounding, particularly in the presence of imperfect matching (see [Greifer & Stuart, 2021](#ref-greifer2021matching)). One approach would be the simple expansion `koa ~ osp + age + male + bmi + race + smoker`.[^8] But we could go even further to protect against any treatment-by-covariate interactions with the fuller `koa ~ osp * (age + male + bmi + race + smoker)`.[^9] We use the `with()` function to fit the model to the matched MI data sets.
+We’re finally ready to fit the substantive model. Technically we could just fit the simple univariable model `koa ~ osp`.[^8] However, there’s no inherent reason for us not to condition the substantive model on the covariate set, and doing so can help further control for confounding, particularly in the presence of imperfect matching (see [Greifer & Stuart, 2021](#ref-greifer2021matching)). One approach would be the simple expansion `koa ~ osp + age + male + bmi + race + smoker`.[^9] But we could go even further to protect against any treatment-by-covariate interactions with the fuller `koa ~ osp * (age + male + bmi + race + smoker)`.[^10] We use the `with()` function to fit the model to the matched MI data sets.
 
 ``` r
 matched.models <- with(
@@ -682,7 +682,7 @@ However, in the *MatchIt: Getting Started* vignette, Greifer cautioned:
 
 > The outcome model coefficients and tests should not be interpreted or reported.
 
-But rather, one should only report and interpret the causal estimand, which in our case is the ATT, the *average treatment effect for the treated*.[^10] We can compute the ATT with g-computation using the `avg_comparisons()` function from the **marginaleffects** package.[^11] Note how we can request cluster-robust standard errors with pair membership as the clustering variable by setting `vcov = ~subclass`. By setting `by = "osp"`, we compute both the ATU[^12] and the ATT. Our focus will be the ATT.
+But rather, one should only report and interpret the causal estimand, which in our case is the ATT, the *average treatment effect for the treated*.[^11] We can compute the ATT with g-computation using the `avg_comparisons()` function from the **marginaleffects** package.[^12] Note how we can request cluster-robust standard errors with pair membership as the clustering variable by setting `vcov = ~subclass`. By setting `by = "osp"`, we compute both the ATU[^13] and the ATT. Our focus will be the ATT.
 
 ``` r
 avg_comparisons(matched.models,
@@ -705,6 +705,14 @@ avg_comparisons(matched.models,
     ## Columns: term, contrast, osp, estimate, std.error, s.value, df, statistic, p.value, conf.low, conf.high
 
 The second row of the output, for which `osp == 1`, is where we see the summary for the ATT. By default, `avg_comparisons()` puts this in a probability-difference metric, though other metrics can be called with the `comparison` and/or `transform` arguments. My understanding is this summary also automatically pools the results using Rubin’s rules. Substantively, the probability difference is -0.03, 95% CI \[-0.10, 0.03\], which is about as close to zero as you could ask for. This is the effect size you would report in a white paper.
+
+## Thank the reviewer
+
+I’d like to publicly acknowledge and thank
+
+- [Julia Rohrer](https://juliarohrer.com/)
+
+for her kind efforts reviewing the draft of this post. Do note the final editorial decisions were my own.
 
 ## Session info
 
@@ -974,26 +982,28 @@ Zhao, Q.-Y., Luo, J.-C., Su, Y., Zhang, Y.-J., Tu, G.-W., & Luo, Z. (2021). Prop
 
 </div>
 
-[^1]: Often called an *exposure* variable in the causal-inference literature. I don’t know for sure, but I imagine the term has its roots in the epidemiological literature.
+[^1]: Here I’m using the term *quasi-experiment* to mean an intervention that shares the major features of a randomized experiment, such as the causal intervention preceding the outcome, but that lacks random assignment to condition. For more background on this use of the term, see Chapter 1 in Shadish et al. ([2002](#ref-shadish2002Experimental)).
 
-[^2]: Technically this isn’t a pure default call since we’re setting `print = FALSE` to suppress the print history. But this is small potatoes and all the other settings are at their defaults, some of which we’ll be changing shortly.
+[^2]: Often called an *exposure* variable in the causal-inference literature. I don’t know for sure, but I imagine the term has its roots in the epidemiological literature.
 
-[^3]: I’m just going to continue paying homage to Pishgar et al. ([2021](#ref-pishgar2021MatchThem)) by reusing many of the object names from their paper.
+[^3]: Technically this isn’t a pure default call since we’re setting `print = FALSE` to suppress the print history. But this is small potatoes and all the other settings are at their defaults, some of which we’ll be changing shortly.
 
-[^4]: Though we don’t have randomly-assigned groups in this example, I believe the basic concern is the same. The two groups may have different correlations among the covariates, and we want an imputation method that can handle such a pattern.
+[^4]: I’m just going to continue paying homage to Pishgar et al. ([2021](#ref-pishgar2021MatchThem)) by reusing many of the object names from their paper.
 
-[^5]: 2023 M2 chip MacBook Pro
+[^5]: Though we don’t have randomly-assigned groups in this example, I believe the basic concern is the same. The two groups may have different correlations among the covariates, and we want an imputation method that can handle such a pattern.
 
-[^6]: That is, they’re below `\(d = 0.2\)`. See Cohen ([1988](#ref-cohenStatisticalPowerAnalysis1988a))
+[^6]: 2023 M2 chip MacBook Pro
 
-[^7]: An ANOVA.
+[^7]: That is, they’re below `\(d = 0.2\)`. See Cohen ([1988](#ref-cohenStatisticalPowerAnalysis1988a))
 
-[^8]: An ANCOVA.
+[^8]: An ANOVA.
 
-[^9]: An ANHECOVA, an analysis of *heterogeneous* covariance.
+[^9]: An ANCOVA.
 
-[^10]: If you’re not familiar with the ATT, it was discussed a bit in Greifer & Stuart ([2021](#ref-greifer2021matching)), though instead by the term “average exposure effect in the exposed.” Greifer recommend the ATT for my real-world use case, which is why I use it here.
+[^10]: An ANHECOVA, an analysis of *heterogeneous* covariance.
 
-[^11]: If you’re not familiar with g-computation, boy do I have the blog series for you. Start [here](https://solomonkurz.netlify.app/blog/2023-04-12-boost-your-power-with-baseline-covariates/). You’ll want to read the first three posts. Sorry, but some topics take a little effort to walk out.
+[^11]: If you’re not familiar with the ATT, it was discussed a bit in Greifer & Stuart ([2021](#ref-greifer2021matching)), though instead by the term “average exposure effect in the exposed.” Greifer recommend the ATT for my real-world use case, which is why I use it here.
 
-[^12]: That is, the *average treatment effect for the untreated*.
+[^12]: If you’re not familiar with g-computation, boy do I have the blog series for you. Start [here](https://solomonkurz.netlify.app/blog/2023-04-12-boost-your-power-with-baseline-covariates/). You’ll want to read the first three posts. Sorry, but some topics take a little effort to walk out.
+
+[^13]: That is, the *average treatment effect for the untreated*.
