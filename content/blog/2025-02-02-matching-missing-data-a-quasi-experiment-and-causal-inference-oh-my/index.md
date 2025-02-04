@@ -233,9 +233,9 @@ imputed.datasets |>
     ##  $ ignore         : logi [1:2585] FALSE FALSE FALSE FALSE FALSE FALSE ...
     ##  $ seed           : logi NA
     ##  $ iteration      : num 5
-    ##  $ lastSeedValue  : int [1:626] 10403 241 -1445287476 1152789864 -378730280 -686891077 90475197 -771102431 1866019345 -980485812 ...
-    ##  $ chainMean      : num [1:7, 1:5, 1:5] NaN NaN NaN NaN 0.5 ...
-    ##  $ chainVar       : num [1:7, 1:5, 1:5] NA NA NA NA 0.268 ...
+    ##  $ lastSeedValue  : int [1:626] 10403 383 702071902 -1137077967 279461322 -620856631 -796721528 -2132257057 -1983709832 -1621461134 ...
+    ##  $ chainMean      : num [1:7, 1:5, 1:5] NaN NaN NaN NaN 0.571 ...
+    ##  $ chainVar       : num [1:7, 1:5, 1:5] NA NA NA NA 0.265 ...
     ##  $ loggedEvents   :'data.frame':	1 obs. of  5 variables:
     ##  $ version        :Classes 'package_version', 'numeric_version'  hidden list of 1
     ##  $ date           : Date[1:1], format: "2025-02-04"
@@ -632,11 +632,11 @@ Each matched pair contains one of each of the two levels of the treatment variab
 
 ## Fit the primary model
 
-We’re finally ready to fit the substantive model. Technically we could just fit the simple univariable model. In formula syntax, that would be:
+We’re finally ready to fit the substantive model. Technically we could just fit a simple univariable model. In formula syntax, that would be
 
 `koa ~ osp`,
 
-which is sometimes called an ANOVA in the methods literature. This simple model would be valid because we have already attempted to account for confounders with our matching procedure. However, there’s no inherent reason for us not to condition the substantive model on the covariate set. Doing so can help further control for confounding, particularly in the presence of imperfect matching, and it can also increase the precision of the estimate[^9] (see [Greifer & Stuart, 2021b](#ref-greifer2021matching)). One approach would be the simple expansion:
+which is sometimes called an ANOVA in the methods literature. This simple model would be valid because we have already attempted to account for confounders with our matching procedure. However, there’s no inherent reason for us not to condition the substantive model on the covariate set. Doing so can help further control for confounding, particularly in the presence of imperfect matching, and it can also increase the precision of the estimate[^9] (see [Greifer & Stuart, 2021b](#ref-greifer2021matching)). One approach would be the simple expansion
 
 `koa ~ osp + age + male + bmi + race + smoker`,
 
@@ -646,7 +646,7 @@ which is often described as an ANCOVA. But we could go even further to protect a
 
 In some of the more recent literature, this has been called an ANHECOVA, an analysis of *heterogeneous* covariance (e.g., [Ye et al., 2022](#ref-ye2022toward)).
 
-In practice, we use the `with()` function to fit the ANHECOVA model to the matched MI data sets. Given the criterion variable `koa` is binary, we use the `glm()` function with `family = binomial` to return a logistic regression model.
+In practice, we use the `with()` function to fit the substantive model to the matched MI data sets. Given the criterion variable `koa` is binary, we use the `glm()` function with `family = binomial` to use logistic regression.
 
 ``` r
 matched.models <- with(
@@ -655,12 +655,59 @@ matched.models <- with(
              family = binomial))
 ```
 
+The output is an object of class `mimira` and `mira`, which is a list of 4.
+
+``` r
+class(matched.models)
+```
+
+    ## [1] "mimira" "mira"
+
+``` r
+str(matched.models, max.level = 1, give.attr = FALSE)
+```
+
+    ## List of 4
+    ##  $ call    : language with.mimids(data = matched.datasets, expr = glm(koa ~ osp * (age + male +      bmi + race + smoker), family = binomial))
+    ##  $ called  : language matchthem(formula = osp ~ age + male + bmi + race + smoker, datasets = imputed.datasets,      method = "genetic",| __truncated__
+    ##  $ nmis    : NULL
+    ##  $ analyses:List of 10
+
+The results of each of fit for each of the MI data sets can be found in the `analyses` section of the object.
+
+``` r
+matched.models$analyses |>
+  str(max.level = 1)
+```
+
+    ## List of 10
+    ##  $ :List of 30
+    ##   ..- attr(*, "class")= chr [1:2] "glm" "lm"
+    ##  $ :List of 30
+    ##   ..- attr(*, "class")= chr [1:2] "glm" "lm"
+    ##  $ :List of 30
+    ##   ..- attr(*, "class")= chr [1:2] "glm" "lm"
+    ##  $ :List of 30
+    ##   ..- attr(*, "class")= chr [1:2] "glm" "lm"
+    ##  $ :List of 30
+    ##   ..- attr(*, "class")= chr [1:2] "glm" "lm"
+    ##  $ :List of 30
+    ##   ..- attr(*, "class")= chr [1:2] "glm" "lm"
+    ##  $ :List of 30
+    ##   ..- attr(*, "class")= chr [1:2] "glm" "lm"
+    ##  $ :List of 30
+    ##   ..- attr(*, "class")= chr [1:2] "glm" "lm"
+    ##  $ :List of 30
+    ##   ..- attr(*, "class")= chr [1:2] "glm" "lm"
+    ##  $ :List of 30
+    ##   ..- attr(*, "class")= chr [1:2] "glm" "lm"
+
 Here’s the summary of the pooled model parameters. As with a typical MI data analysis, you pool the results across the MI data sets with Rubin’s rules using the `pool()` function.
 
 ``` r
 matched.models |> 
   pool() |> 
-  summary(conf.int = TRUE)
+  summary()
 ```
 
     ##           term     estimate    std.error   statistic        df      p.value
@@ -680,29 +727,12 @@ matched.models |>
     ## 14  osp1:race2  15.07286024 479.52179890  0.03143311 939.91137 9.749308e-01
     ## 15  osp1:race3  17.71192964 499.44300859  0.03546336 939.90451 9.717178e-01
     ## 16 osp1:smoker   0.37223668   0.28803087  1.29234998 498.31354 1.968349e-01
-    ##            2.5 %       97.5 %
-    ## 1    -8.91037282   0.24378292
-    ## 2  -957.85903996 924.28119075
-    ## 3    -0.01174788   0.06206091
-    ## 4    -1.05726336   0.64598156
-    ## 5     0.06219481   0.16990091
-    ## 6    -3.29202627   2.64272867
-    ## 7    -3.02986736   2.95402489
-    ## 8  -275.65248377 272.45679904
-    ## 9    -0.71390685   0.10239869
-    ## 10   -0.03040829   0.07383950
-    ## 11   -0.40649685   1.96310391
-    ## 12   -0.09524429   0.04908901
-    ## 13 -926.24583587 955.86804374
-    ## 14 -925.98440875 956.13012922
-    ## 15 -962.44054555 997.86440483
-    ## 16   -0.19366792   0.93814129
 
 However, in the ([2025b](#ref-greifer2025MatchIt)) [*MatchIt: Getting Started*](https://CRAN.R-project.org/package=MatchIt/vignettes/MatchIt.html) vignette, Greifer cautioned:
 
 > The outcome model coefficients and tests should not be interpreted or reported.
 
-But rather, one should only report and interpret the causal estimand, which leads us to the final section of the blog…
+But rather, one should only report and interpret the causal estimand, which leads us to the final major section of the blog…
 
 ## Compute the estimand
 
@@ -720,9 +750,9 @@ The ATU is the average causal effect of those who did not receive the treatment 
 
 In my blog series on causal inference from randomized experiments, were were all about that ATE. But here I think it’s better to focus on the ATT, and this is also what Greifer recommend for my real-world use case.
 
-Importantly, none of these estimands correspond directly to any of the beta coefficients from the `summary()` output in the previous section. Rather, we compute our causal estimands with the statistical model as a whole using the g-computation method. If you’re not familiar with g-computation, boy do I have the blog series for you. Start [here](https://solomonkurz.netlify.app/blog/2023-04-12-boost-your-power-with-baseline-covariates/). You’ll want to read the first three posts. You can also browse through [Chapter 8](https://marginaleffects.com/chapters/gcomputation.html) of Arel-Bundock ([2025](#ref-arelbundock2025model)), as referenced just above.
+Importantly, none of these estimands correspond directly to any of the beta coefficients from the `summary()` output in the previous section. Rather, we compute our causal estimands with the statistical model as a whole using the g-computation method. If you’re not familiar with g-computation, boy do I have the blog series for you. Start [here](https://solomonkurz.netlify.app/blog/2023-04-12-boost-your-power-with-baseline-covariates/). You’ll want to read the first three posts.[^11] You can also browse through [Chapter 8](https://marginaleffects.com/chapters/gcomputation.html) of Arel-Bundock ([2025](#ref-arelbundock2025model)), as referenced just above.
 
-In code, we do g-computation using the `avg_comparisons()` function from the **marginaleffects** package. Note how we can request cluster-robust standard errors with pair membership as the clustering variable by setting `vcov = ~subclass`. By setting `by = "osp"`, we compute both the ATU[^11] and the ATT.[^12]
+In code, we can do g-computation using the `avg_comparisons()` function from the **marginaleffects** package. Note how we can request cluster-robust standard errors with pair membership as the clustering variable by setting `vcov = ~subclass`. By setting `by = "osp"`,[^12] we compute both the ATU[^13] and the ATT.
 
 ``` r
 avg_comparisons(matched.models,
@@ -1097,6 +1127,8 @@ Zhao, Q.-Y., Luo, J.-C., Su, Y., Zhang, Y.-J., Tu, G.-W., & Luo, Z. (2021). Prop
 
 [^10]: This list is not exhaustive, but I’m choosing to focus on the big hitters, here. Even Greifer & Stuart ([2021a](#ref-greifer2021choosing)), for example, entertain a fourth estimand called the average treatment effect in the overlap (ATO).
 
-[^11]: But again, this is with the caveat that because the matching procedure discarded many of the cases in the full untreated sample, this is more like the ATU *in a sample matched to target the ATT*.
+[^11]: Yes, it takes that long to explain g-computation. Once you get it, it’s no big deal. But it can seem really odd at first, or at least that’s how it was for me.
 
-[^12]: If you aren’t working with MI data sets, there’s a more syntax available for **marginaleffects** functions like `avg_comparisons()`, but which does not currently work well for MI data sets. Right around the time I’m writing this blog post, the **marginaleffects** team are working on a promising fix, but that fix is not yet available for the official CRAN release of **marginaleffects**. For the insider details, see [issue \#1117](https://github.com/vincentarelbundock/marginaleffects/issues/1117) on GitHub.
+[^12]: If you aren’t working with MI data sets, there’s a more streamlined syntax available for **marginaleffects** functions like `avg_comparisons()`, but which does not currently work well for MI data sets. Right around the time I’m writing this blog post, the **marginaleffects** team are working on a promising fix, but that fix is not yet available for the official CRAN release of **marginaleffects**. For the insider details, see [issue \#1117](https://github.com/vincentarelbundock/marginaleffects/issues/1117) on GitHub.
+
+[^13]: But again, this is with the caveat that because the matching procedure discarded many of the cases in the full untreated sample, this is more like the ATU *in a sample matched to target the ATT*.
