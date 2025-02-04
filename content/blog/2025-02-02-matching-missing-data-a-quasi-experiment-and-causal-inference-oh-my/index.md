@@ -233,9 +233,9 @@ imputed.datasets |>
     ##  $ ignore         : logi [1:2585] FALSE FALSE FALSE FALSE FALSE FALSE ...
     ##  $ seed           : logi NA
     ##  $ iteration      : num 5
-    ##  $ lastSeedValue  : int [1:626] 10403 480 -794428955 474296762 -696371925 -1062066067 -768590641 -1839416198 521653197 311473819 ...
-    ##  $ chainMean      : num [1:7, 1:5, 1:5] NaN NaN NaN NaN 0.536 ...
-    ##  $ chainVar       : num [1:7, 1:5, 1:5] NA NA NA NA 0.268 ...
+    ##  $ lastSeedValue  : int [1:626] 10403 294 1568738496 -48455791 1612294608 1595288257 1908155728 -1350916449 962330295 647141435 ...
+    ##  $ chainMean      : num [1:7, 1:5, 1:5] NaN NaN NaN NaN 0.464 ...
+    ##  $ chainVar       : num [1:7, 1:5, 1:5] NA NA NA NA 0.265 ...
     ##  $ loggedEvents   :'data.frame':	1 obs. of  5 variables:
     ##  $ version        :Classes 'package_version', 'numeric_version'  hidden list of 1
     ##  $ date           : Date[1:1], format: "2025-02-03"
@@ -366,7 +366,7 @@ Now we match. Were we using a single data set, we might match with the `matchit(
 
 In the `formula` argument, we use the confounder variables to predict the *treatment* variable `osp`. Here I use a simple approach where all confounder only have lower-order terms. But you might also consider adding interactions among the confounders, or even adding polynomial terms (see [Zhao et al., 2021](#ref-zhao2021propensity) for an extended example).
 
-The default for the `method` argument is `"nearest"` for *nearest neighbor matching*. In a personal consultation, Noah Greifer recommended I use the *genetic matching* approach for my use case, and so we use it here. You can learn about the various matching methods in Greifer’s ([2025a](#ref-greifer2025matching)) vignette [*Matching Methods* vignette](https://CRAN.R-project.org/package=MatchIt/vignettes/matching-methods.html), and about the genetic algorithm in specific in Greifer’s ([2022](#ref-greifer2022genetic)) blog post [*Genetic Matching, from the Ground Up*](https://ngreifer.github.io/blog/genetic-matching/). In short, the genetic algorithm optimizes balance among the confounders using the scaled generalized Mahalanobis distance via functions from the **Matching** package ([Sekhon, 2011](#ref-sekhon2011multivariate)).
+The default for the `method` argument is `"nearest"` for *nearest neighbor matching*. In a personal consultation, Noah Greifer recommended I use the *genetic matching* approach for my use case, and so we use it here. You can learn about the various matching methods in Greifer’s ([2025a](#ref-greifer2025matching)) vignette [*Matching Methods*](https://CRAN.R-project.org/package=MatchIt/vignettes/matching-methods.html), and about the genetic algorithm in specific in Greifer’s ([2022](#ref-greifer2022genetic)) blog post [*Genetic Matching, from the Ground Up*](https://ngreifer.github.io/blog/genetic-matching/). In short, the genetic algorithm optimizes balance among the confounders using the scaled generalized Mahalanobis distance via functions from the **Matching** package ([Sekhon, 2011](#ref-sekhon2011multivariate)).
 
 Note the `pop.size` argument. If you run the code without that argument, you’ll get a warning message from **Matching** that the optimization parameters are at their default values, and that `pop.size` in particular might should be increased from its default setting of `100`. At the moment, I do not have a deep grasp of this setting, but for the sake of practice I have increased it to `200`.
 
@@ -698,11 +698,27 @@ matched.models |>
     ## 15 -962.44054555 997.86440483
     ## 16   -0.19366792   0.93814129
 
-However, in the ([2025b](#ref-greifer2025MatchIt)) [*MatchIt: Getting Started* vignette](https://CRAN.R-project.org/package=MatchIt/vignettes/MatchIt.html), Greifer cautioned:
+However, in the ([2025b](#ref-greifer2025MatchIt)) [*MatchIt: Getting Started*](https://CRAN.R-project.org/package=MatchIt/vignettes/MatchIt.html) vignette, Greifer cautioned:
 
 > The outcome model coefficients and tests should not be interpreted or reported.
 
-But rather, one should only report and interpret the causal estimand, which in our case is the ATT, the *average treatment effect for the treated*.[^10] We can compute the ATT with g-computation using the `avg_comparisons()` function from the **marginaleffects** package.[^11] Note how we can request cluster-robust standard errors with pair membership as the clustering variable by setting `vcov = ~subclass`. By setting `by = "osp"`, we compute both the ATU[^12] and the ATT. Our focus will be the ATT.
+But rather, one should only report and interpret the causal estimand. Following the frameworks in Greifer & Stuart ([2021a](#ref-greifer2021choosing)) and [Chapter 8](https://marginaleffects.com/chapters/gcomputation.html) of Arel-Bundock ([2025](#ref-arelbundock2025model)), there are three primary causal estimands we might consider:[^10]
+
+- the average treatment effect (ATE),
+- the average treatment effect in the treated (ATT), and
+- the average treatment effect in the untreated (ATU).
+
+The ATE is the causal estimand that most directly corresponds to what we get with a randomized experiment. It’s the average causal effect were we to give the intervention to all those in the target population.
+
+The ATT is the average causal effect of those who received the treatment in the sample, and the broader subset of the population resembling that part of the sample. The ATT answers the question: *How well did the treatment work for those who got it?*
+
+The ATU is the average causal effect of those who did not receive the treatment in the sample, and the broader subset of the population resembling that part of the sample. The ATU answers the question: *How well would the treatment have worked for those who did not get it?* But when we compute the ATU after using a matching procedure where some of those from the broader untreated sample were removed (as was the case here), then the ATU comes with the caveat that it is the average treatment effect of those who did not get the treatment, *in a sample matched to target the ATT*, which is a bit of a strange caveat and may or may not be the kind of caveat you’d like to make in a paper.
+
+In my blog series on causal inference from randomized experiments, were were all about that ATE. But here I think it’s better to focus on the ATT, and this is also what Greifer recommend for my real-world use case.
+
+Importantly, none of these estimands correspond directly to any of the beta coefficients from the `summary()` output above. Rather, we compute them with the statistical model as a whole using the g-computation method. If you’re not familiar with g-computation, boy do I have the blog series for you. Start [here](https://solomonkurz.netlify.app/blog/2023-04-12-boost-your-power-with-baseline-covariates/). You’ll want to read the first three posts. You can also browse through [Chapter 8](https://marginaleffects.com/chapters/gcomputation.html) of Arel-Bundock ([2025](#ref-arelbundock2025model)), as referenced just above.
+
+In code, we do g-computation using the `avg_comparisons()` function from the **marginaleffects** package. Note how we can request cluster-robust standard errors with pair membership as the clustering variable by setting `vcov = ~subclass`. By setting `by = "osp"`, we compute both the ATU[^11] and the ATT.
 
 ``` r
 avg_comparisons(matched.models,
@@ -794,6 +810,12 @@ sessionInfo()
 <div id="ref-R-marginaleffects" class="csl-entry">
 
 Arel-Bundock, V. (2023). *<span class="nocase">marginaleffects</span>: Predictions, Comparisons, Slopes, Marginal Means, and Hypothesis Tests* \[Manual\]. [https://vincentarelbundock.github.io/ marginaleffects/ https://github.com/vincentarelbundock/ marginaleffects](https://vincentarelbundock.github.io/ marginaleffects/ https://github.com/vincentarelbundock/ marginaleffects)
+
+</div>
+
+<div id="ref-arelbundock2025model" class="csl-entry">
+
+Arel-Bundock, V. (2025). *Model to meaning*. <https://marginaleffects.com/>
 
 </div>
 
@@ -1069,8 +1091,6 @@ Zhao, Q.-Y., Luo, J.-C., Su, Y., Zhang, Y.-J., Tu, G.-W., & Luo, Z. (2021). Prop
 
 [^9]: i.e., increase statistical power by decreasing the standard error.
 
-[^10]: If you’re not familiar with the ATT, it was discussed a bit in Greifer & Stuart ([2021b](#ref-greifer2021matching)), though instead by the term “average exposure effect in the exposed.” Greifer recommend the ATT for my real-world use case, which is why I use it here. See also Greifer & Stuart ([2021a](#ref-greifer2021choosing)).
+[^10]: This list is not exhaustive, but I’m choosing to focus on the big hitters, here. Even Greifer & Stuart ([2021a](#ref-greifer2021choosing)), for example, entertain a fourth called the average treatment effect in the overlap (ATO).
 
-[^11]: If you’re not familiar with g-computation, boy do I have the blog series for you. Start [here](https://solomonkurz.netlify.app/blog/2023-04-12-boost-your-power-with-baseline-covariates/). You’ll want to read the first three posts. Sorry, but some topics take a little effort to walk out.
-
-[^12]: That is, the *average treatment effect for the untreated*.
+[^11]: But again, this is with the caveat that because the matching procedure discarded many of the cases in the full untreated sample, this is more like the ATU *in a sample matched to target the ATT*.
