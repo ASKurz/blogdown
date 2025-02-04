@@ -33,7 +33,7 @@ link-citations: yes
 
 ## Context
 
-I have a project for work where the goal is to compare two non-randomized groups. One group received and experimental intervention, and we'd like to compare them to their peers who were not offered the same intervention. We have access to data from folks from the broader population during the same time period, so the goal isn't so bad as far as quasi-experiments go.^[Here I'm using the term *quasi-experiment* to mean an intervention that shares the major features of a randomized experiment, such as the causal intervention preceding the outcome, but that lacks random assignment to condition. For more background on this use of the term, see Chapter 1 in @shadish2002Experimental.] The team would like to improve the comparisons by using matching, and we have some missing data issues in the matching covariate set. I haven't done an analysis quite like this before, so this post is a walk through of the basic statistical procedure as I see it.
+I have a project for work where the goal is to compare two non-randomized groups. One group received an experimental intervention, and we'd like to compare those folks to their peers who were not offered that same intervention. We have easy access to data from folks from the broader population during the same time period, so the goal isn't so bad as far as quasi-experiments go.^[Here I'm using the term *quasi-experiment* to mean an intervention that shares the major features of a randomized experiment, such as the causal intervention preceding the outcome, but that lacks random assignment to condition. For more background on this use of the term, see Chapter 1 in @shadish2002Experimental.] The team would like to improve the comparisons by using matching, and we have some missing data issues in the matching covariate set. I haven't done an analysis quite like this before, so this post is a walk-through of the basic statistical procedure as I see it.
 
 You are welcome to give feedback in the comments section.
 
@@ -89,7 +89,7 @@ data("osteoarthritis")
 glimpse(osteoarthritis)
 ```
 
-Here we make a few adjustments to the data. First, I generally prefer the **tidyverse** style of lower-case variable names [see @wickhamTidyverseStyleGuide2020]. Second, I generally like my lower-case names to use whole words such as `race`, rather than abbreviations, such as `rac`. Third, I prefer my 2-level nominal variables in a dummy-code format. Here we make those changes and save the results as `d`.
+Here we make a few adjustments to the data. First, I generally prefer the **tidyverse** style of lower-case variable names [see @wickhamTidyverseStyleGuide2020]. Second, I generally like my lower-case names to use whole words such as `race`, rather than abbreviations like `rac`. Third, I prefer my 2-level nominal variables in a dummy-code format. Here we make those changes and save the results as `d`.
 
 ```{r}
 d <- osteoarthritis |> 
@@ -133,11 +133,11 @@ imputed.datasets$method
 imputed.datasets$predictorMatrix
 ```
 
-The default imputation method for `mice()` is generally predictive mean matching (execute `imputed.datasets$method`), which is attractive in how simple and general it is. If you're not familiar with predictive mean matching, see [Section 3.4](https://stefvanbuuren.name/fimd/sec-pmm.html) in @vanbuurenFlexibleImputationMissing2018 for an introduction. I believe there are some concerns predictive mean matching doesn't work as well with smaller sample sizes, but I think the $N = 2{,}585$ data set here is large enough to discard those worries. Note though, the `mice()` function used polytomous logistic regression (`method = "polyreg"`) for the factor variable `race`, which I think is a great choice for that variable.
+The default imputation method for `mice()` is generally predictive mean matching (execute `imputed.datasets$method`), which is attractive in how simple and general it is. If you're not familiar with predictive mean matching, see [Section 3.4](https://stefvanbuuren.name/fimd/sec-pmm.html) in @vanbuurenFlexibleImputationMissing2018 for an introduction. I believe there are some concerns predictive mean matching doesn't work as well with smaller sample sizes, but I think the $N = 2{,}585$ data set here is large enough to discard those worries. Note though, the `mice()` function used multinomial logistic regression (`method = "polyreg"`) for the factor variable `race`, which I think is a great choice.
 
 I might also explicitly mention that, yes, we are imputing the missing data for the criterion variable `koa`. Personally, I find this natural and sensible. But there has been some concern about imputing missing criterion values in some areas of the literature. If you share that concern, see the nice simulation study by @kontopantelis2017outcome. In short, it's fine.
 
-By default, all variables are used to predict the missingness of all other variables in a simple linear model (execute `imputed.datasets$predictorMatrix`). However, there is some concern in the RCT literature that such a simple model may be inappropriate in that it would not be robust to possible treatment-by-covariate interactions, which could bias the results [@sullivan2018should; @zhang2023should].^[Though we don't have randomly-assigned groups in this example, I believe the basic concern is the same. The two groups may have different correlations among the covariates, and we want an imputation method that can handle such a pattern.] This leaves us with two basic solutions: expand the predictor matrix to include all possible `osp`-by-covariate interactions, or impute the data sets separately by the two levels of `osp`. With a small number of rows, the second option might be worrisome, but I think splitting the data set into $n_{{\text{osp}} = 0} = 2{,}106$ and $n_{{\text{osp}} = 1} = 479$ should be fine.^[As a third option, you could also use random forests to addresses possible interactions and nonlinear effects [see @laqueur2022supermice].]
+By default, all variables are used to predict the missingness of all other variables in a linear model (execute `imputed.datasets$predictorMatrix`). However, there is some concern in the RCT literature that such an imputation model may be inappropriate in that it would not be robust to possible treatment-by-covariate interactions, which could bias the results [@sullivan2018should; @zhang2023should].^[Though we don't have randomly-assigned groups in this example, I believe the basic concern is the same. The two groups may have different correlations among the covariates, and we want an imputation method that can handle such a pattern.] This leaves us with two basic solutions: expand the predictor matrix to include all possible `osp`-by-covariate interactions, or impute the data sets separately by the two levels of `osp`. With a small number of rows, the second option might be worrisome, but I think splitting the data set into $n_{{\text{osp}} = 0} = 2{,}106$ and $n_{{\text{osp}} = 1} = 479$ should be fine.^[As a third option, you could also use random forests to addresses possible interactions and nonlinear effects [see @laqueur2022supermice].]
 
 ```{r, echo = FALSE, eval = FALSE}
 d |> 
@@ -215,7 +215,7 @@ plot(imputed.datasets)
 
 To my eye, these look pretty good. For tips on how to interpret trace plots like this from `mice()`, see [Section 6.5.2](https://stefvanbuuren.name/fimd/sec-algoptions.html#sec:convergence) from @vanbuurenFlexibleImputationMissing2018.
 
-Once you're imputed the data sets, it's also a good idea to take a look at the results with summary statistics and/or plots. As a first step, you can extract the MI data sets with the `complete()` function. By setting `action = "long"`, all MI data sets will be returned in a long format with respect to the imputation number (`.imp`). Setting `include = TRUE` returns the results for the original un-imputed data set (`.imp == 0`), too.
+Once you've imputed the data sets, it's also a good idea to take a look at the results with summary statistics and/or plots. As a first step, you can extract the MI data sets with the `complete()` function. By setting `action = "long"`, all MI data sets will be returned in a long format with respect to the imputation number (`.imp`). Setting `include = TRUE` returns the results for the original un-imputed data set (`.imp == 0`), too.
 
 ```{r}
 imputed.datasets |> 
@@ -281,7 +281,7 @@ For a modest $N$ data set with so few columns, it's not a big deal to just use a
 
 Now we match. Were we using a single data set, we might match with the `matchit()` function from **MatchIt**. But since we have MI data sets, we instead use the `matchthem()` function from **MatchThem**. Note the name of the `datasets` argument (typically `data` in most functions) further indicates `matchthem()` is designed for MI data sets.
 
-In the `formula` argument, we use the confounder variables to predict the *treatment* variable `osp`. Here I use a simple approach where all confounder only have lower-order terms. But you might also consider adding interactions among the confounders, or even adding polynomial terms [see @zhao2021propensity for an extended example].
+In the `formula` argument, we use the confounder variables to predict the *treatment* variable `osp`. Here I use a simple approach where all confounders only have lower-order terms. But you might also consider adding interactions among the confounders, or even adding polynomial terms [see @zhao2021propensity for an extended example].
 
 The default for the `method` argument is `"nearest"` for *nearest neighbor matching*. In a personal consultation, Noah Greifer recommended I use the *genetic matching* approach for my use case, and so we use it here. You can learn about the various matching methods in Greifer's [-@greifer2025matching] vignette [*Matching Methods*](https://CRAN.R-project.org/package=MatchIt/vignettes/matching-methods.html), and about the genetic algorithm in specific in Greifer's [-@greifer2022genetic] blog post [*Genetic Matching, from the Ground Up*](https://ngreifer.github.io/blog/genetic-matching/). In short, the genetic algorithm optimizes balance among the confounders using the scaled generalized Mahalanobis distance via functions from the **Matching** package [@sekhon2011multivariate]. 
 
@@ -364,7 +364,7 @@ Also note in the secondary tables we can see that whereas the total sample size 
 
 #### Plots.
 
-We can also get a plot representation of this table with a love plot via `love.plot()`. When working with MI data sets, you'll want to set the `which.imp` argument which specifies which of the MI data sets get displayed in the plot. One way to do this is to feed a vector of integers. In this case, we set `which.imp = 1:3` to plot the first three MI data sets.
+We can also get a plot representation of this table with a love plot via the `love.plot()` function. When working with MI data sets, you'll want to set the `which.imp` argument which specifies which of the MI data sets get displayed in the plot. One way to do this is to feed a vector of integers. In this case, we set `which.imp = 1:3` to plot the first three MI data sets.
 
 ```{r, fig.width = 7, fig.height = 3, warning = FALSE}
 love.plot(matched.datasets, which.imp = 1:3, thresholds = 0.2)
@@ -464,7 +464,7 @@ matched.datasets.long |>
   glimpse()
 ```
 
-You'll also note every time `weights == 0`, we have missingness for `subclass`. Those cases that were not matched (i.e., no `subclass` factor level) have an exact zero weight in the substantive analyses.
+You'll also note every time `weights == 0`, we have missingness for `subclass`. Those cases that were not matched (i.e., no `subclass` factor level) will have an exact zero weight in the substantive analyses to come.
 
 ```{r}
 matched.datasets.long |> 
