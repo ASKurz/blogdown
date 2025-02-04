@@ -233,12 +233,12 @@ imputed.datasets |>
     ##  $ ignore         : logi [1:2585] FALSE FALSE FALSE FALSE FALSE FALSE ...
     ##  $ seed           : logi NA
     ##  $ iteration      : num 5
-    ##  $ lastSeedValue  : int [1:626] 10403 294 1568738496 -48455791 1612294608 1595288257 1908155728 -1350916449 962330295 647141435 ...
-    ##  $ chainMean      : num [1:7, 1:5, 1:5] NaN NaN NaN NaN 0.464 ...
-    ##  $ chainVar       : num [1:7, 1:5, 1:5] NA NA NA NA 0.265 ...
+    ##  $ lastSeedValue  : int [1:626] 10403 241 -1445287476 1152789864 -378730280 -686891077 90475197 -771102431 1866019345 -980485812 ...
+    ##  $ chainMean      : num [1:7, 1:5, 1:5] NaN NaN NaN NaN 0.5 ...
+    ##  $ chainVar       : num [1:7, 1:5, 1:5] NA NA NA NA 0.268 ...
     ##  $ loggedEvents   :'data.frame':	1 obs. of  5 variables:
     ##  $ version        :Classes 'package_version', 'numeric_version'  hidden list of 1
-    ##  $ date           : Date[1:1], format: "2025-02-03"
+    ##  $ date           : Date[1:1], format: "2025-02-04"
 
 In the `str()` output, you’ll note how the data frame in the `data` section now has 2,585 rows (i.e., the full sample size), and that correct number of cases is also echoed in the `where` and `ignore` sections. `rbind()` worked!
 
@@ -630,13 +630,13 @@ matched.datasets.long |>
 
 Each matched pair contains one of each of the two levels of the treatment variable `osp`. Look how closely the members of each of the pairs are on their propensity scores. The matching wasn’t exact, but it was very close.
 
-## Fit the primary model and compute the estimand
+## Fit the primary model
 
-We’re finally ready to fit the substantive model. Technically we could just fit the simple univariable model, which we might also call an ANOVA. In formula syntax, that would be:
+We’re finally ready to fit the substantive model. Technically we could just fit the simple univariable model. In formula syntax, that would be:
 
-`koa ~ osp`.
+`koa ~ osp`,
 
-Given our matching procedure, this simple model would be valid. However, there’s no inherent reason for us not to condition the substantive model on the covariate set. Doing so can help further control for confounding, particularly in the presence of imperfect matching, and it can also increase the precision of the estimate[^9] (see [Greifer & Stuart, 2021b](#ref-greifer2021matching)). One approach would be the simple expansion:
+which is sometimes called an ANOVA in the methods literature. This simple model would be valid because we have already attempted to account for confounders with our matching procedure. However, there’s no inherent reason for us not to condition the substantive model on the covariate set. Doing so can help further control for confounding, particularly in the presence of imperfect matching, and it can also increase the precision of the estimate[^9] (see [Greifer & Stuart, 2021b](#ref-greifer2021matching)). One approach would be the simple expansion:
 
 `koa ~ osp + age + male + bmi + race + smoker`,
 
@@ -646,7 +646,7 @@ which is often described as an ANCOVA. But we could go even further to protect a
 
 In some of the more recent literature, this has been called an ANHECOVA, an analysis of *heterogeneous* covariance (e.g., [Ye et al., 2022](#ref-ye2022toward)).
 
-In practice, we use the `with()` function to fit the ANHECOVA model to the matched MI data sets.
+In practice, we use the `with()` function to fit the ANHECOVA model to the matched MI data sets. Given the criterion variable `koa` is binary, we use the `glm()` function with `family = binomial` to return a logistic regression model.
 
 ``` r
 matched.models <- with(
@@ -702,23 +702,27 @@ However, in the ([2025b](#ref-greifer2025MatchIt)) [*MatchIt: Getting Started*](
 
 > The outcome model coefficients and tests should not be interpreted or reported.
 
-But rather, one should only report and interpret the causal estimand. Following the frameworks in Greifer & Stuart ([2021a](#ref-greifer2021choosing)) and [Chapter 8](https://marginaleffects.com/chapters/gcomputation.html) of Arel-Bundock ([2025](#ref-arelbundock2025model)), there are three primary causal estimands we might consider:[^10]
+But rather, one should only report and interpret the causal estimand, which leads us to the final section of the blog…
+
+## Compute the estimand
+
+Following the frameworks in Greifer & Stuart ([2021a](#ref-greifer2021choosing)) and [Chapter 8](https://marginaleffects.com/chapters/gcomputation.html) of Arel-Bundock ([2025](#ref-arelbundock2025model)), there are three primary causal estimands we might consider:[^10]
 
 - the average treatment effect (ATE),
 - the average treatment effect in the treated (ATT), and
 - the average treatment effect in the untreated (ATU).
 
-The ATE is the causal estimand that most directly corresponds to what we get with a randomized experiment. It’s the average causal effect were we to give the intervention to all those in the target population.
+The ATE is the causal estimand that most directly corresponds to what we get with a randomized experiment. It’s the average causal effect were we to give the intervention to all those in the target population, relative to what we’d expect from withholding the intervention.
 
 The ATT is the average causal effect of those who received the treatment in the sample, and the broader subset of the population resembling that part of the sample. The ATT answers the question: *How well did the treatment work for those who got it?*
 
-The ATU is the average causal effect of those who did not receive the treatment in the sample, and the broader subset of the population resembling that part of the sample. The ATU answers the question: *How well would the treatment have worked for those who did not get it?* But when we compute the ATU after using a matching procedure where some of those from the broader untreated sample were removed (as was the case here), then the ATU comes with the caveat that it is the average treatment effect of those who did not get the treatment, *in a sample matched to target the ATT*, which is a bit of a strange caveat and may or may not be the kind of caveat you’d like to make in a paper.
+The ATU is the average causal effect of those who did not receive the treatment in the sample, and the broader subset of the population resembling that part of the sample. The ATU answers the question: *How well would the treatment have worked for those who did not get it?* But when we compute the ATU after using a matching procedure where some of those from the broader untreated sample were removed (as was the case here), then the ATU comes with the caveat that it is the average treatment effect of those who did not get the treatment, *in a sample matched to target the ATT*, which is a bit of a strange caveat and may or may not be the kind of caveat you’d like to make in a white paper.
 
 In my blog series on causal inference from randomized experiments, were were all about that ATE. But here I think it’s better to focus on the ATT, and this is also what Greifer recommend for my real-world use case.
 
-Importantly, none of these estimands correspond directly to any of the beta coefficients from the `summary()` output above. Rather, we compute them with the statistical model as a whole using the g-computation method. If you’re not familiar with g-computation, boy do I have the blog series for you. Start [here](https://solomonkurz.netlify.app/blog/2023-04-12-boost-your-power-with-baseline-covariates/). You’ll want to read the first three posts. You can also browse through [Chapter 8](https://marginaleffects.com/chapters/gcomputation.html) of Arel-Bundock ([2025](#ref-arelbundock2025model)), as referenced just above.
+Importantly, none of these estimands correspond directly to any of the beta coefficients from the `summary()` output in the previous section. Rather, we compute our causal estimands with the statistical model as a whole using the g-computation method. If you’re not familiar with g-computation, boy do I have the blog series for you. Start [here](https://solomonkurz.netlify.app/blog/2023-04-12-boost-your-power-with-baseline-covariates/). You’ll want to read the first three posts. You can also browse through [Chapter 8](https://marginaleffects.com/chapters/gcomputation.html) of Arel-Bundock ([2025](#ref-arelbundock2025model)), as referenced just above.
 
-In code, we do g-computation using the `avg_comparisons()` function from the **marginaleffects** package. Note how we can request cluster-robust standard errors with pair membership as the clustering variable by setting `vcov = ~subclass`. By setting `by = "osp"`, we compute both the ATU[^11] and the ATT.
+In code, we do g-computation using the `avg_comparisons()` function from the **marginaleffects** package. Note how we can request cluster-robust standard errors with pair membership as the clustering variable by setting `vcov = ~subclass`. By setting `by = "osp"`, we compute both the ATU[^11] and the ATT.[^12]
 
 ``` r
 avg_comparisons(matched.models,
@@ -1091,6 +1095,8 @@ Zhao, Q.-Y., Luo, J.-C., Su, Y., Zhang, Y.-J., Tu, G.-W., & Luo, Z. (2021). Prop
 
 [^9]: i.e., increase statistical power by decreasing the standard error.
 
-[^10]: This list is not exhaustive, but I’m choosing to focus on the big hitters, here. Even Greifer & Stuart ([2021a](#ref-greifer2021choosing)), for example, entertain a fourth called the average treatment effect in the overlap (ATO).
+[^10]: This list is not exhaustive, but I’m choosing to focus on the big hitters, here. Even Greifer & Stuart ([2021a](#ref-greifer2021choosing)), for example, entertain a fourth estimand called the average treatment effect in the overlap (ATO).
 
 [^11]: But again, this is with the caveat that because the matching procedure discarded many of the cases in the full untreated sample, this is more like the ATU *in a sample matched to target the ATT*.
+
+[^12]: If you aren’t working with MI data sets, there’s a more syntax available for **marginaleffects** functions like `avg_comparisons()`, but which does not currently work well for MI data sets. Right around the time I’m writing this blog post, the **marginaleffects** team are working on a promising fix, but that fix is not yet available for the official CRAN release of **marginaleffects**. For the insider details, see [issue \#1117](https://github.com/vincentarelbundock/marginaleffects/issues/1117) on GitHub.
