@@ -1,7 +1,7 @@
 ---
 author: A. Solomon Kurz
 title: Workshops
-description: This is a list of my past and upcoming workshops. It's sparse now, but I expect it to fill out in the near future.
+description: This is a list of my past and upcoming workshops.
 layout: list
 show_author_byline: true
 show_button_links: true
