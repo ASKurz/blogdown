@@ -366,11 +366,7 @@ Glorious.
 
 The Bayesians in the room have been able to compute 95% intervals of this kind all along. They just set their priors, sample from the posterior, and summarize the posterior samples as needed. It's no big deal. Which brings us to an important caveat:
 
-Whether you use `emmeans()` to compute 95% confidence intervals by the Kenward-Roger method or the Satterthwaite method, both approaches are approximate and will occasionally return questionable results. Again, see @kuznetsova2017lmertest and @luke2017EvaluatingSignificance for introductions to the issue. So if you're going to use the `emmeans()` method, you should heed this warning from the great [Ben Bolker](https://math.mcmaster.ca/~bolker/):
-
-```{r echo = FALSE}
-blogdown::shortcode('tweet', user = "SolomonKurz", id = '1465826587060940806')
-```
+Whether you use `emmeans()` to compute 95% confidence intervals by the Kenward-Roger method or the Satterthwaite method, both approaches are approximate and will occasionally return questionable results. Again, see @kuznetsova2017lmertest and @luke2017EvaluatingSignificance for introductions to the issue.
 
 It's wise to inspect the quality of your `emmeans()`-based Kenward-Roger or Satterthwaite intervals against intervals computed using the parametric bootstrap, or with Bayesian software. Though it's my understanding that `emmeans()` is capable of bootstrapping, I have not explored that functionality and will have to leave that guidance up to others. I can, however, give you an example of how to compare our Satterthwaite intervals to those from a Bayesian model computed with the **brms** package. Here we'll use `brms::brm()` to fit the Bayesian version of our unconditional growth model. For simplicity, we'll use the default minimally-informative priors[^1].
 
