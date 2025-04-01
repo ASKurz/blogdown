@@ -16,7 +16,7 @@ show_title_as_headline: false
 
 Every so often, people ask how they might support the work I do with my tutorial [blog posts](https://solomonkurz.netlify.app/blog/) and [ebooks](https://solomonkurz.netlify.app/book/). Here are some options:
 
-* If you like my material, give it a shout out on Twitter! You can find me there at [https://twitter.com/SolomonKurz](https://twitter.com/SolomonKurz).
+* If you like my material, give it a shout out on social media! You can find me on [Twitter](https://twitter.com/SolomonKurz) or [Bluesky](https://bsky.app/profile/solomonkurz.bsky.social).
 
 * If my material directly helped your scientific work, consider citing them. You can find tips on how to cite blog posts in APA 7 style [here](https://apastyle.apa.org/style-grammar-guidelines/references/examples/blog-post-references). As far as my books go, I'm okay with people using either their URLs or their DOI numbers. 
 
@@ -31,5 +31,5 @@ Every so often, people ask how they might support the work I do with my tutorial
   + questionnaire development, and
   + non-clinical [EMA](https://doi.org/10.1146/annurev.clinpsy.3.022806.091415) research.
 
-* No, I am not taking monetary donations, at this time. If you have graduate students, buy them lunch, instead.
+* No, I am not taking monetary donations at this time. If you have graduate students, buy them lunch instead.
 
