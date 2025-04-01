@@ -2,7 +2,7 @@
 author: A. Solomon Kurz
 title: Welcome to my blog
 thumbnail_left: true
-description: "I mainly post about data analysis and applied statistics stuff, usually in [**R**](https://cran.r-project.org/). Frequent topics include Bayesian statistics, multilevel models, and statistical power."
+description: "I mainly post about data analysis and applied statistics stuff, usually in [**R**](https://cran.r-project.org/). Frequent topics include Bayesian statistics, causal inference, multilevel models, and statistical power."
 layout: list-grid # default was list-sidebar
 show_author_byline: true
 show_button_links: false
