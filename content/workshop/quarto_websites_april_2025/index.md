@@ -1,6 +1,6 @@
 ---
 title: Quarto for professional websites
-subtitle: A workshop through VISN 17 Center of Excellence
+subtitle: A workshop through the VISN 17 Center of Excellence
 author: A. Solomon Kurz 
 categories:
 - workshop
@@ -29,11 +29,11 @@ We assume familiarity with [R](https://cran.r-project.org/) and [RStudio](https:
 After completing this course, the participants will:
 
 * have a basic professional website,
-* built primarilly with quarto,
+* built primarily with Quarto,
 * with files stored on GitHub, and
 * hosted by Quarto Pub.
 
 ## Supporting materials
 
-You can find supporting materials from the workshop on the OSF.
+You can find supporting materials from the workshop on the OSF at [https://osf.io/es8bv/](https://osf.io/es8bv/).
 
