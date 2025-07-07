@@ -24,7 +24,7 @@ link-citations: yes
 
 Though I’m an ardent **brms** user, I’ve been learning more about Stan for another project. One of the ways you can learn more about Stan is by reviewing the Stan code underlying your **brms** models. But I’m guessing that if you’ve ever tried that, you discovered Paul Bürkner’s Stan code can be challenging to read. The purpose of this post, and the next couple posts to come, is to help demystify the Stan code from a few simple **brms** models.
 
-### I make assumptions.
+### I make assumptions
 
 For this series, you’ll want to be familiar with Bayesian single-level regression. We’ll be sticking with Gaussian models for this series. For Bayesian regression beginners, I recommend the texts by Gelman and colleagues ([2020](#ref-gelmanRegressionOtherStories2020)), Kruschke ([2015](#ref-kruschkeDoingBayesianData2015)), or McElreath ([2015](#ref-mcelreathStatisticalRethinkingBayesian2015), [2020](#ref-mcelreathStatisticalRethinkingBayesian2020)). However, if applied Bayesian statistics is new to you, this probably isn’t the right time to wade through this blog series.
 
@@ -43,7 +43,7 @@ library(ggdist)
 library(posterior)
 ```
 
-### We need data.
+### We need data
 
 The data were made with a custom function, which you can learn about in [the appendix](#appendix).
 
@@ -94,7 +94,7 @@ You, of course, don’t have to use my priors. If you think they’re terrible, 
 
 I’m assuming readers of this series are already familiar with the **brms** basics. If you’re not, I’ve published several applied books on how to use **brms**, which you can find listed [here](https://solomonkurz.netlify.app/book/). However, the last two subsections in this section may be new to even to intermediate **brms** users.
 
-### Fit the model with `brm()`.
+### Fit the model with `brm()`
 
 We can fit this model with **brms** like so.[^4]
 
@@ -200,7 +200,7 @@ stancode(brm1)
 
 Even for a model without predictors, there’s a lot going on in that code. Fortunately, there are simpler ways to specify a model like this in Stan, and we’ll practice those first before building up to more sophisticated code like this. So if you’re intimidated already, great! This is the blog post for you.
 
-### Extract the Stan data with `standata()`.
+### Extract the Stan data with `standata()`
 
 Though we usually use data frames to input our data to **brms**, Stan expects data in a different format. To see the data **brms** actually passed onto Stan, we can use the `standata()` function.
 
@@ -230,11 +230,11 @@ In this section I’ll be pulling liberally from Kurz ([2024](#ref-kurz2025sr2rs
 
 We will be fitting six **rstan** versions of the `brm1` model. We will start simple, and slowly build up our code until it matches all the major features from the `stancode()` output above. Though all of our **rstan** models will be similar to the one from **brms**, the sixth and final model will match it exactly. The remaining subsections are organized around the six models, and the first is a massive **rstan** introductory with subsections of its own.
 
-### `stan1.1` and the **rstan** newbie bootcamp.
+### `stan1.1` and the **rstan** newbie bootcamp
 
 Readers familiar with **rstan** might want to lightly browse through this section, and take whatever they may need. **brms** users new to **rstan** should probably work through it slowly, and spend some time with the resources cited within.
 
-#### Stan likes data in lists.
+#### Stan likes data in lists
 
 Many model-fitting functions in **R** allow for a variety of data types, including data frames, lists, free-floating vectors, and so on. *Stan expects data in lists*, and the primary model-fitting functions in the **rstan** package generally expect data lists, too. The **tidybayes** package includes a `compose_data()` function, which makes it easy to convert data frames into the list format we need. Here’s what this can look like for our use case.
 
@@ -253,7 +253,7 @@ str(stan_data)
 
 The `compose_data()` function automatically added a scalar value `n`, which defines the number of rows in the original data frame. As we will see, scalar values defining various dimensions are important for the kind of syntax we use with **rstan**. There were several in the data from `standata(brm1)` above, but we only need `n` to start.
 
-#### `model_code` and its blocks.
+#### `model_code` and its blocks
 
 Stan programs are organized into a series of program blocks, and those blocks are saved as a character string for the primary **rstan** functions.[^5] Following the schematic in the [*Program Blocks*](https://mc-stan.org/docs/reference-manual/blocks.html) section in the *Stan Reference Manual*, those blocks are:
 
@@ -303,7 +303,7 @@ model {
 
 In Stan program blocks, each line ends with a `;`. As you can see in the `model` block, we can annotate the code with `//` marks. We’ll focus on each of the three program blocks in the subsections below.
 
-#### Check the `data` block.
+#### Check the `data` block
 
 Data declarations are a *big deal* with Stan. We’ll cover a few of the fine points in this section, but the primary information source is the [*Data Types and Declarations*](https://mc-stan.org/docs/reference-manual/types.html) section of the *Stan Reference Manual*. At some time or another, you will want to study that material.
 
@@ -326,7 +326,7 @@ Some values have *constraints*, and we have declared `1` to be the lowest intege
 
 By the second line `vector[n] weight`, we have defined our `weight` response values as a vector of length `n`. Stan supports several data types, such as scalars, vectors, matrices, and arrays (see [here](https://mc-stan.org/docs/reference-manual/types.html#overview-of-data-types)). Though sequences of real values (such as `weight`) can be declared in vectors or arrays, sequences of integers go into arrays. If you try to declare a sequence of integer values as a vector, Stan will return an error. In my experience, properly juggling vectors and arrays has been a major source of frustration. Stan is picky, friends. Respect the data types.
 
-#### Our `parameters` block.
+#### Our `parameters` block
 
 A good initial place to learn the technical details for the `parameters` block is in the [*Program block: `parameters`*](https://mc-stan.org/docs/reference-manual/blocks.html#program-block-parameters) section of the *Stan Reference Manual*. Otherwise you can glean a lot of applied insights from the [*Regression Models*](https://mc-stan.org/docs/stan-users-guide/regression.html) section of the *Stan User’s Guide*.
 
@@ -341,7 +341,7 @@ parameters {
 
 Our unconditional mean parameter `mu` is declared as an unconstrained `real` value. Parameters can have constraints, and our syntax of `real<lower=0>` placed a lower boundary of zero for our `\(\sigma\)` parameter. It’s also possible to place upper boundaries, such as `<lower=0, upper=1>` for proportions. Though we don’t have any here, you can declare vectors and matrices of parameters too.
 
-#### Our `model` block.
+#### Our `model` block
 
 In the above sections were we detailed our `data` and `parameters` blocks, all of their contents were what are called *declarations*.
 Whereas `model` blocks do allow for declarations, they also allow for *statements*. In short, declarations let you name data elements and model parameters, and statements tell Stan how the parameters should be computed. A great place to learn all about statements is the [*Statements*](https://mc-stan.org/docs/reference-manual/statements.html) section of the *Stan Reference Manual*. You might also read the brief [*Program block: `model`*](https://mc-stan.org/docs/reference-manual/blocks.html#program-block-model) section of the *Stan Reference Manual*, or soak in all the applied examples in the [*Regression Models*](https://mc-stan.org/docs/stan-users-guide/regression.html) section of the *Stan User’s Guide*. When you’re really ready to get serious, you could browse though pretty much the whole of the *Stan Functions Reference*.
@@ -372,11 +372,11 @@ model {
 }
 ```
 
-But anyways, this kind of likelihood syntax is often called the *distribution* syntax in Stan. It’s perhaps the most simple, and I generally like it the best. But there are many others, and Bürkner’s Stan code above uses an alternative we’ll discuss more \[below\]\[target\].
+But anyways, this kind of likelihood syntax is often called the *distribution* syntax in Stan. It’s perhaps the most simple, and I generally like it the best. But there are many others, and Bürkner’s Stan code above uses an alternative we’ll discuss more [below](#stan1.2-by-adding-a-target).
 
 Notice that our prior lines follow a similar kind of syntax as our likelihood line for `weight`. Each prior line started with the parameter of interest on the left side, followed by the tilde `~`, and then concluded with a distribution. Though not shown here, it is also possible to assign vectors of parameters to a common prior.
 
-#### HMC sampling with `stan()`.
+#### HMC sampling with `stan()`
 
 To my eye, there are two basic ways to draw posterior samples from **rstan**. The simplest way is with `stan()`, and a handy alternative is to use the combo of `stan_model()` and `sampling()`. In this blog series we’ll just practice with the `stan()` function. The two main arguments are the `data` argument, into which we insert our `stan_data`, and the `model_code` argument, into which we insert our `model_code_1.1` string with its `data`, `parameters`, and `model` block information. There are several other arguments with default settings you might want to change. For example, `stan()` automatically samples from four HMC chains by the default setting `chains = 4`, which I generally find reasonable. Though it by default samples from the four chains in sequence, we will instead sample from them in parallel by setting `cores = 4`. To make the results more reproducible, I will also set `seed = 1`.
 
@@ -410,7 +410,7 @@ print(stan1.1, probs = c(0.025, 0.975))
     ## and Rhat is the potential scale reduction factor on split chains (at 
     ## convergence, Rhat=1).
 
-The parameter summaries are pretty similar to those from `print(brm1)` above, and by the \[end of the post\]\[prior_only\] we’ll get the two to match identically.
+The parameter summaries are pretty similar to those from `print(brm1)` above, and by the [end of the post](#stan1.6-for-prior_only-and-if) we’ll get the two to match identically.
 
 Notice that unlike the with the `print()` output for the **brms** model, the output for our **rstan** model also included a line for the `lp__`. That stands for *log posterior*, and one way we can extract that value from our **brms** model is with the `log_posterior()` function. As the `lp__` has a distribution, we’ll just summarize it by its mean and 95% interval with `mean_qi()`.
 
@@ -426,7 +426,7 @@ log_posterior(brm1) |>
 
 Again, the `lp__` for our two models does not match up yet, but it will by the end. As to its interpretation, the `lp__` is beyond the scope of this project. You can learn more about it from [Stephen Martin](https://srmart.in/)’s [nice explanation](https://discourse.mc-stan.org/t/basic-question-what-is-lp-in-posterior-samples-of-a-brms-regression/17567/2) on the Stan Forums.
 
-### `stan1.2` by adding a `target`.
+### `stan1.2` by adding a `target`
 
 One of the many ways our simple `model_code` differed from Bürkner’s is he used a very different kind of syntax for the likelihood and prior distributions. Part of that difference is he also used a `transformed parameters` block. Here’s a focused look at those parts of his code:
 
@@ -449,7 +449,7 @@ model {
 }
 ```
 
-Before you fixate on it, Bürkner slipped an `if` statement into his `model` block. We’ll come back to that \[later\]\[prior_only\]. For now, focus on the other features of the code.
+Before you fixate on it, Bürkner slipped an `if` statement into his `model` block. We’ll come back to that [later](#stan1.6-for-prior_only-and-if). For now, focus on the other features of the code.
 
 Notice how his syntax is full of lines with `+=` operators. These follow the common pattern `parameter_name` `+=` `distribution_name` `_lpdf`. The `lpdf` suffix stands for *log probability density function*. Whereas the `y ~ normal` style of syntax drops constants during computation, the `target += normal_lpdf` style of syntax retains them. As a consequence, the latter tends to be a bit slower, but it’s also more general. Importantly, the `target += normal_lpdf` style of syntax is required for some post-processing steps, such as Bayes factors. Though we won’t be computing Bayes factors in this series, it’s important for a package like **brms** to use a style of syntax that’s general enough to handle use cases where they arise. You can begin to learn more about this kind of syntax in the [*Unbounded Continuous Distributions* section](https://mc-stan.org/docs/functions-reference/unbounded_continuous_distributions.html#normal-distribution) of the *Stan Functions Reference*, and the [*Distribution statements*](https://mc-stan.org/docs/reference-manual/statements.html#sampling-statements.section) section of the *Stan Reference Manual*.
 
@@ -508,7 +508,7 @@ print(stan1.2, probs = c(0.025, 0.975))
 
 The summaries for the `mu` and `sigma` rows are largely the same as before. But notice the `lp__` has dropped to a different range, and it now matches more closely to what we saw from `log_posterior(brm1)` above.
 
-### `stan1.3` to define the `lprior`.
+### `stan1.3` to define the `lprior`
 
 We’re now ready to say a few words about the `transformed parameters` block. The `transformed parameters` block is a place you can define additional parameters not necessarily part of the primary model, but from which you’d like to sample during the HMC process. Focus again on that part of Bürkner’s code.
 
@@ -626,7 +626,7 @@ as_draws_df(brm1) |>
     ## $ .iteration  <int> 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,…
     ## $ .draw       <int> 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,…
 
-### `stan1.4` adds an `Intercept`.
+### `stan1.4` adds an `Intercept`
 
 Take another at Bürkner’s `parameters` and `model` blocks.
 
@@ -711,7 +711,7 @@ print(stan1.4, probs = c(0.025, 0.975))
 
 This time the `print()` output is very similar to what we saw before, but technically those changes to the `parameters` and `model` blocks did change the numbers on the small scale.
 
-### `stan1.5` adds a `b_Intercept`.
+### `stan1.5` adds a `b_Intercept`
 
 Now notice that at the bottom of his code, Bürkner added a `generated quantities` block.
 
@@ -808,7 +808,7 @@ as_draws_df(brm1) |>
     ## $ .iteration  <int> 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,…
     ## $ .draw       <int> 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17,…
 
-### `stan1.6` for `prior_only` and `if`.
+### `stan1.6` for `prior_only` and `if`
 
 We’re finally ready to address that mysterious `if` statement in Bürkner’s `model` block. We also need to review the `data` block. Here’s a focused look at both.
 
