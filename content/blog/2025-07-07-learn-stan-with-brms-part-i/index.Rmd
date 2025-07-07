@@ -130,7 +130,7 @@ c(prior(normal(160, 25), class = Intercept),
   theme(panel.grid = element_blank())
 ```
 
-### Extract the Stan code with `stancode()`. {#stancode}
+### Extract the Stan code with `stancode()`.
 
 We can extract the Stan code underlying our `brm()` model with the `stancode()` function.
 
