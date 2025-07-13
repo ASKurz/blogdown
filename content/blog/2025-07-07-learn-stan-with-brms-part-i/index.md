@@ -648,7 +648,7 @@ model {
 }
 ```
 
-Whereas we’ve been defining our parameter for `\(\mu\)` `mu` within the `parameters` block, Bürkner named that term `Intercept` in his. Since this is his general term for the model intercept (what you might also call `\(\alpha\)` or `\(\beta_0\)`), this is no great surprise. We’re not ready in this first post to discuss what Bürkner meant with his cryptic comment `temporary intercept for centered predictors`, but that will take a center stage in third post of this series. But also look how he smuggled a `mu += Intercept` line in the middle of that `if` statement, and then he used `mu` in his likelihood line: `target += normal_lpdf(Y | mu, sigma)`. In the context of this simple model, this seems like a redundant tautology. But this too will play a very important role in the third post of this series, and we will begin to discuss it more fully in the second post. So for now, just let the tension build and practice fitting a model with this extra step.
+Whereas we’ve been defining our parameter for `\(\mu\)` `mu` within the `parameters` block, Bürkner named that term `Intercept` in his. Since this is his general term for the model intercept (what you might also call `\(\alpha\)` or `\(\beta_0\)`), this is no great surprise. We’re not ready in this first post to discuss what Bürkner meant with his cryptic comment `temporary intercept for centered predictors`, but that will take a center stage in third post of this series. But also look how he smuggled a `mu += Intercept` line in the middle of that `if` statement, and then he used `mu` in his likelihood line: `target += normal_lpdf(Y | mu, sigma)`. In the context of this simple model, this seems like a redundant tautology. But this too will play a very important role in the third post of this series, and we will begin to discuss it more fully in the [second post](https://solomonkurz.netlify.app/blog/2025-07-13-learn-stan-with-brms-part-ii/#stan22-and-a-quick-stan-code-review). So for now, just let the tension build and practice fitting a model with this extra step.
 
 ``` r
 model_code_1.4 <- '
@@ -1004,7 +1004,7 @@ Yep, their summaries are the same.
 
 ## Wrap up
 
-For all you readers new to **rstan**: Congratulations on fitting your first `stan()` models! For all you more advanced readers who are feeling surly and restless, just chill; we’ve got nerdier stuff coming your way soon. In the next post, we expand our skill sets by adding a predictor variable to the model, and learn to grapple with matrix notation and more.
+For all you readers new to **rstan**: Congratulations on fitting your first `stan()` models! For all you more advanced readers who are feeling surly and restless, just chill; we’ve got nerdier stuff coming your way soon. In the [next post](https://solomonkurz.netlify.app/blog/2025-07-13-learn-stan-with-brms-part-ii/), we expand our skill sets by adding a predictor variable to the model, and learn to grapple with matrix notation and more.
 
 Happy coding, friends!
 
@@ -1073,7 +1073,7 @@ sessionInfo()
     ## [58] bookdown_0.40        hms_1.1.3            arrayhelpers_1.1-0  
     ## [61] jquerylib_0.1.4      glue_1.8.0           codetools_0.2-20    
     ## [64] distributional_0.5.0 stringi_1.8.7        gtable_0.3.6        
-    ## [67] QuickJSR_1.8.0       pillar_1.10.2        htmltools_0.5.8.1   
+    ## [67] QuickJSR_1.8.0       pillar_1.11.0        htmltools_0.5.8.1   
     ## [70] Brobdingnag_1.2-9    R6_2.6.1             evaluate_1.0.1      
     ## [73] lattice_0.22-6       backports_1.5.0      bslib_0.7.0         
     ## [76] rstantools_2.4.0     coda_0.19-4.1        gridExtra_2.3       
