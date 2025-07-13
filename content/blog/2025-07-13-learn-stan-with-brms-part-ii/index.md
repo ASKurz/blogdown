@@ -843,6 +843,17 @@ In this post we fit a single-level Gaussian model with a single continuous predi
 
 Happy coding, friends!
 
+## Thank the reviewers
+
+I’d like to publicly acknowledge and thank
+
+- [Riccardo Fusaroli](https://pure.au.dk/portal/en/persons/fusaroli%40cc.au.dk) and
+- [Stephen J. Wild](https://sjwild.github.io/)
+
+for their kind efforts reviewing the draft of this post. Go team!
+
+Do note the final editorial decisions were my own, and I do not think it would be reasonable to assume my reviewers have given blanket endorsements of the current version of this post.
+
 ## Session information
 
 ``` r
