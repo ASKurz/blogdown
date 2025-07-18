@@ -461,7 +461,7 @@ We'll comment on the various blocks in order.
 
 For the `data` block, the only new feature is the third line for the `kc` scalar, which we mentioned before is one less than `k`. The fifth line for the `X` matrix is the same as in the last post, and this is the third time we've seen the `prior_only` value.
 
-We should probably take a focused look at the `transformed data` block.
+We should probably take a focused look at the `transformed data` block.^[During peer review, we had a discussion about my `for(i in 2:k)` notation in the `for` loop. It's not great because it mixes the $i$ subscript typically used to denote a case with $k$, which we're using here to denote the number of columns. I'm basing my notation on Bürkner's `for(i in 2:K)` notation, which also mixes the two letters, but uses the upper-case `K`, which is more in line with what you'd often see in formal statistical notation. In the [*Variable naming* section](https://mc-stan.org/docs/stan-users-guide/style-guide.html#variable-naming) of the *Stan User's Guide* [@standevelopmentteamStanUserGuide2024], you'll see the recommendation of notation like `for(k in 2:K)`, which is more explicitly in harmony with statistical-notation norms. On the other hand, I'm generally following [tidyverse-style](https://style.tidyverse.org/syntax.html#sec-objectnames) naming principles of using lower-case names at all costs [@wickhamTidyverseStyleGuide2020], and you'll note this is also consistent with how the `compose_data()` function returns scalar values with lower-case names, rather than upper-case names. Anyways, I acknowledge this is all a mess and, IMO, there's no clear correct solution, here. I'm juggling sensibilities from two style guides, and trying to discuss someone else's code that doesn't cleanly follow either. So it goes...]
 
 ```default
 transformed data {
@@ -632,5 +632,5 @@ p1 + p2 +
 # ggsave("height_cross-featured.jpg", width = 3.6, height = 3.5, units = "in")
 ```
 
-## References 
+## References
 

@@ -590,7 +590,7 @@ We’ll comment on the various blocks in order.
 
 For the `data` block, the only new feature is the third line for the `kc` scalar, which we mentioned before is one less than `k`. The fifth line for the `X` matrix is the same as in the last post, and this is the third time we’ve seen the `prior_only` value.
 
-We should probably take a focused look at the `transformed data` block.
+We should probably take a focused look at the `transformed data` block.[^3]
 
 ``` default
 transformed data {
@@ -875,6 +875,18 @@ Stan Development Team. (2024b). *Stan functions reference, Version 2.35*. <https
 
 </div>
 
+<div id="ref-standevelopmentteamStanUserGuide2024" class="csl-entry">
+
+Stan Development Team. (2024c). *Stan user’s guide, Version 2.35*. <https://mc-stan.org/docs/stan-users-guide/>
+
+</div>
+
+<div id="ref-wickhamTidyverseStyleGuide2020" class="csl-entry">
+
+Wickham, H. (2020). *The tidyverse style guide*. <https://style.tidyverse.org/>
+
+</div>
+
 <div id="ref-R-tidyverse" class="csl-entry">
 
 Wickham, H. (2022). *<span class="nocase">tidyverse</span>: Easily install and load the ’tidyverse’*. <https://CRAN.R-project.org/package=tidyverse>
@@ -892,3 +904,5 @@ Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L. D., François, R., G
 [^1]: Though with a smaller posterior standard deviation, as we have now accounted for some of the variance with the predictor.
 
 [^2]: Even the `Kc` scalar was actually present in the data from `brm1` from the [first post](https://solomonkurz.netlify.app/blog/2025-07-07-learn-stan-with-brms-part-i/#extract-the-stan-data-with-standata). In a [later section](#stan3.2-for-new-tricks-and-the-final-model) we’ll clarify what it actually is.
+
+[^3]: During peer review, we had a discussion about my `for(i in 2:k)` notation in the `for` loop. It’s not great because it mixes the `\(i\)` subscript typically used to denote a case with `\(k\)`, which we’re using here to denote the number of columns. I’m basing my notation on Bürkner’s `for(i in 2:K)` notation, which also mixes the two letters, but uses the upper-case `K`, which is more in line with what you’d often see in formal statistical notation. In the [*Variable naming* section](https://mc-stan.org/docs/stan-users-guide/style-guide.html#variable-naming) of the *Stan User’s Guide* ([Stan Development Team, 2024c](#ref-standevelopmentteamStanUserGuide2024)), you’ll see the recommendation of notation like `for(k in 2:K)`, which is more explicitly in harmony with statistical-notation norms. On the other hand, I’m generally following [tidyverse-style](https://style.tidyverse.org/syntax.html#sec-objectnames) naming principles of using lower-case names at all costs ([Wickham, 2020](#ref-wickhamTidyverseStyleGuide2020)), and you’ll note this is also consistent with how the `compose_data()` function returns scalar values with lower-case names, rather than upper-case names. Anyways, I acknowledge this is all a mess and, IMO, there’s no clear correct solution, here. I’m juggling sensibilities from two style guides, and trying to discuss someone else’s code that doesn’t cleanly follow either. So it goes…
