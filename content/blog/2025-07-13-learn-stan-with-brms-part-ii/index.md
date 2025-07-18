@@ -96,7 +96,7 @@ c(prior(normal(0, 100), class = b, coef = Intercept),
 
 ### Center the predictor
 
-Some of my more experienced readers might wonder why I haven’t made things easier on myself by centering the predictor variable. Then we could drop that annoyingly wide `\(\operatorname{Normal}(0, 100)\)` prior for `\(\beta_0\)`. Yes, that’s a great strategy in many contexts. Mean centering predictor variables is a *big deal* with **brms**, particularly with how you set your priors.[^3] It’s such a big deal that it will be the focus of the next post. But the mean-centering issue and how it relates to **brms** syntax complicates the underlying Stan code in ways I think would be prohibitively confusing at this point. The Stan code is simpler for a model fit with a non-standardized predictor. And plus, it’s nice to learn how to fit a Stan model with a non-centered predictor. As an applied researcher, I like it when I have options.
+Some of my more experienced readers might wonder why I haven’t made things easier on myself by centering the predictor variable. Then we could drop that annoyingly wide `\(\operatorname{Normal}(0, 100)\)` prior for `\(\beta_0\)`. Yes, that’s a great strategy in many contexts. Mean centering predictor variables is a *big deal* with **brms**, particularly with how you set your priors.[^3] It’s such a big deal that it will be the focus of the [next post](https://solomonkurz.netlify.app/blog/2025-07-17-learn-stan-with-brms-part-iii/). But the mean-centering issue and how it relates to **brms** syntax complicates the underlying Stan code in ways I think would be prohibitively confusing at this point. The Stan code is simpler for a model fit with a non-standardized predictor. And plus, it’s nice to learn how to fit a Stan model with a non-centered predictor. As an applied researcher, I like it when I have options.
 
 ## **brms** workflow
 
@@ -118,7 +118,7 @@ brm2 <- brm(
   file = "fits/brm2")
 ```
 
-The only noteworthy part of the model code is how we wrapped our formula line in the `bf()` function, in which we also set `center = FALSE`. Those details have to do with setting the prior for `\(\beta_0\)` using the current version of `height` that is *not* mean centered. You can execute `?brmsformula` in your console for the technical documentation. We’ll have more to say on that whole issue in the next post. For now, just go with it.
+The only noteworthy part of the model code is how we wrapped our formula line in the `bf()` function, in which we also set `center = FALSE`. Those details have to do with setting the prior for `\(\beta_0\)` using the current version of `height` that is *not* mean centered. You can execute `?brmsformula` in your console for the technical documentation. We’ll have more to say on that whole issue in the [next post](https://solomonkurz.netlify.app/blog/2025-07-17-learn-stan-with-brms-part-iii/). For now, just go with it.
 
 Check the parameter summary.
 
@@ -688,7 +688,7 @@ print(stan2.3, probs = c(0.025, 0.975))
     ## and Rhat is the potential scale reduction factor on split chains (at 
     ## convergence, Rhat=1).
 
-Overall, the parameter summaries are very similar to those from `stan2.2`. But notice the names of the first two rows. When we use this approach, all `\(\beta\)` coefficients in the model now take generic names `b[k]`, ranging from `\(1, \dots, K\)`. Even though we[^9] often refer to the intercept as `\(\beta_0\)`, and so on, here the intercept is `b[1]`. To the best of my knowledge, there is no simple way to fix this when using this approach to fitting models with Stan. The first index in a vector is a 1, not a zero. We won’t have a good solution to that challenge in this post, but we will present an alternative in the third post. For now, let’s prepare for one last Stan syntax trick.
+Overall, the parameter summaries are very similar to those from `stan2.2`. But notice the names of the first two rows. When we use this approach, all `\(\beta\)` coefficients in the model now take generic names `b[k]`, ranging from `\(1, \dots, K\)`. Even though we[^9] often refer to the intercept as `\(\beta_0\)`, and so on, here the intercept is `b[1]`. To the best of my knowledge, there is no simple way to fix this when using this approach to fitting models with Stan. The first index in a vector is a 1, not a zero. We won’t have a good solution to that challenge in this post, but we will present an alternative in the [third post](https://solomonkurz.netlify.app/blog/2025-07-17-learn-stan-with-brms-part-iii/). For now, let’s prepare for one last Stan syntax trick.
 
 ### `stan2.4` with the `normal_id_glm_lpdf()` function
 
@@ -722,7 +722,7 @@ model {
 '
 ```
 
-The only new line is for the likelihood in the `model` block. Following the syntax in Bürkner’s Stan code, we have abandoned the `normal_lpdf()` function for `normal_id_glm_lpdf()`. Stan provides a family of functions parameterized for the generalized linear model. This family of functions follows the naming convention of `distribution_link_glm_function()`. In this case, we are using the Gaussian distribution (`normal`), the identity link (`id`), and the log probability density function (`lpdf`). For the documentation, go [here](https://mc-stan.org/docs/functions-reference/unbounded_continuous_distributions.html#normal-id-glm) for the relevant section of the *Stan Functions Reference* ([Stan Development Team, 2024b](#ref-standevelopmentteamStanFunctionsReference2024)). On the left side of the `|` bar, we input the response variable `weight`. The four arguments on the right side of the `|` bar are `\(x, \alpha, \beta, \sigma\)`. For the first of those four, we input our model matrix `X`, which includes a constant vector of `1` for the intercept and a vector of the numeric values of the predictor `height`. In our case, we are not using the `\(\alpha\)` argument because we have included the intercept in `X`. In the next post, however, we will see an example of how we can use `\(\alpha\)`. But notice we do input our vector of `b` parameters in the `\(\beta\)` argument. Perhaps not surprisingly at this point, we input our `sigma` parameter in the final argument `\(\sigma\)`. In the *Stan Functions Reference*, we read this function is designed to provide “a more efficient implementation of linear regression than a manually written regression in terms of a normal distribution and matrix multiplication.”
+The only new line is for the likelihood in the `model` block. Following the syntax in Bürkner’s Stan code, we have abandoned the `normal_lpdf()` function for `normal_id_glm_lpdf()`. Stan provides a family of functions parameterized for the generalized linear model. This family of functions follows the naming convention of `distribution_link_glm_function()`. In this case, we are using the Gaussian distribution (`normal`), the identity link (`id`), and the log probability density function (`lpdf`). For the documentation, go [here](https://mc-stan.org/docs/functions-reference/unbounded_continuous_distributions.html#normal-id-glm) for the relevant section of the *Stan Functions Reference* ([Stan Development Team, 2024b](#ref-standevelopmentteamStanFunctionsReference2024)). On the left side of the `|` bar, we input the response variable `weight`. The four arguments on the right side of the `|` bar are `\(x, \alpha, \beta, \sigma\)`. For the first of those four, we input our model matrix `X`, which includes a constant vector of `1` for the intercept and a vector of the numeric values of the predictor `height`. In our case, we are not using the `\(\alpha\)` argument because we have included the intercept in `X`. In the [next post](https://solomonkurz.netlify.app/blog/2025-07-17-learn-stan-with-brms-part-iii/#stan32-for-new-tricks-and-the-final-model), however, we will see an example of how we can use `\(\alpha\)`. But notice we do input our vector of `b` parameters in the `\(\beta\)` argument. Perhaps not surprisingly at this point, we input our `sigma` parameter in the final argument `\(\sigma\)`. In the *Stan Functions Reference*, we read this function is designed to provide “a more efficient implementation of linear regression than a manually written regression in terms of a normal distribution and matrix multiplication.”
 
 Let’s fit the model and see.
 
@@ -839,7 +839,7 @@ Yes, their posterior draws are exactly the same. Success!
 
 ## Wrap up
 
-In this post we fit a single-level Gaussian model with a single continuous predictor with **brms**, and then fit the equivalent model with **rstan**. To replicate the **brms** results exactly, we expanded our Stan syntax skills to use model matrices, parameter vectors, and the `normal_id_glm_lpdf()` function for the likelihood. In the next post we grapple with how **brms** mean-centers predictors, and what that means for setting priors and for the underlying Stan code.
+In this post we fit a single-level Gaussian model with a single continuous predictor with **brms**, and then fit the equivalent model with **rstan**. To replicate the **brms** results exactly, we expanded our Stan syntax skills to use model matrices, parameter vectors, and the `normal_id_glm_lpdf()` function for the likelihood. In the [next post](https://solomonkurz.netlify.app/blog/2025-07-17-learn-stan-with-brms-part-iii/) we grapple with how **brms** mean-centers predictors, and what that means for setting priors and for the underlying Stan code.
 
 Happy coding, friends!
 
@@ -880,7 +880,7 @@ sessionInfo()
     ## other attached packages:
     ##  [1] posterior_1.6.1     ggdist_3.3.2        tidybayes_3.0.7    
     ##  [4] rstan_2.32.7        StanHeaders_2.32.10 brms_2.22.0        
-    ##  [7] Rcpp_1.0.14         lubridate_1.9.3     forcats_1.0.0      
+    ##  [7] Rcpp_1.1.0          lubridate_1.9.3     forcats_1.0.0      
     ## [10] stringr_1.5.1       dplyr_1.1.4         purrr_1.0.4        
     ## [13] readr_2.1.5         tidyr_1.3.1         tibble_3.3.0       
     ## [16] ggplot2_3.5.2       tidyverse_2.0.0    

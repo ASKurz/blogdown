@@ -316,7 +316,7 @@ data {
 }
 ```
 
-All the data required by the model must be declared in the `data` block. An important exception is if you define a transformed version of any of your data in the `transformed data` block, and we will see examples of that strategy later in the third post of this series. One generally defines one variable per line, but it is possible to declare multiple variables in a single line (see [here](https://mc-stan.org/docs/reference-manual/types.html#declaring-multiple-variables-at-once)).
+All the data required by the model must be declared in the `data` block. An important exception is if you define a transformed version of any of your data in the `transformed data` block, and we will see examples of that strategy later in the [third post](https://solomonkurz.netlify.app/blog/2025-07-17-learn-stan-with-brms-part-iii/) of this series. One generally defines one variable per line, but it is possible to declare multiple variables in a single line (see [here](https://mc-stan.org/docs/reference-manual/types.html#declaring-multiple-variables-at-once)).
 
 It’s important to understand that Stan programs are read in order, top to bottom. Thus the first line in a `data` block often defines a scalar value we later use to define a data dimension. Recall how earlier we learned the `compose_data()` function automatically makes an `n` scalar, which defines the number of rows in the original data set. If you have more than one scalar value for your model, it’s generally a good idea to declare them all at the top.
 
@@ -648,7 +648,7 @@ model {
 }
 ```
 
-Whereas we’ve been defining our parameter for `\(\mu\)` `mu` within the `parameters` block, Bürkner named that term `Intercept` in his. Since this is his general term for the model intercept (what you might also call `\(\alpha\)` or `\(\beta_0\)`), this is no great surprise. We’re not ready in this first post to discuss what Bürkner meant with his cryptic comment `temporary intercept for centered predictors`, but that will take a center stage in third post of this series. But also look how he smuggled a `mu += Intercept` line in the middle of that `if` statement, and then he used `mu` in his likelihood line: `target += normal_lpdf(Y | mu, sigma)`. In the context of this simple model, this seems like a redundant tautology. But this too will play a very important role in the third post of this series, and we will begin to discuss it more fully in the [second post](https://solomonkurz.netlify.app/blog/2025-07-13-learn-stan-with-brms-part-ii/#stan22-and-a-quick-stan-code-review). So for now, just let the tension build and practice fitting a model with this extra step.
+Whereas we’ve been defining our parameter for `\(\mu\)` `mu` within the `parameters` block, Bürkner named that term `Intercept` in his. Since this is his general term for the model intercept (what you might also call `\(\alpha\)` or `\(\beta_0\)`), this is no great surprise. We’re not ready in this first post to discuss what Bürkner meant with his cryptic comment `temporary intercept for centered predictors`, but that will take a center stage in [third post](https://solomonkurz.netlify.app/blog/2025-07-17-learn-stan-with-brms-part-iii/) of this series. But also look how he smuggled a `mu += Intercept` line in the middle of that `if` statement, and then he used `mu` in his likelihood line: `target += normal_lpdf(Y | mu, sigma)`. In the context of this simple model, this seems like a redundant tautology. But this too will play a very important role in the third post of this series, and we will begin to discuss it more fully in the [second post](https://solomonkurz.netlify.app/blog/2025-07-13-learn-stan-with-brms-part-ii/#stan22-and-a-quick-stan-code-review). So for now, just let the tension build and practice fitting a model with this extra step.
 
 ``` r
 model_code_1.4 <- '
@@ -1045,7 +1045,7 @@ sessionInfo()
     ## other attached packages:
     ##  [1] posterior_1.6.1     ggdist_3.3.2        tidybayes_3.0.7    
     ##  [4] rstan_2.32.7        StanHeaders_2.32.10 brms_2.22.0        
-    ##  [7] Rcpp_1.0.14         lubridate_1.9.3     forcats_1.0.0      
+    ##  [7] Rcpp_1.1.0          lubridate_1.9.3     forcats_1.0.0      
     ## [10] stringr_1.5.1       dplyr_1.1.4         purrr_1.0.4        
     ## [13] readr_2.1.5         tidyr_1.3.1         tibble_3.3.0       
     ## [16] ggplot2_3.5.2       tidyverse_2.0.0    
@@ -1295,4 +1295,4 @@ Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L. D., François, R., G
 
 [^5]: Technically, there are other ways to save the blocks, such as external files. Here we just rely on the character string method.
 
-[^6]: Again, this looks like madness for this simple model, but it will become extremely important for the third where we grapple with the **brms** default behavior for predictors.
+[^6]: Again, this looks like madness for this simple model, but it will become extremely important for the [third](https://solomonkurz.netlify.app/blog/2025-07-17-learn-stan-with-brms-part-iii/) where we grapple with the **brms** default behavior for predictors.
