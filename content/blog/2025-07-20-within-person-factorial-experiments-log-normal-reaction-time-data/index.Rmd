@@ -1,0 +1,1445 @@
+---
+title: Within-person factorial experiments, log(normal) reaction-time data
+subtitle: "Causal inference with the GLMM, Part 1"
+author: A. Solomon Kurz
+date: '2025-07-20'
+excerpt: "Blah, blah, blah"
+tags:
+  - ANCOVA
+  - ANOVA
+  - ATE
+  - Bayesian
+  - brms
+  - causal inference
+  - factorial
+  - g-computation
+  - GLMM
+  - lme4
+  - longitudinal
+  - potential outcomes
+  - R
+  - randomized
+  - standardization
+  - Stroop
+  - tidyverse
+  - tutorial
+  - within-person
+draft: false
+layout: single
+featured: no
+bibliography: /Users/solomonkurz/Dropbox/blogdown/content/blog/my_blog.bib
+biblio-style: apalike
+csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
+link-citations: yes
+nocite: |  # This adds references not cited in the prose
+ @R-patchwork, @R-GGally  
+---
+
+## Welcome to the next beginning
+
+In 2023 I released a 9-part series on causal inference for randomized experiments. We focused on real-world data from several published experiments, and practices fitting models with a variety of likelihood functions from the GLM. In this series, we expand to multilevel models within the generalized linear mixed model (GLMM). We'll do so both as frequentists and as Bayesians.
+
+Here's the working table of contents for this series:
+
+1. Within-person factorial experiments, log(normal) reaction-time data
+2. Within-person factorial experiments, expanding on the multilevel ANCOVA
+3. ?
+
+Compared to the GLM-based series, this one will be more of an on-the fly effort. I'll add to it when I can.
+
+### I make assumptions
+
+This series is an applied tutorial more so than an introduction. I'm presuming you have a passing familiarity with the following:
+
+#### Experimental design
+
+You should have a basic grounding in group-based experimental design. Given my background in clinical psychology, I recommend @shadish2002Experimental or @kazdin2017ResearchDesign. You might also check out @taback2022DesignAndAnalysis, and its free companion website at [https://designexptr.org/index.html](https://designexptr.org/index.html).
+
+#### Regression
+
+You'll want to be familiar with multilevel regression, from the perspective of the GLMM. For frequentist resources, I recommend the texts by @roback2021beyond and @faraway2016extending. For the Bayesians in the room, I recommend the texts by @gelmanDataAnalysisUsing2006, @kruschkeDoingBayesianData2015, or McElreath [-@mcelreathStatisticalRethinkingBayesian2015; -@mcelreathStatisticalRethinkingBayesian2020].
+
+#### Causal inference
+
+At this point in the series^[Or series of series, I suppose...], I expect readers will be familiar with contemporary causal inference. If you haven't already, you should read my series in causal inference for randomized experiments using the GLM! Click on the link to the first post [here](https://solomonkurz.netlify.app/blog/2023-04-12-boost-your-power-with-baseline-covariates/). Otherwise, consider texts like @brumback2022Fundamentals, @hernan2020CausalInference, or @imbensCausalInferenceStatistics2015. If you prefer freely-accessible ebooks, check out @cunningham2021causal. But do keep in mind that even though a lot of the contemporary causal inference literature is centered around observational studies, we will only be considering causal inference for fully-randomized experiments in this blog series.
+
+#### **R**
+
+All code will be in **R** [@R-base]. Data wrangling and plotting will rely heavily on the **tidyverse** [@R-tidyverse; @wickhamWelcomeTidyverse2019] and **ggdist** [@R-ggdist]. Bayesian models will be fit with **brms** [@R-brms; @burknerBrmsPackageBayesian2017; @burknerAdvancedBayesianMultilevel2018], and frequentist models will be fit with **lme4** [@R-lme4]. We will post process our models with help packages such as **broom.mixed** [@R-broom.mixed], **marginaleffects** [@R-marginaleffects], and **tidybayes** [@R-tidybayes].
+
+Load the primary **R** packages and adjust the global plotting theme.
+
+```{r, warning = F, message = F}
+# Packages
+library(tidyverse)
+library(lme4)
+library(brms)
+library(tidybayes)
+library(broom.mixed)
+library(marginaleffects)
+library(patchwork)
+library(GGally)
+
+# Adjust the global plotting theme
+theme_set(theme_gray(base_size = 12) +
+            theme(panel.grid = element_blank()))
+```
+
+## We need data
+
+In this post, we'll be borrowing data from the **bayes4psy** package [@R-bayes4psy], which is designed to make Bayesian analyses more accessible to psychology students. Here we load the `stroop_extended` data, which are reaction times from participants who took an online version^[I'm presuming it was online, anyways. The documentation from `?bayes4psy::stroop_extended` wasn't as specific as I would have hoped. You get what you pay for, friends.] of the Stroop task [@stroop1935studies]. Given how old and established it is in my field, I'm not going to explain the Stroop task here. But for those who aren't acquainted with the Stroop, see @macleod1991half for a classic review. Sure, things are more online nowadays, but I don't know that much has changed for the Stroop at a fundamental level since then.
+
+```{r}
+data(stroop_extended, package = "bayes4psy")
+glimpse(stroop_extended)
+```
+
+The full 41,068-row data set contains information from 219 unique participants (`subject`), each of whom received five experimental conditions (`cond`).
+
+```{r}
+stroop_extended |> 
+  distinct(subject) |> 
+  glimpse()
+
+stroop_extended |> 
+  distinct(cond) |> 
+  glimpse()
+```
+
+The data also contain the background variable `age`. An unexpected quirk of the data is a few levels of `subject` have multiple levels of `age`.^[See this [GitHub issue](https://github.com/bstatcomp/bayes4psy/issues/11) for updates on this.]
+
+```{r}
+stroop_extended |> 
+  group_by(subject) |> 
+  filter(n_distinct(age) > 1) |> 
+  count(subject, age)
+```
+
+Since we don't need the full data set for our purposes, here we restrict ourselves to a random selection of 50 levels of `subject`, and just the two conditions `"congruent"` and `"incongruent"`. We save the results as `stroop_subset`. Along the way, we also filter the data to only include cases from the lowest `age` for each level of `subject`.
+
+```{r}
+set.seed(1)
+
+# Random 50 levels of `participant`
+random_50_subject <- stroop_extended |> 
+  # Select only adults
+  filter(age > 17) |>
+  distinct(subject) |> 
+  slice_sample(n = 50) |> 
+  pull()
+
+# Make the new reduced data set
+stroop_subset <- stroop_extended |> 
+  filter(subject %in% random_50_subject) |> 
+  group_by(subject) |> 
+  # Add a `trial` number index
+  mutate(trial = row_number()) |>
+  # Remove cases where `age` is not the minimum value of `age` within a given participant
+  slice_min(age) |> 
+  ungroup() |> 
+  arrange(subject, trial) |>
+  # Drop rows from conditions irrelevant to our primary analyses
+  filter(str_detect(cond, "congruent")) |> 
+  mutate(cond = factor(cond, levels = c("congruent", "incongruent")),
+         subject = factor(subject, levels = random_50_subject)) 
+
+# What?
+glimpse(stroop_subset)
+```
+
+The number of trials differed across participants and conditions, with most ranging between 20 and 40 trials.
+
+```{r, fig.height = 3.5}
+stroop_subset |> 
+  count(subject, cond) |> 
+  pivot_wider(names_from = cond, values_from = n) |> 
+  
+  ggplot(aes(x = congruent, y = incongruent)) +
+  geom_abline(color = "white") +
+  geom_point() +
+  labs(subtitle = expression(italic(n)~"trials per person, by condition")) +
+  coord_equal(xlim = c(0, 65), ylim = c(0, 65))
+```
+
+The levels of `cond` were randomly assigned to each trial, by participant. To get a sense, here's a tile plot of the conditions for a random subset of 12 of our focal participants.
+
+```{r, fig.width = 9, fig.height = 2.25}
+set.seed(1)
+
+stroop_subset |> 
+  filter(subject %in% sample(random_50_subject, size = 12)) |> 
+  mutate(trial = factor(trial)) |> 
+  
+  ggplot(aes(x = trial, y = subject)) +
+  geom_tile(aes(fill = cond), color = "gray92") +
+  scale_x_discrete(breaks = NULL) +
+  scale_fill_viridis_d(option = "A", end = 0.75)
+```
+
+Thus, this is what you might describe as a within-person factorial design. Each person gets many levels of the experimental condition, assigned at random in quick succession. The dependent variable is reaction time in milliseconds (`rt`). As has long been observed, reaction-time data are often approximately log-normally distributed [e.g., @snodgrass1967some]. To give a sense, here's a plot of `rt` and `log(rt)` for the overall subsample.
+
+```{r, fig.width = 6, fig.height = 3}
+stroop_subset |> 
+  mutate(lrt = log(rt)) |> 
+  pivot_longer(cols = c(rt, lrt)) |> 
+  mutate(scale = ifelse(name == "lrt", "log(milliseconds)", "milliseconds") |> 
+           factor(levels = c("milliseconds", "log(milliseconds)"))) |> 
+  
+  ggplot(aes(x = value)) +
+  geom_histogram(bins = 50) +
+  scale_y_continuous(NULL, breaks = NULL) +
+  xlab("reaciton time") +
+  facet_wrap(~ scale, scales = "free")
+```
+
+With this data set, we're playing a little fast and loose calling those data *approximately* lognormal. But do keep in mind these distributions haven't yet been conditioned on `subject` or `cond`, which can go a long way.
+
+We also have a baseline covariate, `age`, which you might suspect would have a meaningful association with reaction times. Here's a scatter plot of `age` and mean `rt`.
+
+```{r, fig.width = 6, fig.height = 3}
+stroop_subset |> 
+  group_by(subject) |> 
+  summarise(across(.cols = c(rt, age), .fns = mean)) |> 
+  pivot_longer(cols = rt:age, names_to = "variable", values_to = "original") |> 
+  mutate(log = log(original)) |> 
+  pivot_longer(cols = original:log) |> 
+  pivot_wider(names_from = variable, values_from = value) |> 
+  mutate(name = factor(name, levels = c("original", "log"), labels = c("original scale", "log scale"))) |> 
+  
+  ggplot(aes(x = age, y = rt)) +
+  geom_point() +
+  ylab("rt (averaged within person)") +
+  facet_wrap(~ name, scales = "free")
+```
+
+```{r, fig.width = 6, fig.height = 3, echo = FALSE, eval = FALSE}
+# Here's the story by sd(rt)
+
+stroop_subset |> 
+  filter(cond == "congruent") |> 
+  group_by(subject) |> 
+  summarise(age = mean(age),
+            rt = sd(rt)) |> 
+  pivot_longer(cols = rt:age, names_to = "variable", values_to = "original") |> 
+  mutate(log = log(original)) |> 
+  pivot_longer(cols = original:log) |> 
+  pivot_wider(names_from = variable, values_from = value) |> 
+  mutate(name = factor(name, levels = c("original", "log"), labels = c("original scale", "log scale"))) |> 
+  
+  ggplot(aes(x = age, y = rt)) +
+  geom_point() +
+  labs(y = "sd(rt) [within person]",
+       subtitle = "congruent") +
+  facet_wrap(~ name, scales = "free")
+
+stroop_subset |> 
+  filter(cond == "incongruent") |> 
+  group_by(subject) |> 
+  summarise(age = mean(age),
+            rt = sd(rt)) |> 
+  pivot_longer(cols = rt:age, names_to = "variable", values_to = "original") |> 
+  mutate(log = log(original)) |> 
+  pivot_longer(cols = original:log) |> 
+  pivot_wider(names_from = variable, values_from = value) |> 
+  mutate(name = factor(name, levels = c("original", "log"), labels = c("original scale", "log scale"))) |> 
+  
+  ggplot(aes(x = age, y = rt)) +
+  geom_point() +
+  labs(y = "sd(rt) [within person]",
+       subtitle = "incongruent") +
+  facet_wrap(~ name, scales = "free")
+```
+
+We'll be using `age` in our analyses as a background covariate. Here we log transform `age` (`logage`), and then mean center that log-transformed version (`lac`).
+
+```{r}
+stroop_subset <- stroop_subset |> 
+  # Log transform `age`
+  mutate(logage = log(age)) |> 
+  # Mean center `logage`
+  mutate(lac = logage - mean(logage))
+
+# How do these three look together?
+stroop_subset |> 
+  distinct(age, logage, lac) |> 
+  arrange(age) |> 
+  slice(1, 11:12, 29)
+```
+When the new `lac` variable is at zero, `age` is between 46 and 47 years.
+
+## Model framework
+
+The primary goal of this post is to walk out causal inference with a multilevel model, which inclines me to stick to a few relatively simple models.^[Or at least, as simple as we can given the context.] Given the longstanding observation reaction-time data are approximately lognormal, we will simply model `log(rt)` with the Gaussian likelihood for now. In a later post, however, we will explore how to model `rt` directly with the lognormal distribution, instead. In this post we will fit two models as frequentists, and then fit two corresponding models as Bayesians.
+
+We start as frequentists.
+
+### Frequentist models
+
+Our frequentist multilevel ANOVA will be of the form
+
+$$
+\begin{align}
+\log(\text{rt}_{ij}) & \sim \operatorname{Normal}(\mu_{ij}, \sigma_\epsilon) \\
+\mu_{ij} & = \beta_{0i} + \beta_{1i} \text{cond}_{ij} \\
+\beta_{0i} & = b_0 + u_{0i} \\
+\beta_{1i} & = b_1 + u_{1i} \\
+\begin{bmatrix} u_{0i} \\ u_{1i} \end{bmatrix} & \sim \operatorname{Normal} \left ( \mathbf 0, \mathbf \Sigma   \right ) \\
+\mathbf \Sigma & = \mathbf{SRS} \\
+\mathbf S & = \begin{bmatrix} \sigma_{u_0} & \\ 0 & \sigma_{u_1} \end{bmatrix} \\
+\mathbf R & = \begin{bmatrix} 1 & \\ \rho & 1 \end{bmatrix},
+\end{align}
+$$
+
+where the dependent variable `rt` varies across $i$ participants and $j$ trials. Its log is modeled as normally distributed, with a conditional mean $\mu_{ij}$ and residual standard deviation $\sigma_\epsilon$. The independent variable `cond` has been defined as a two-level factor for which `congruent` is the first level, and `incongruent` is the second. Thus in software, `cond` will effectively be treated as a dummy variable for which `congruent` is the reference category and `incongruent` is the comparison category. Thus the linear model for $\mu_{ij}$ has an intercept $\beta_{0i}$ which varies across $i$ participants, and quantifies their mean values for the `congruent` condition. The slope $\beta_{1i}$ is the average difference in the `incongruent` condition, versus the `congruent` condition, which also varies across $i$ participants. In typical multilevel model fashion, we can decompose the intercept $\beta_{0i}$ into a population mean $b_0$, and participant-level deviation $u_{0i}$. In a similar way, we can decompose the slope $\beta_{1i}$ into a population mean $b_1$, and participant-level deviation $u_{1i}$. The two participant-level deviation terms $u_{0i}$ and $u_{1i}$ are modeled as bivariate normal with a mean vector of two zeros, and a variance covariance matrix $\mathbf \Sigma$. Anticipating the needs of our Bayesian **brms** models below, we can decompose $\mathbf \Sigma$ into a $2 \times 2$ matrix for the standard deviations $\mathbf S$, and a $2 \times 2$ correlation matrix $\mathbf R$. On the diagonal of our standard-deviation matrix $\mathbf S$, we have the standard-deviation terms for $u_{0i}$ and $u_{1i}$. On the off-diagonal of our correlation matrix $\mathbf R$, we have the correlation term for the deviations $\rho$. The final term $\sigma_\epsilon$ captures the variation within participants, after accounting for their between-level differences. As is typical, we hold this within-person variance constant across participants.^[Though we do not do so here, it is possible to relax this constraint in various ways. Frequentists can do so to some degree with the **glmmTMB** package [@R-glmmTMB].]
+
+We can fit the model with restricted maximum likelihood via `lmer()` like so.
+
+```{r, message = FALSE}
+lmer_anova <- lmer(
+  data = stroop_subset,
+  log(rt) ~ 1 + cond + (1 + cond | subject))
+```
+
+Here's the model summary.
+
+```{r}
+summary(lmer_anova)
+```
+
+Our second model will be a multilevel ANCOVA where we condition on the background variable `age`, but using the log-transformed and mean-centered version (`lac`). In our last exploratory figure [above][We need data], we saw `log(age)` had a curved relation with the participant-level means for `log(rt)`. To better capture that in the model, we'll add a quadratic term like so:
+
+$$
+\begin{align}
+\log(\text{rt}_{ij}) & \sim \operatorname{Normal}(\mu_{ij}, \sigma_\epsilon) \\
+\mu_{ij} & = \beta_{0i} + \beta_{1i} \text{cond}_{ij} \\
+\beta_{0i} & = b_{00} + b_{01} \text{lac}_i + b_{02} \text{lac}_i^2 + u_{0i} \\
+\beta_{1i} & = b_1 + u_{1i} \\
+\begin{bmatrix} u_{0i} \\ u_{1i} \end{bmatrix} & \sim \operatorname{Normal} \left ( \mathbf 0, \mathbf \Sigma \right ) \\
+\mathbf \Sigma & = \mathbf{SRS} \\
+\mathbf S & = \begin{bmatrix} \sigma_{u_0} & \\ 0 & \sigma_{u_1} \end{bmatrix} \\
+\mathbf R & = \begin{bmatrix} 1 \\ \rho & 1 \end{bmatrix}.
+\end{align}
+$$
+
+To accommodate the new terms in the $\beta_{0i}$, we've added a second index for the $b$-term subscripts.
+
+Now we fit that mode with `lmer()`.
+
+```{r, message = FALSE}
+lmer_ancova <- lmer(
+  data = stroop_subset,
+  log(rt) ~ 1 + cond + lac + I(lac^2) + (1 + cond | subject))
+```
+
+Here's the model summary.
+
+```{r}
+summary(lmer_ancova)
+```
+
+We might compare the population-level experimental contrast parameter $b_1$, by model.
+
+```{r, eval = FALSE}
+bind_rows(
+  tidy(lmer_anova, conf.int = TRUE, conf.method = "profile"),
+  tidy(lmer_ancova, conf.int = TRUE, conf.method = "profile")) |> 
+  filter(term == "condincongruent") |> 
+  mutate(model = c("anova", "ancova"),
+         interval_width = conf.high - conf.low) |> 
+  select(model, estimate:conf.high, interval_width)
+```
+
+```{r, echo = FALSE}
+# frequentist_model <- bind_rows(
+#   tidy(lmer_anova, conf.int = TRUE, conf.method = "profile"),
+#   tidy(lmer_ancova, conf.int = TRUE, conf.method = "profile")) |>
+#   filter(term == "condincongruent") |>
+#   mutate(model = c("anova", "ancova"),
+#          interval_width = conf.high - conf.low) |>
+#   select(model, estimate:conf.high, interval_width)
+# 
+# save(frequentist_model, file = "objects/frequentist_model")
+
+load("objects/frequentist_model")
+
+frequentist_model
+```
+
+As is often the case, the ANCOVA lent greater precision to $b_1$ than the ANOVA, though not by much in this case.
+
+### Bayesian models
+
+Our first Bayesian model will also be a multilevel ANOVA of the form
+
+$$
+\begin{align}
+\log(\text{rt}_{ij}) & \sim \operatorname{Normal}(\mu_{ij}, \sigma_\epsilon) \\
+\mu_{ij} & = \beta_{0i} + \beta_{1i} \text{cond}_{ij} \\
+\beta_{0i} & = b_0 + u_{0i} \\
+\beta_{1i} & = b_1 + u_{1i} \\
+\begin{bmatrix} u_{0i} \\ u_{1i} \end{bmatrix} & \sim \operatorname{Normal} \left ( \mathbf 0, \mathbf \Sigma   \right ) \\
+\mathbf \Sigma & = \mathbf{SRS} \\
+\mathbf S & = \begin{bmatrix} \sigma_{u_0} & \\ 0 & \sigma_{u_1} \end{bmatrix} \\
+\mathbf R & = \begin{bmatrix} 1 \\ \rho & 1 \end{bmatrix} \\
+b_0 & \sim \operatorname{Normal}(\log 1000, 1) \\
+b_1 & \sim \operatorname{Normal}(0, 1) \\
+\sigma_{u_0}, \sigma_{u_1}, \sigma_\epsilon & \sim \operatorname{Exponential}(1) \\
+\mathbf R & \sim \operatorname{LKJ}(2),
+\end{align}
+$$
+
+where the only difference from the frequentist model is we're now using priors, which are defined in the bottom four rows. All priors are meant to be weakly-regularizing on the scale of the data (the DV of which is on the log scale, keep in mind). We'll detail each below.
+
+The $\operatorname{Normal}(\log 1000, 1)$ prior for the population-level intercept $b_0$ is very weak. We've centered the prior on the log of 1000 milliseconds, and 1000 milliseconds is the same as one second. For a given trial on a Stroop task, most folks are going to have reaction times a little above or below a second. In numbers, $\log 1000 \approx 6.9$.  The unit standard deviation on the prior means that about 95% of the prior mass is between 4.9 and 8.9 on the log scale, which is a massive spread. To see the range for yourself, execute `exp(log(1000) + c(-2, 2))` in your console. Any experienced Stroop-task researchers should be able to set a much stronger prior than this.
+
+The $\operatorname{Normal}(0, 1)$ prior for the population-level slope $b_1$ is also very weak. It would allow for a plus or minus difference of 2 on the log scale for the `incongruent` condition, relative to the `congruent` condition. The Stroop effect is very well-established finding in psychology, but as reliable as it is, it's nowhere near as large as a log difference of 2. Again, an experienced Stroop-task researcher could easily justify a much more specific prior here.
+
+The $\operatorname{Exponential}(1)$ prior for all three $\sigma$ parameters is my go-to prior for such parameters any time I'm fitting a model on the log scale. It's straight out of @mcelreathStatisticalRethinkingBayesian2020, and I find it works well for many of the data types I see in psychology.
+
+The $\operatorname{LKJ}(2)$ prior will gently push the $\mathbf R$ correlation matrix to have smaller off-diagonal values. For reference, the sole parameter in the LKJ $(\eta)$ ranges from zero to positive infinity. Values of 1 are flat for $2 \times 2$ matrices such as ours, and small numbers like 2 are very mildly conservative. For more on the LKJ, see @martin2020lkj.
+
+Here's how to fit the model with `brm()`.
+
+```{r}
+brm_anova <- brm(
+  data = stroop_subset,
+  family = gaussian,
+  bf(log(rt) ~ 1 + cond + (1 + cond | subject),
+     center = FALSE),
+  prior = prior(normal(log(1000), 1), class = b, coef = Intercept) +
+    prior(normal(0, 1), class = b) +
+    prior(exponential(1), class = sd) +
+    prior(exponential(1), class = sigma) +
+    prior(lkj(2), class = cor), 
+  cores = 4, seed = 1,
+  file = "fits/brm_anova")
+```
+
+Check the summary.
+
+```{r}
+print(brm_anova)
+```
+
+Though not always the case, the parameter summaries for the frequentist and Bayesian ANOVAs are quite similar.
+
+```{r, echo = F, eval = F}
+as_draws_df(brm_anova) |> 
+  select(cor_subject__Intercept__condincongruent) |> 
+  mode_hdi()
+```
+
+As above in the frequentist models, our second Bayesian model will also be a multilevel ANCOVA where we condition on the background variable `lac`:
+
+$$
+\begin{align}
+\log(\text{rt}_{ij}) & \sim \operatorname{Normal}(\mu_{ij}, \sigma_\epsilon) \\
+\mu_{ij} & = \beta_{0i} + \beta_{1i} \text{cond}_{ij} \\
+\beta_{0i} & = b_{00} + b_{01} \text{lac}_i + b_{02} \text{lac}_i^2 + u_{0i} \\
+\beta_{1i} & = b_1 + u_{1i} \\
+\begin{bmatrix} u_{0i} \\ u_{1i} \end{bmatrix} & \sim \operatorname{Normal} \left ( \mathbf 0, \mathbf \Sigma   \right ) \\
+\mathbf \Sigma & = \mathbf{SRS} \\
+\mathbf S & = \begin{bmatrix} \sigma_{u_0} & \\ 0 & \sigma_{u_1} \end{bmatrix} \\
+\mathbf R & = \begin{bmatrix} 1 \\ \rho & 1 \end{bmatrix} \\
+b_{00} & \sim \operatorname{Normal}(\log 1000, 1) \\
+b_{01}, b_{02}, b_1 & \sim \operatorname{Normal}(0, 1) \\
+\sigma_{u_0}, \sigma_{u_1}, \sigma_\epsilon & \sim \operatorname{Exponential}(1) \\
+\mathbf R & \sim \operatorname{LKJ}(2).
+\end{align}
+$$
+
+For the priors, $\operatorname{Normal}(0, 1)$ should be pretty gentle for both $b_{01}$ and $b_{02}$. Because we have mean-centered `lac`, I feel comfortable retaining the $\operatorname{Normal}(\log 1000, 1)$ prior for $b_{00}$.
+
+We can fit the multilevel ANCOVA with `brm()` like so.
+
+```{r}
+brm_ancova <- brm(
+  data = stroop_subset,
+  family = gaussian,
+  bf(log(rt) ~ 1 + cond + lac + I(lac^2) + (1 + cond | subject),
+     center = FALSE),
+  prior = prior(normal(log(1000), 1), class = b, coef = Intercept) +
+    prior(normal(0, 1), class = b) +
+    prior(exponential(1), class = sd) +
+    prior(exponential(1), class = sigma) +
+    prior(lkj(2), class = cor),
+  cores = 4, seed = 1,
+  file = "fits/brm_ancova")
+```
+
+Check the parameter summary.
+
+```{r}
+print(brm_ancova)
+```
+
+```{r, echo = FALSE, eval = FALSE}
+stroop_subset |> 
+  distinct(age, logage, lac) |> 
+  arrange(age) |> 
+  slice(1, 11:12, 29)
+```
+
+At first glance, the $b_{01}$ and $b_{02}$ posteriors might seem strong. Keep in mind the `lac` variable only ranges from -0.900 (`age == 19`) to 0.574 (`age == 83`), so a one-unit increase in `lac` is a massive increase on the `age` scale.^[Keep in mind the basic interpretation for a regression interpretation is it is the change in the expected value for the DV, given a one-unit increase in the predictor variable for the coefficient. Thus if your predictor variables have wide ranges, one-unit increases probably won't have a big change in expectation for the DV. But if your predictor variables have small ranges, a one-unit increase might well make for a massive difference in DV expectation.] Take together, the $b_{01}$ and $b_{02}$ posteriors indicate that older participants tended to have longer reaction times, and this trend increased on the right end of the `age` distribution.
+
+We might make a couple gross `pp_check()` plots to get a sense of the quality of our models.
+
+```{r, fig.width = 6, fig.height = 4, message = FALSE}
+set.seed(1)
+p1 <- pp_check(brm_anova, ndraws = 50) + 
+  coord_cartesian(xlim = c(5, 9), ylim = c(0, 0.8)) +
+  labs(subtitle = "ANOVA")
+p2 <- pp_check(brm_ancova, ndraws = 50) + 
+  coord_cartesian(xlim = c(5, 9), ylim = c(0, 0.8)) +
+  labs(subtitle = "ANCOVA")
+
+p1 / p2
+```
+
+Overall, they're not great. But they do at least capture the conditional means.^[We'll do better in a future post.]
+
+```{r, fig.width = 6, fig.height = 4, message = FALSE}
+set.seed(1)
+p3 <- pp_check(brm_anova, type = "stat_grouped", group = "cond", ndraws = 2000) + 
+  coord_cartesian(xlim = c(6.94, 7.13)) +
+  labs(subtitle = "ANOVA")
+p4 <- pp_check(brm_ancova, type = "stat_grouped", group = "cond", ndraws = 2000) + 
+  coord_cartesian(xlim = c(6.94, 7.13)) +
+  labs(subtitle = "ANCOVA")
+
+p3 / p4
+```
+
+Given the strength of our $b_{01}$ and $b_{02}$ posteriors, we might expect greater precision for our population-level experimental contrast parameter $b_1$.
+
+```{r}
+bind_rows(
+  fixef(brm_anova)["condincongruent", ],
+  fixef(brm_ancova)["condincongruent", ]) |> 
+  mutate(model = c("anova", "ancova"),
+         interval_width = Q97.5 - Q2.5) |> 
+  select(model, everything())
+```
+
+In this case, the contrast is mixed. With respect for the the posterior $\textit{SD}$, the value is smaller for the ANOVA. But the 95% interval is narrower for the ANCOVA. We'll have to see what happens for the causal estimands, below.
+
+## Causal inference with multilevel models
+
+When we measure the dependent variable at a single time point, we can define the causal effect $\tau$ of one condition versus another for the $i$th person as
+
+$$
+\tau_i = y_i^1 - y_i^0,
+$$
+
+where $y_i^0$ is the $i$th person's outcome in one condition^[Often the control or baseline condition.], and where $y_i^1$ is the $i$th person's outcome in other condition.^[Often the experimental or contrasting condition.] Within-person factorial experiments add a temporal element where the DV is measured across many trials, where the level of the independent variable is varied (often at random, as in these data). Thus in a technical sense, reaction-time data like these are longitudinal, though you might describe them as intensively longitudinal.^[Different research traditions use different terms for such things. I'm borrowing the term *intensive longitudinal* from the daily-diary research tradition in psychology, where people typically answer a few questions once or a few times a day for several days or weeks [see @collins2006analysis]. Comparatively, you might describe reaction-time data from computer tasks as *very* intensive longitudinal data.] Therefore we might need to expand our notation to capture the response across $j$ time points (trials), and define the $i$th person's causal effect at a given time point as
+
+$$
+\tau_{ij} = y_{ij}^1 - y_{ij}^0.
+$$
+
+We often express causal effects in aggregates, and within-person designs allow for several options. For example, if we wanted to average across all $j$ trials within each $i$ persons, we could compute a person-specific average treatment effect (ATE):
+
+$$
+\tau_{\text{ATE}_i} = \mathbb E (y_j^1 - y_j^0)_i.
+$$
+
+If we were instead interested in averaging across $i$ persons, we could compute a trail-specific ATE:
+
+$$
+\tau_{\text{ATE}_j} = \mathbb E (y_i^1 - y_i^0)_j.
+$$
+
+Often times researchers simply want a causal effect averaged across trials *and* persons:
+
+$$
+\tau_\text{ATE} = \mathbb E (y_{ij}^1 - y_{ij}^0).
+$$
+
+Yet keep in mind that even though each participant receives multiple trials under both levels of the independent variable, $\tau_{ij}$ can never be directly computed from the data alone because for any given trial $j$, the $i$th participant is only under one of the levels of the independent variable. Thus Holland's [-@holland1986statistics] fundamental problem of causal inference still holds even when we have many observations within each person: We are always missing at least half of the data. This would also hold true for other within-person designs, such as the crossover trials used in medicine and exercise science [see @senn2002cross], or the reversal designs used in behavior analysis and education research [see @cooper2019applied].
+
+However, as we have seen on previous posts, we can use *g-computation* [@robins1986new] to compute estimates for $y_{ij}^1$ and $y_{ij}^0$ from the model, and then average over those estimates to ATE. We can compute these estimates from an unconditional model, such as a multilevel ANOVA, or a conditional model, such as a multilevel ANCOVA.
+
+As we saw in the [first blog series](https://solomonkurz.netlify.app/blog/2023-04-12-boost-your-power-with-baseline-covariates/), sometimes the ATE is directly estimated from one of the parameters in the model (often $\beta_1$ in a single-level Gaussian ANOVA or ANCOVA), but sometimes the ATE is only a product of the entire model realized through g-computation (as is often the case when using a non-identity link function). It is my observation that for multilevel models, the ATE requires g-computation, with caveats we'll highlight below.^[I should add that to my knowledge this insight is largely missing from the formal methodological literature, and conflicts somewhat from some of the published work, such as @raudenbush2020randomized. I bet this would make for a great dissertation topic for a grad student in, say, quantitative psychology or perhaps statistics. If you decide to take it on, just make sure to cite uncle Solomon's blog post, and tell me all about your exciting results so I can share them with my readers.]
+
+For more theory on causal inference with multilevel models in other research design contexts, see @hill2013multilevel, @feller2015hierarchical, and @raudenbush2020randomized.
+
+## Frequentist g-computation
+
+### Frequentist ANOVA and the ATE
+
+If we took the generic $\tau_\text{ATE}$ as our focal estimand, we can compute the point estimate by hand following the same basic steps for with a single-level GLM. The first step is to make a predictor grid of all the model inputs. For that grid, we start with the observed levels of `subject`. Though not technically necessary at this point, it can help clarify the steps by retaining the `trial` indices. We then double the length of the data set such that the first version has one level of the IV for all cases (`cond == "congruent"`), and the other level of the IV for the duplicate cases (`incond == "congruent"`). We save the predictor grid as `nd`, my preferred shorthand for `newdata`.
+
+```{r}
+nd <- stroop_subset |> 
+  # Subset the necessary columns
+  select(subject, trial) |> 
+  # Expand the data set by the two levels of the IV
+  expand_grid(cond = levels(stroop_subset$cond) |> factor(levels = levels(stroop_subset$cond)))
+
+# What?
+glimpse(nd)
+```
+
+Here's the structure of the output of `predict()` when you request `se = TRUE`.
+
+```{r}
+predict(lmer_anova, newdata = nd, se = TRUE) |> 
+  str()
+```
+
+In late 2023 **lme4** began offering an `se.fit = TRUE` method for `predict()`. If you execute `?predict.merMod` for the documentation, you will find this method is currently considered "experimental". There is no current direct method to request 95% CIs, but you can compute Wald intervals by hand. However, the `se.fit = TRUE` method won't actually serve us well here because we're interested in averaging across the `trial`-level estimates with `subject`s, and we'll be interested in computing within-`subject` contrasts from them as well.
+
+Before we move on, an important thing to notice is that for a simple multilevel ANOVA like this, all counterfactual predictions will be identical across all levels of `trial` per `subject`, within each level of the IV. This might be easier to see if we `slice()` to show the last three trials for the first `subject`, and the first three trials for the second.
+
+```{r}
+nd |> 
+  mutate(y_hat = predict(lmer_anova, newdata = nd)) |> 
+  pivot_wider(names_from = cond, values_from = y_hat) |> 
+  slice(61:66)
+```
+
+See? All the expected values in `congruent` are all the same for each level of `subject`, as are the all the expected values for `incongruent`. Because the simple multilevel ANOVA has no way to capture systemic differences across trials within a `subject`, this holds for all trials within all levels of `subject`. In a later post, we'll see how we might model systemic within-`subject` differences.
+
+As with single-level GLMs, we can also compute counterfactual estimates with `predictions()` from **marginaleffects**. Here's the default output.
+
+```{r, echo = FALSE, eval = FALSE}
+# Not needed
+
+# 16.08144 mins
+# `conf_type = "bca"` is very costly relative to other methods
+lmer_anova_predictions_boot_ij <- inferences(lmer_anova_predictions_ij, method = "rsample", R = 1000, conf_type = "bca")
+
+# 1.084172 mins
+t0 <- Sys.time()
+
+lmer_anova_predictions_boot_ij <- inferences(lmer_anova_predictions_ij, method = "rsample", R = 1000)
+
+t1 <- Sys.time()
+
+t1 - t0
+```
+
+```{r}
+lmer_anova_predictions_ij <- predictions(lmer_anova, newdata = nd)
+head(lmer_anova_predictions_ij)
+```
+
+Notice the warning message, which begins: "For this model type, `marginaleffects` only takes into account the uncertainty in fixed-effect parameters." Although we do have correct point estimates in the `Estimate` column, we should not trust the standard errors or any of the products of the standard errors, such as the $p$-value and 95% CI. Those standard errors are based only on the fixed effects, which ignore the uncertainty in the random portion of the model. This is because, for frequentist models, **marginaleffects** only uses the output of the `vcov()` function as input for its own implementation of the delta method. The `vcov()` function will return the variance/covariance matrix for the fixed effects (what we called $b$ coefficients in our equations, above), but it does *not* include uncertainty information for the multilevel deviation parameters (often called random effects, and what we called $u$ parameter, above). However, one can compute frequentist 95% CIs with bootstrapping, which we'll show in a moment. But first, we can use the `by` argument in the `avg_predictions()` function to compute the average estimates, within each level `cond`, within each level of `subject`. These are what we might denote $\mathbb E (y_j^0)_i$ and $\mathbb E (y_j^1)_i$.
+
+```{r, warning = FALSE}
+lmer_anova_predictions_i <- avg_predictions(
+  lmer_anova, 
+  newdata = nd, 
+  by = c("subject", "cond"))
+
+head(lmer_anova_predictions_i)
+```
+
+I've suppressed the warning message here, but you'll still get one. You should not trust those standard errors, even though the point estimates are fine. To express uncertainty with bootstrap 95% CIs, we use the `inferences()` function from **marginaleffects** (execute `?inferences` for the documentation). Here we use the `rsample` method, and compute the intervals based on bootstraped 1000 samples. This operation takes about a minute on my laptop, so make sure to save the results as an object when you do something like this on your own computer.^[Before you try this on your own computer, make sure you're using **marginaleffects** version 0.28.0.6 or higher. If you need it, you can install the current developmental version by executing `remotes::install_github("vincentarelbundock/marginaleffects", force = TRUE)`.]
+
+```{r, echo = FALSE, eval = FALSE}
+# 1.045246 mins
+t0 <- Sys.time()
+lmer_anova_predictions_i_boot <- inferences(
+  lmer_anova_predictions_i, 
+  method = "rsample", 
+  R = 1000)
+t1 <- Sys.time()
+
+t1 - t0
+save(lmer_anova_predictions_i_boot, file = "objects/lmer_anova_predictions_i_boot")
+```
+
+```{r, eval = FALSE}
+lmer_anova_predictions_i_boot <- inferences(
+  lmer_anova_predictions_i, 
+  method = "rsample", 
+  R = 1000)
+
+head(lmer_anova_predictions_i_boot)
+```
+
+```{r, echo = FALSE}
+load(file = "objects/lmer_anova_predictions_i_boot")
+head(lmer_anova_predictions_i_boot)
+```
+
+The object now contains two new columns for the 95% bootstrap CIs. 
+
+We can follow similar steps to compute the average within-`subject` contrasts with `avg_comparisons()`, what we might denote $\tau_{\text{ATE}_i}$.
+
+```{r, echo = FALSE, eval = FALSE}
+lmer_anova_comparisons_i <- avg_comparisons(
+  lmer_anova, newdata = nd, variables = "cond", by = "subject")
+
+# 1.696435 mins
+t0 <- Sys.time()
+lmer_anova_comparisons_i_boot <- inferences(
+  lmer_anova_comparisons_i, method = "rsample", R = 1000)
+t1 <- Sys.time()
+
+t1 - t0
+
+save(lmer_anova_comparisons_i_boot, file = "objects/lmer_anova_comparisons_i_boot")
+```
+
+```{r, eval = FALSE}
+lmer_anova_comparisons_i <- avg_comparisons(
+  lmer_anova, newdata = nd, variables = "cond", by = "subject")
+lmer_anova_comparisons_i_boot <- inferences(
+  lmer_anova_comparisons_i, method = "rsample", R = 1000)
+head(lmer_anova_comparisons_i_boot)
+```
+
+```{r, echo = FALSE}
+load(file = "objects/lmer_anova_comparisons_i_boot")
+head(lmer_anova_comparisons_i_boot)
+```
+
+Though not strictly necessary, we'll also compute a `rank` based on each $\mathbb E (y_j^0)_i$ estimate to aid with the plots.
+
+```{r}
+# Compute the ranks and save as a simple data frame
+ranks <- lmer_anova_predictions_i |> 
+  data.frame() |> 
+  filter(cond == "congruent") |> 
+  mutate(rank = rank(estimate)) |> 
+  select(subject, rank)
+
+# What?
+glimpse(ranks)
+```
+
+Now we plot.
+
+```{r, fig.width = 8, fig.height = 5}
+# Counterfactual prediction means
+p1 <- lmer_anova_predictions_i_boot |> 
+  data.frame() |> 
+  mutate(y = ifelse(cond == "congruent", "E(widehat(italic(y[j])^0))[italic(i)]", "E(widehat(italic(y[j])^1))[italic(i)]")) |> 
+  left_join(ranks, by = "subject") |> 
+  
+  ggplot(aes(x = estimate, y = reorder(subject, rank), color = y)) +
+  geom_interval(aes(xmin = conf.low, xmax = conf.high),
+                position = position_dodge(width = -0.3),
+                size = 1/5) +
+  geom_point(aes(shape = y),
+             size = 2) +
+  scale_y_discrete(breaks = NULL) +
+  scale_color_viridis_d(NULL, option = "A", begin = 0.3, end = 0.6,
+                        labels = scales::parse_format()) +
+  scale_shape_manual(NULL, values = c(20, 18),
+                     labels = scales::parse_format()) +
+  guides(color = guide_legend(position = "inside"),
+         shape = guide_legend(position = "inside")) +
+  labs(x = "log(rt)",
+       y = "subject (ranked)",
+       subtitle = "Counterfactual prediction means") +
+  coord_cartesian(xlim = c(6.3, 8.2)) +
+  theme(legend.background = element_blank(),
+        legend.position.inside = c(0.85, 0.75))
+
+# Experimental effects
+p2 <- lmer_anova_comparisons_i_boot |>  
+  data.frame() |> 
+  left_join(ranks, by = "subject") |>
+  
+  ggplot(aes(x = estimate, y = reorder(subject, rank))) +
+  geom_vline(xintercept = 0, color = "white") +
+  geom_interval(aes(xmin = conf.low, xmax = conf.high),
+                size = 1/5) +
+  geom_point() +
+  scale_y_discrete(breaks = NULL) +
+  labs(x = expression(hat(tau)[italic(i)]~("i.e., "*E(widehat(italic(y[j])^1-italic(y[j])^0))[italic(i)])),
+       y = NULL,
+       subtitle = "Experimental effects") +
+  coord_cartesian(xlim = c(-0.95, 0.95)) 
+
+# Combine, entitle, and display
+p1 + p2 + plot_annotation(title = "Person-level estimates based on the frequentist multilevel ANOVA")
+```
+
+```{r, fig.width = 8, fig.height = 5, echo = FALSE, eval = FALSE}
+# Basically the same
+
+# 5.142032 mins
+t0 <- Sys.time()
+lmer_anova_predictions_i_boot_5000 <- inferences(lmer_anova_predictions_i, method = "rsample", R = 5000)
+t1 <- Sys.time()
+t1 - t0
+save(lmer_anova_predictions_i_boot_5000, file = "objects/lmer_anova_predictions_i_boot_5000")
+
+# 8.549263 mins
+t0 <- Sys.time()
+lmer_anova_comparisons_i_boot_5000 <- inferences(lmer_anova_comparisons_i, method = "rsample", R = 5000)
+t1 <- Sys.time()
+t1 - t0
+save(lmer_anova_comparisons_i_boot_5000, file = "objects/lmer_anova_comparisons_i_boot_5000")
+
+# Counterfactual prediction means
+p1 <- lmer_anova_predictions_i_boot_5000 |> 
+  data.frame() |> 
+  mutate(y = ifelse(cond == "congruent", "E(widehat(italic(y[j])^0))[italic(i)]", "E(widehat(italic(y[j])^1))[italic(i)]")) |> 
+  left_join(ranks, by = "subject") |> 
+  
+  ggplot(aes(x = estimate, y = reorder(subject, rank), color = y)) +
+  geom_interval(aes(xmin = conf.low, xmax = conf.high),
+                position = position_dodge(width = -0.3),
+                size = 1/2) +
+  geom_point(aes(shape = y),
+             size = 1.75) +
+  scale_y_discrete(breaks = NULL) +
+  scale_color_viridis_d(NULL, option = "A", begin = 0.3, end = 0.6,
+                        labels = scales::parse_format()) +
+  scale_shape_manual(NULL, values = c(20, 18),
+                     labels = scales::parse_format()) +
+  guides(color = guide_legend(position = "inside"),
+         shape = guide_legend(position = "inside")) +
+  labs(x = "log(rt)",
+       y = "subject (ranked)",
+       subtitle = "Counterfactual prediction means") +
+  coord_cartesian(xlim = c(6.3, 8.2)) +
+  theme(legend.background = element_blank(),
+        legend.position.inside = c(0.85, 0.75))
+
+# Experimental effects
+p2 <- lmer_anova_comparisons_i_boot_5000 |>  
+  data.frame() |> 
+  left_join(ranks, by = "subject") |>
+  
+  ggplot(aes(x = estimate, y = reorder(subject, rank))) +
+  geom_vline(xintercept = 0, color = "white") +
+  geom_interval(aes(xmin = conf.low, xmax = conf.high),
+                size = 1/2) +
+  geom_point(size = 1.25) +
+  scale_y_discrete(breaks = NULL) +
+  labs(x = expression(hat(tau)[italic(i)]~("i.e., "*E(widehat(italic(y[j])^1-italic(y[j])^0))[italic(i)])),
+       y = NULL,
+       subtitle = "Experimental effects") +
+  coord_cartesian(xlim = c(-0.95, 0.95)) 
+
+# Combine, entitle, and display
+p1 + p2 + plot_annotation(title = "Person-level estimates based on the frequentist multilevel ANOVA")
+```
+
+See those horizontal lines? Those are those 95% bootstrap CIs we've been working so hard for. Unlike with the single-level GLM ANOVAs we have seen before ([here](https://solomonkurz.netlify.app/blog/2023-04-16-causal-inference-with-potential-outcomes-bootcamp/#estimands-estimators-and-estimates)), even the simple multilevel ANOVA allows the counterfactual estimates and causal effects to vary across persons. This is because the multilevel model groups the `trial`-level observations within `subject` for both intercepts and slopes.^[Yeah, I'll admit it. Those intervals look surprisingly janky and asymmetrical to my eye. The last time I dove seriously into the bootstrapping literature was the early 2000 teens when I and all of my colleagues were learning about BCa CIs for mediation analyses. I wasn't even into Bayes yet. I did a casual survey of some of the bootstrapping literature for multilevel models in preparation for this post, and my impression was the methods available by `inferences()` are generally fine for many use cases. However, if any of y'all readers are bootstrap jocks with important insights for this application, share them in the comments.]
+
+Now let's see what happens if we average across all those $\tau_{ij}$ estimates.
+
+```{r, echo = FALSE, eval = FALSE}
+lmer_anova_comparisons <- avg_comparisons(lmer_anova)
+
+# 1.746185 mins
+t0 <- Sys.time()
+lmer_anova_comparisons_boot <- inferences(lmer_anova_comparisons, method = "rsample", R = 1000)
+t1 <- Sys.time()
+
+t1 - t0
+
+save(lmer_anova_comparisons_boot, file = "objects/lmer_anova_comparisons_boot")
+```
+
+```{r, eval = FALSE}
+lmer_anova_comparisons <- avg_comparisons(lmer_anova)
+lmer_anova_comparisons_boot <- inferences(
+  lmer_anova_comparisons, method = "rsample", R = 1000)
+print(lmer_anova_comparisons_boot)
+```
+
+```{r, echo = FALSE}
+load(file = "objects/lmer_anova_comparisons_boot")
+print(lmer_anova_comparisons_boot)
+```
+
+This is our overall ATE, with uncertainty expressed with 95% bootstrapped CIs. Note how it's similar, but not the same as, the estimate for $b_1$. The 95% CI for that parameter is wider.
+
+```{r, eval = FALSE}
+tidy(lmer_anova, conf.int = TRUE, conf.method = "profile") |> 
+  filter(term == "condincongruent") |> 
+  select(estimate, conf.low:conf.high)
+```
+
+```{r, echo = FALSE}
+frequentist_model |> 
+  slice(1) |> 
+  select(estimate, conf.low:conf.high)
+```
+
+The point estimate for $b_1$ is very similar to the point estimate for our ATE, but they're not identical. This is important to get. The population-level slope $b_1$ from our multilevel ANOVA is *not* the same as the ATE. To the best of my knowledge, the two do approximate one another. But whereas our causal estimand is the ATE, $b_1$ is just a part of the model we use to compute the ATE. That is, in the multilevel ANOVA
+
+$$\tau_\text{ATE} \neq b_1.$$
+
+### Frequentist ANCOVA and the ATE
+
+To compute our estimands from our frequentist ANCOVA, we'll want to add the `age` variables to the `nd` predictor grid.
+
+```{r, warning = FALSE}
+nd <- nd |> 
+  left_join(stroop_subset |> 
+              distinct(subject, age, lac),
+            by = join_by(subject))
+
+# What?
+glimpse(nd)
+```
+
+The remaining steps are much the same. We can compute point estimates for predictions and contrasts with functions like `predictions()`, `comparisons()`, `avg_predictions()`, and `avg_comparisons()`. But for measures of uncertainty, we bootstrap with `inferences()`.
+
+First, we compute the predictions $\mathbb E (y_j^0)_i$ and $\mathbb E (y_j^1)_i$.
+
+```{r, echo = FALSE, eval = FALSE}
+lmer_ancova_predictions_i <- avg_predictions(lmer_ancova, newdata = nd, by = c("subject", "cond"))
+
+# 1.253386 mins
+t0 <- Sys.time()
+lmer_ancova_predictions_i_boot <- inferences(lmer_ancova_predictions_i, method = "rsample", R = 1000)
+t1 <- Sys.time()
+t1 - t0
+
+save(lmer_ancova_predictions_i_boot, file = "objects/lmer_ancova_predictions_i_boot")
+```
+
+```{r, eval = FALSE}
+lmer_ancova_predictions_i <- avg_predictions(
+  lmer_ancova, newdata = nd, by = c("subject", "cond"))
+lmer_ancova_predictions_i_boot <- inferences(
+  lmer_ancova_predictions_i, method = "rsample", R = 1000)
+head(lmer_ancova_predictions_i_boot)
+```
+
+```{r, echo = FALSE}
+load(file = "objects/lmer_ancova_predictions_i_boot")
+head(lmer_ancova_predictions_i_boot)
+```
+
+Next we compute and save $\tau_{j}$ for the frequentist multilevel ANCOVA.
+
+```{r,  echo = FALSE, eval = FALSE}
+lmer_ancova_comparisons_i <- avg_comparisons(lmer_ancova, newdata = nd, variables = "cond", by = "subject")
+
+# 2.063871 mins
+t0 <- Sys.time()
+lmer_ancova_comparisons_i_boot <- inferences(lmer_ancova_comparisons_i, method = "rsample", R = 1000)
+t1 <- Sys.time()
+t1 - t0
+
+save(lmer_ancova_comparisons_i_boot, file = "objects/lmer_ancova_comparisons_i_boot")
+```
+
+```{r, eval = FALSE}
+lmer_ancova_comparisons_i <- avg_comparisons(
+  lmer_ancova, newdata = nd, variables = "cond", by = "subject")
+lmer_ancova_comparisons_i_boot <- inferences(
+  lmer_ancova_comparisons_i, method = "rsample", R = 1000)
+head(lmer_ancova_comparisons_i_boot)
+```
+
+```{r, echo = FALSE}
+load(file = "objects/lmer_ancova_comparisons_i_boot")
+head(lmer_ancova_comparisons_i_boot)
+```
+
+We can plot like before.
+
+```{r, fig.width = 8, fig.height = 5}
+# Counterfactual prediction means
+p3 <- lmer_ancova_predictions_i_boot |> 
+  data.frame() |> 
+  mutate(y = ifelse(cond == "congruent", "E(widehat(italic(y[j])^0))[italic(i)]", "E(widehat(italic(y[j])^1))[italic(i)]")) |> 
+  left_join(ranks, by = "subject") |> 
+  
+  ggplot(aes(x = estimate, y = reorder(subject, rank), color = y)) +
+  geom_interval(aes(xmin = conf.low, xmax = conf.high),
+                position = position_dodge(width = -0.3),
+                size = 1/5) +
+  geom_point(aes(shape = y),
+             size = 2) +
+  scale_y_discrete(breaks = NULL) +
+  scale_color_viridis_d(NULL, option = "A", begin = 0.3, end = 0.6,
+                        labels = scales::parse_format()) +
+  scale_shape_manual(NULL, values = c(20, 18),
+                     labels = scales::parse_format()) +
+  guides(color = guide_legend(position = "inside"),
+         shape = guide_legend(position = "inside")) +
+  labs(x = "log(rt)",
+       y = "subject (ranked)",
+       subtitle = "Counterfactual prediction means") +
+  coord_cartesian(xlim = c(6.3, 8.2)) +
+  theme(legend.background = element_blank(),
+        legend.position.inside = c(0.85, 0.75))
+
+# Experimental effects
+p4 <- lmer_ancova_comparisons_i_boot |>  
+  data.frame() |> 
+  left_join(ranks, by = "subject") |>
+  
+  ggplot(aes(x = estimate, y = reorder(subject, rank))) +
+  geom_vline(xintercept = 0, color = "white") +
+  geom_interval(aes(xmin = conf.low, xmax = conf.high),
+                size = 1/5) +
+  geom_point() +
+  scale_y_discrete(breaks = NULL) +
+  labs(x = expression(hat(tau)[italic(i)]~("i.e., "*E(widehat(italic(y[j])^1-italic(y[j])^0))[italic(i)])),
+       y = NULL,
+       subtitle = "Experimental effects") +
+  coord_cartesian(xlim = c(-0.95, 0.95)) 
+
+# Combine, entitle, and display
+p3 + p4 + plot_annotation(title = "Person-level estimates based on the frequentist multilevel ANCOVA")
+```
+
+In this case, the results are pretty close to what we got from the ANOVA. Conditioning on `age` helped a bit, but not a lot compared to what we already got from conditioning on `subject`. We can get a sense of this with a quick AIC comparison.
+
+```{r}
+AIC(lmer_anova, lmer_ancova)
+```
+
+The ANCOVA captured more information in the data, but not dramatically so.
+
+Now we compute the ATE.
+
+```{r, echo = FALSE, eval = FALSE}
+lmer_ancova_comparisons <- avg_comparisons(lmer_ancova, variables = "cond")
+
+# 1.717069 mins
+t0 <- Sys.time()
+lmer_ancova_comparisons_boot <- inferences(lmer_ancova_comparisons, method = "rsample", R = 1000)
+t1 <- Sys.time()
+t1 - t0
+
+save(lmer_ancova_comparisons_boot, file = "objects/lmer_ancova_comparisons_boot")
+```
+
+```{r, eval = FALSE}
+lmer_ancova_comparisons <- avg_comparisons(
+  lmer_ancova, variables = "cond")
+lmer_ancova_comparisons_boot <- inferences(
+  lmer_ancova_comparisons, method = "rsample", R = 1000)
+print(lmer_ancova_comparisons_boot)
+```
+
+```{r, echo = FALSE}
+load(file = "objects/lmer_ancova_comparisons_boot")
+print(lmer_ancova_comparisons_boot)
+```
+
+To summarize, we might compare the $b_1$ and $\tau_\text{ATE}$ estimates from the frequentist ANOVA and ANCOVA all in one coefficient plot.
+
+```{r}
+bind_rows(
+  lmer_anova_comparisons_boot,
+  lmer_ancova_comparisons_boot) |> 
+  data.frame() |> 
+  mutate(model = c("ANOVA", "ANCOVA"),
+         statistic = "ATE") |> 
+  select(model, statistic, estimate, contains("conf."))
+
+bind_rows(
+  lmer_anova_comparisons_boot,
+  lmer_ancova_comparisons_boot) |> 
+  mutate(model = c("ANOVA", "ANCOVA"),
+         statistic = "ATE") |> 
+  select(model, statistic, estimate, contains("conf."))
+```
+
+```{r, echo = FALSE, eval = FALSE}
+frequentist_b1s <- bind_rows(
+  tidy(lmer_anova, conf.int = TRUE, conf.method = "profile"),
+  tidy(lmer_ancova, conf.int = TRUE, conf.method = "profile")) |> 
+  filter(term == "condincongruent") |> 
+  mutate(model = c("ANOVA", "ANCOVA"),
+         statistic = "italic(b)[1]") |> 
+  select(model, statistic, estimate, contains("conf."))
+
+frequentist_ates <- bind_rows(
+  lmer_anova_comparisons_boot,
+  lmer_ancova_comparisons_boot) |> 
+  data.frame() |> 
+  mutate(model = c("ANOVA", "ANCOVA"),
+         statistic = "ATE") |> 
+  select(model, statistic, estimate, contains("conf."))
+
+save(frequentist_b1s, file = "objects/frequentist_b1s")
+save(frequentist_ates, file = "objects/frequentist_ates")
+```
+
+```{r, eval = FALSE}
+# Compute
+frequentist_ates <- bind_rows(
+  lmer_anova_comparisons_boot,
+  lmer_ancova_comparisons_boot) |> 
+  data.frame() |> 
+  mutate(model = c("ANOVA", "ANCOVA"),
+         statistic = "ATE") |> 
+  select(model, statistic, estimate, contains("conf."))
+
+frequentist_b1s <- bind_rows(
+  tidy(lmer_anova, conf.int = TRUE, conf.method = "profile"),
+  tidy(lmer_ancova, conf.int = TRUE, conf.method = "profile")) |> 
+  filter(term == "condincongruent") |> 
+  mutate(model = c("ANOVA", "ANCOVA"),
+         statistic = "italic(b)[1]") |> 
+  select(model, statistic, estimate, contains("conf."))
+
+# Combine
+bind_rows(
+  frequentist_ates,
+  frequentist_b1s) |> 
+  mutate(model = fct_rev(model)) |> 
+  
+  # Plot
+  ggplot(aes(x = estimate, xmin = conf.low, xmax = conf.high, y = model, color = statistic)) +
+  geom_vline(xintercept = 0, color = "white") +
+  geom_pointinterval(position = position_dodge(width = -0.5), size = 1.5) +
+  scale_color_viridis_d(NULL, option = "C", begin = 0.25, end = 0.5, labels = scales::parse_format()) +
+  labs(x = "parameter space",
+       y = NULL)
+```
+
+```{r, fig.width = 6, fig.height = 1.5, echo = FALSE}
+load(file = "objects/frequentist_b1s")
+load(file = "objects/frequentist_ates")
+
+bind_rows(
+  frequentist_ates,
+  frequentist_b1s) |> 
+  mutate(model = fct_rev(model)) |> 
+  
+  ggplot(aes(x = estimate, xmin = conf.low, xmax = conf.high, y = model, color = statistic)) +
+  geom_vline(xintercept = 0, color = "white") +
+  geom_pointinterval(position = position_dodge(width = -0.5), size = 1.5) +
+  scale_color_viridis_d(NULL, option = "C", begin = 0.25, end = 0.5, labels = scales::parse_format()) +
+  labs(x = "parameter space",
+       y = NULL)
+```
+
+Within and across models, $b_1$ and $\tau_\text{ATE}$ approximate one another. However, across both models $\tau_\text{ATE}$ is more precise than $b_1$. In this particular case, the multilevel ANCOVA isn't an improvement over the multilevel ANCOVA with respect to precision.^[We'll have more to say about this later.] This difference between $b_1$ and $\tau_\text{ATE}$, however, is important from a study-design perspective. If it is generally the case that the ATE computed via g-computation is more precise than the population parameter $b_1$, then that means for a given sample the ATE will have more statistical power, which wise researchers can account for when the plan for their studies with power analyses.
+
+## Bayesian g-computation
+
+### Bayesian ANOVA and the ATE
+
+There are numerous ways to compute expected values for our predictor grid, and we'll start with the `add_epred_draws()` method.
+
+```{r}
+brm_anova_epred_ij <- nd |> 
+  add_epred_draws(brm_anova)
+
+# What?
+glimpse(brm_anova_epred_ij)
+```
+
+Next we pivot to the wide format with respect to the two levels of `cond`, and then compute $\tau_{ij}$.
+
+```{r}
+brm_anova_epred_ij <- brm_anova_epred_ij |> 
+  ungroup() |> 
+  select(subject:cond, .draw, .epred) |> 
+  pivot_wider(names_from = cond, values_from = .epred) |> 
+  mutate(tau_ij = incongruent - congruent)
+
+# What?
+glimpse(brm_anova_epred_ij)
+```
+
+Now we have full posterior distributions for our $y_{ij}^0$, $y_{ij}^1$, and $\tau_{ij}$. But because these are identical across trials within each person, we might consolidate by averaging across those trials within each person.
+
+```{r, message = FALSE}
+brm_anova_epred_i <- brm_anova_epred_ij |> 
+  group_by(subject, .draw) |> 
+  summarise(across(.cols = congruent:tau_ij, .fns = mean)) |> 
+  ungroup() |> 
+  rename(ate_i = tau_ij)
+
+# What?
+glimpse(brm_anova_epred_i)
+```
+
+Now we have averaged those `tau_ij` across trials, we have renamed the column `ate_i`. That is, we have the posterior draws for $\tau_{\text{ATE}_i}$ using the equation 
+
+$$
+\begin{align}
+\tau_{\text{ATE}_i} & = \mathbb E (y_j^1 - y_j^0)_i \\
+& = \mathbb E(\tau_j)_i.
+\end{align}
+$$
+
+We might add in the `rank` values from our frequentist version of the output.
+
+```{r}
+brm_anova_epred_i <- brm_anova_epred_i |> 
+  left_join(ranks, by = join_by(subject))
+
+# What?
+head(brm_anova_epred_i)
+```
+
+We can plot those posteriors in a figure similar to the one above.
+
+```{r, fig.width = 8, fig.height = 5}
+# Counterfactual prediction means
+p3 <- brm_anova_epred_i |> 
+  pivot_longer(ends_with("congruent"), names_to = "cond") |> 
+  mutate(y = ifelse(cond == "congruent", "E(widehat(italic(y[j])^0))[italic(i)]", "E(widehat(italic(y[j])^1))[italic(i)]")) |> 
+
+  ggplot(aes(x = value, y = reorder(subject, rank))) +
+  stat_pointinterval(aes(color = y, shape = y),
+                     .width = 0.95, point_interval = mean_qi,
+                     linewidth = 1/5, size = 2,
+                     position = position_dodge(width = -0.35)) +
+  scale_y_discrete(breaks = NULL) +
+  scale_color_viridis_d(NULL, option = "A", begin = 0.3, end = 0.6,
+                        labels = scales::parse_format()) +
+  scale_shape_manual(NULL, values = c(20, 18),
+                     labels = scales::parse_format()) +
+  guides(color = guide_legend(position = "inside"),
+         shape = guide_legend(position = "inside")) +
+  labs(x = "log(rt)",
+       y = "subject (ranked)",
+       subtitle = "Counterfactual prediction means") +
+  coord_cartesian(xlim = c(6.3, 8.2)) +
+  theme(legend.background = element_blank(),
+        legend.position.inside = c(0.85, 0.75))
+
+# Experimental effects
+p4 <- brm_anova_epred_i |> 
+  ggplot(aes(x = ate_i, y = reorder(subject, rank))) +
+  geom_vline(xintercept = 0, color = "white") +
+  stat_pointinterval(.width = 0.95, point_interval = mean_qi,
+                     linewidth = 1/4, size = 1/2) +
+  scale_y_discrete(breaks = NULL) +
+  labs(x = expression(hat(tau)[italic(i)]~("i.e., "*E(widehat(italic(y[j])^1-italic(y[j])^0))[italic(i)])),
+       y = NULL,
+       subtitle = "Experimental effects") +
+  coord_cartesian(xlim = c(-0.95, 0.95))
+
+# Combine, entitle, and display
+p3 + p4 + plot_annotation(title = "Person-level estimates based on the Bayesian multilevel ANOVA")
+```
+
+If we work instead with the `brm_anova_epred_ij` that was not averaged across `trial`, we can also summarize the posterior distribution for the ATE.
+
+```{r}
+brm_anova_ate <- brm_anova_epred_ij |> 
+  group_by(.draw) |> 
+  summarise(ate = mean(tau_ij))
+
+brm_anova_ate |> 
+  summarise(m = mean(ate),
+            s = sd(ate),
+            lwr = quantile(ate, probs = 0.025),
+            upr = quantile(ate, probs = 0.975))
+```
+
+That output is the same as we'd get from `avg_comparisons()`.
+
+```{r}
+avg_comparisons(brm_anova) |> 
+  get_draws() |> 
+  summarise(m = mean(draw),
+            s = sd(draw),
+            lwr = quantile(draw, probs = 0.025),
+            upr = quantile(draw, probs = 0.975)) |> 
+  mutate(across(.cols = everything(), .fns = \(x) round(x, digits = 4)))
+```
+
+But as with the frequentist model, these Bayesian estimates for the ATE are *not* identical to the posterior for $b_1$.
+
+```{r}
+as_draws_df(brm_anova) |> 
+  summarise(m = mean(b_condincongruent),
+            s = sd(b_condincongruent),
+            lwr = quantile(b_condincongruent, probs = 0.025),
+            upr = quantile(b_condincongruent, probs = 0.975))
+```
+
+Yes, it appears they approximate one another. But very importantly, look at the precision of the estimates by their posterior $\textit{SD}$s and 95% intervals. The posterior for the ATE is narrower that for $b_1$. We might further compare the two with a plot.
+
+```{r, fig.width = 5, fig.height = 2.75}
+brm_anova_ate |> 
+  rename(ATE = ate) |> 
+  mutate(`italic(b)[1]` = as_draws_df(brm_anova) |> pull(b_condincongruent)) |> 
+  pivot_longer(cols = -.draw) |> 
+  
+  ggplot(aes(x = value, fill = name, color = name)) +
+  geom_vline(xintercept = 0, color = "white") +
+  stat_slab(alpha = 0.5, linewidth = 0) +
+  stat_pointinterval(.width = 0.95,
+                     justification = 0.2, position = ggdist::position_dodgejust(width = -0.2)) +
+  scale_y_continuous(NULL, breaks = NULL, expand = expansion(mult = 0.02)) +
+  scale_color_viridis_d(NULL, option = "D", begin = 0.25, end = 0.7,
+                        labels = scales::parse_format()) +
+  scale_fill_viridis_d(NULL, option = "D", begin = 0.25, end = 0.7,
+                        labels = scales::parse_format()) +
+  labs(x = "parameter space",
+       subtitle = "Bayesian ANOVA")
+```
+
+### Bayesian ANCOVA and the ATE
+
+We can compute the posteriors for the various estimands from our Bayesian ANCOVA much the same way we did for the Bayesian ANOVA, above. The only catch is to make sure the `nd` predictor grid has the information for the covariate[s] in the ANCOVA. In this case, it already does. We could follow all the steps above to make another version of the two-panel figure, but I'll leave that up at an exercise for the interested reader. For many, the main goal is just to compute the posterior for $\tau_{ij}$, and perhaps compare it to the posterior for $b_1$. Here's $\tau_{ij}$.
+
+```{r}
+# Save
+brm_ancova_ate <- avg_comparisons(brm_ancova, variables = "cond") |> 
+  get_draws() |> 
+  transmute(.draw = as.integer(drawid),
+            ate = draw)
+
+# Summarize
+brm_ancova_ate |> 
+  summarise(m = mean(ate),
+            s = sd(ate),
+            lwr = quantile(ate, probs = 0.025),
+            upr = quantile(ate, probs = 0.975)) |> 
+  mutate(across(.cols = everything(), .fns = \(x) round(x, digits = 4)))
+```
+
+As with the Bayesian ANOVA, these Bayesian ANCOVA estimates for the ATE are *not* identical to the posterior for $b_1$.
+
+```{r}
+as_draws_df(brm_ancova) |> 
+  summarise(m = mean(b_condincongruent),
+            s = sd(b_condincongruent),
+            lwr = quantile(b_condincongruent, probs = 0.025),
+            upr = quantile(b_condincongruent, probs = 0.975))
+```
+
+Yes, they approximate one another. But the posterior for the ATE is narrower that for $b_1$, which we might further compare the two with a plot.
+
+```{r, fig.width = 5, fig.height = 2.75}
+brm_ancova_ate |> 
+  rename(ATE = ate) |> 
+  mutate(`italic(b)[1]` = as_draws_df(brm_ancova) |> pull(b_condincongruent)) |> 
+  pivot_longer(cols = c(ATE, `italic(b)[1]`)) |> 
+  
+  ggplot(aes(x = value, fill = name, color = name)) +
+  geom_vline(xintercept = 0, color = "white") +
+  stat_slab(alpha = 0.5, linewidth = 0) +
+  stat_pointinterval(.width = 0.95,
+                     justification = 0.2, position = ggdist::position_dodgejust(width = -0.2)) +
+  scale_y_continuous(NULL, breaks = NULL, expand = expansion(mult = 0.02)) +
+  scale_color_viridis_d(NULL, option = "D", begin = 0.25, end = 0.7,
+                        labels = scales::parse_format()) +
+  scale_fill_viridis_d(NULL, option = "D", begin = 0.25, end = 0.7,
+                        labels = scales::parse_format()) +
+  labs(x = "parameter space",
+       subtitle = "Bayesian ANCOVA")
+```
+
+Thus for the multilevel ANCOVA, the same pattern holds we saw for the Bayesian ANOVA. The ATE computed via g-computation has greater statistical power than the population parameter $b_1$. If you would to make causal inferences with multilevel models, I recommend using the ATE via g-computation.
+
+We might also go ahead and compare the ATE posteriors for the ANOVA and ANCOVA.
+
+```{r, fig.width = 5, fig.height = 2.75}
+bind_rows(brm_anova_ate, brm_ancova_ate) |> 
+  mutate(model = rep(c("ANOVA", "ANCOVA"), each = n() / 2)) |> 
+  
+  ggplot(aes(x = ate, fill = model, color = model)) +
+  geom_vline(xintercept = 0, color = "white") +
+  stat_slab(alpha = 0.5, linewidth = 0) +
+  stat_pointinterval(.width = c(0.5, 0.95),
+                     justification = 0.2, position = ggdist::position_dodgejust(width = -0.2)) +
+  scale_y_continuous(NULL, breaks = NULL, expand = expansion(mult = 0.02)) +
+  scale_color_viridis_d(NULL, option = "C", begin = 0.25, end = 0.7) +
+  scale_fill_viridis_d(NULL, option = "C", begin = 0.25, end = 0.7) +
+  labs(x = "ATE",
+       subtitle = "Bayesian ANOVA vs Bayesian ANCOVA")
+```
+
+As with the frequentist models, In this case the Bayesian ANCOVA was a touch *less* precise than the Bayesian ANOVA, which you might find a little surprising. We'll have more to say about this in the next post.
+
+```{r, echo = F, eval = F}
+Multilevel models are appropriate for causal inference in other non-longitudinal contexts as well. For example, you could have medical patients randomized to different experimental treatments, clustered within multiple medical centers. Here we frame the model in longitudinal terms because that's the nature of our use case, and because it's also the most natural way for my profession. For more on causal inference with multilevel models in other research design contexts, see @hill2013multilevel and @feller2015hierarchical.
+
+```
+
+```{r, echo = F, eval = F}
+avg_comparisons(brm_anova) |> 
+  get_draws() |> 
+  summarise(m = mean(draw),
+            s = sd(draw),
+            lwr = quantile(draw, probs = 0.025),
+            upr = quantile(draw, probs = 0.975))
+
+avg_comparisons(brm_ancova, variables = "cond") |> 
+  get_draws() |> 
+  summarise(m = mean(draw),
+            s = sd(draw),
+            lwr = quantile(draw, probs = 0.025),
+            upr = quantile(draw, probs = 0.975))
+```
+
+```{r, echo = F, eval = F}
+nd <- brm_ancova$data |> 
+  select(subject, lac) |> 
+  mutate(row = row_number()) |> 
+  expand_grid(cond = factor(c("congruent", "incongruent"), levels = c("congruent", "incongruent")))
+
+glimpse(nd)
+
+as_draws_df(brm_ancova) |> 
+  select(starts_with(".")) |> 
+  mutate(ate = pull(draw, draw)) |> 
+  posterior::summarise_draws()
+```
+
+## Wrap up
+
+In this post, some of the main points we covered were:
+
+* It is possible to extend the potential-outcomes framework to multilevel GLMMs.
+* It is possible to fit multilevel ANOVA and ANCOVAs to data with within-person factorial designs.
+* As with single-level GLMs, we generally rely on g-computation to compute the ATE.
+* The $b_1$ coefficient in a multilevel model is *not* the same as the ATE.
+  - It appears $b_1$ and the ATE approximate one another.
+  - The ATE may be more precise than the $b_1$ parameter, and thus has more statistical power. I say *may* here because though I have replicated this in other data sets, I'm not fully confident this is a general principle, and I have not yet seen rigorous methodological work on this.
+* Though in some contexts the multilevel ANCOVA may improve precision on the ATE, this will not always be the case. As we will see later, there's more than one way to fit a multilevel ANCOVA.
+* Within the frequentist paradigm, the only current way to express uncertainty in the ATE is with bootstrapping. For Bayesians, there are no meaningful differences to the procedures we used for single-level GLMs.
+
+In the next post, I plan on extending the multilevel ANOVA and ANCOVA framework for these Stroop data to consider longitudinal models, distributional models, and models with different likelihood functions. Until then, happy modeling!
+
+## Thank the reviewers
+
+I'd like to publicly acknowledge and thank
+
+* [Vincent Arel-Bundock](https://arelbundock.com/) and
+* [Julia M. Rohrer](https://juliarohrer.com/)
+
+for their kind efforts reviewing the draft of this post. Go team!
+
+Do note the final editorial decisions were my own, and I do not think it would be reasonable to assume my reviewers have given blanket endorsements of the current version of this post.
+
+## Session information
+
+```{r}
+sessionInfo()
+```
+
+```{r, fig.width = 3.75, fig.height = 3, echo = FALSE, eval = FALSE}
+brm_anova_ate |> 
+  rename(ATE = ate) |> 
+  mutate(`italic(b)[1]` = as_draws_df(brm_anova) |> pull(b_condincongruent)) |> 
+  pivot_longer(cols = -.draw) |> 
+  
+  ggplot(aes(x = value, fill = name, color = name)) +
+  stat_slab(alpha = 0.5, linewidth = 0) +
+  stat_pointinterval(.width = 0.95,
+                     justification = 0.2, position = ggdist::position_dodgejust(width = -0.2)) +
+  scale_y_continuous(NULL, breaks = NULL, expand = expansion(mult = 0.02)) +
+  scale_color_viridis_d(NULL, option = "D", begin = 0.25, end = 0.7,
+                        labels = scales::parse_format()) +
+  scale_fill_viridis_d(NULL, option = "D", begin = 0.25, end = 0.7,
+                        labels = scales::parse_format()) +
+  guides(color = guide_legend(position = "inside"),
+         fill = guide_legend(position = "inside")) +
+  labs(x = "parameter space",
+       subtitle = "Bayesian multilevel ANOVA") +
+  theme(legend.background = element_blank(),
+        legend.position.inside = c(0.85, 0.75))
+
+# ggsave("ate_vs_b1-featured.jpg", width = 3.5, height = 3.5, units = "in")
+```
+
+## References
+
