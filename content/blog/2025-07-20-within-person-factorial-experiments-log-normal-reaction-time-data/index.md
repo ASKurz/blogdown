@@ -3,7 +3,7 @@ title: Within-person factorial experiments, log(normal) reaction-time data
 subtitle: "Causal inference with the GLMM, Part 1"
 author: A. Solomon Kurz
 date: '2025-07-20'
-excerpt: "Blah, blah, blah"
+excerpt: "This is the first post in a new series on causal inference. We will learn how to analyze data from true experiments with techniques from the contemporary causal inference literature. Unlike with my earlier series focused on the generalized linear model (GLM), all the data in this series will have more complicated structures, which we'll capture with the generalized linear *mixed* model (GLMM). In this first post, we walk out the general framework using log(normal) reaction-time data collected from a within-person factorial experiment."
 tags:
   - ANCOVA
   - ANOVA
@@ -32,7 +32,7 @@ biblio-style: apalike
 csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 nocite: |  # This adds references not cited in the prose
- @R-patchwork, @R-GGally  
+ @R-patchwork  
 ---
 
 ## Welcome to the next beginning
@@ -78,7 +78,6 @@ library(tidybayes)
 library(broom.mixed)
 library(marginaleffects)
 library(patchwork)
-library(GGally)
 
 # Adjust the global plotting theme
 theme_set(theme_gray(base_size = 12) +
@@ -1104,34 +1103,6 @@ print(lmer_ancova_comparisons_boot)
 To summarize, we might compare the `\(b_1\)` and `\(\tau_\text{ATE}\)` estimates from the frequentist ANOVA and ANCOVA all in one coefficient plot.
 
 ``` r
-bind_rows(
-  lmer_anova_comparisons_boot,
-  lmer_ancova_comparisons_boot) |> 
-  data.frame() |> 
-  mutate(model = c("ANOVA", "ANCOVA"),
-         statistic = "ATE") |> 
-  select(model, statistic, estimate, contains("conf."))
-```
-
-    ##    model statistic  estimate   conf.low conf.high
-    ## 1  ANOVA       ATE 0.1013675 0.07688030 0.1292362
-    ## 2 ANCOVA       ATE 0.1014729 0.07466603 0.1294383
-
-``` r
-bind_rows(
-  lmer_anova_comparisons_boot,
-  lmer_ancova_comparisons_boot) |> 
-  mutate(model = c("ANOVA", "ANCOVA"),
-         statistic = "ATE") |> 
-  select(model, statistic, estimate, contains("conf."))
-```
-
-    ## 
-    ##  Estimate   z CI low CI high
-    ##     0.101 ATE 0.0769   0.129
-    ##     0.101 ATE 0.0747   0.129
-
-``` r
 # Compute
 frequentist_ates <- bind_rows(
   lmer_anova_comparisons_boot,
@@ -1522,13 +1493,12 @@ sessionInfo()
     ## [1] stats     graphics  grDevices utils     datasets  methods   base     
     ## 
     ## other attached packages:
-    ##  [1] GGally_2.2.1             patchwork_1.3.1          marginaleffects_0.28.0.6
-    ##  [4] broom.mixed_0.2.9.5      tidybayes_3.0.7          brms_2.22.0             
-    ##  [7] Rcpp_1.1.0               lme4_1.1-37              Matrix_1.7-2            
-    ## [10] lubridate_1.9.3          forcats_1.0.0            stringr_1.5.1           
-    ## [13] dplyr_1.1.4              purrr_1.0.4              readr_2.1.5             
-    ## [16] tidyr_1.3.1              tibble_3.3.0             ggplot2_3.5.2           
-    ## [19] tidyverse_2.0.0         
+    ##  [1] patchwork_1.3.1          marginaleffects_0.28.0.6 broom.mixed_0.2.9.5     
+    ##  [4] tidybayes_3.0.7          brms_2.22.0              Rcpp_1.1.0              
+    ##  [7] lme4_1.1-37              Matrix_1.7-2             lubridate_1.9.3         
+    ## [10] forcats_1.0.0            stringr_1.5.1            dplyr_1.1.4             
+    ## [13] purrr_1.0.4              readr_2.1.5              tidyr_1.3.1             
+    ## [16] tibble_3.3.0             ggplot2_3.5.2            tidyverse_2.0.0         
     ## 
     ## loaded via a namespace (and not attached):
     ##   [1] Rdpack_2.6.2         gridExtra_2.3        inline_0.3.21       
@@ -1543,29 +1513,28 @@ sessionInfo()
     ##  [28] parallel_4.4.3       R6_2.6.1             StanHeaders_2.32.10 
     ##  [31] bslib_0.7.0          stringi_1.8.7        RColorBrewer_1.1-3  
     ##  [34] parallelly_1.45.0    boot_1.3-31          jquerylib_0.1.4     
-    ##  [37] estimability_1.5.1   rstan_2.32.7         bookdown_0.40       
+    ##  [37] estimability_1.5.1   bookdown_0.40        rstan_2.32.7        
     ##  [40] knitr_1.49           zoo_1.8-12           bayesplot_1.13.0    
     ##  [43] splines_4.4.3        timechange_0.3.0     tidyselect_1.2.1    
     ##  [46] rstudioapi_0.16.0    dichromat_2.0-0.1    abind_1.4-8         
     ##  [49] yaml_2.3.8           codetools_0.2-20     blogdown_1.20       
     ##  [52] curl_6.0.1           pkgbuild_1.4.8       listenv_0.9.1       
-    ##  [55] lattice_0.22-6       plyr_1.8.9           withr_3.0.2         
+    ##  [55] plyr_1.8.9           lattice_0.22-6       withr_3.0.2         
     ##  [58] bridgesampling_1.1-2 posterior_1.6.1      coda_0.19-4.1       
     ##  [61] evaluate_1.0.1       future_1.58.0        survival_3.8-3      
-    ##  [64] ggstats_0.6.0        RcppParallel_5.1.10  ggdist_3.3.2        
-    ##  [67] pillar_1.11.0        tensorA_0.36.2.1     stats4_4.4.3        
-    ##  [70] checkmate_2.3.2      insight_1.3.1        reformulas_0.4.1    
-    ##  [73] distributional_0.5.0 generics_0.1.4       hms_1.1.3           
-    ##  [76] rstantools_2.4.0     scales_1.4.0         minqa_1.2.6         
-    ##  [79] globals_0.18.0       xtable_1.8-4         glue_1.8.0          
-    ##  [82] emmeans_1.10.3       tools_4.4.3          data.table_1.17.8   
-    ##  [85] mvtnorm_1.3-3        grid_4.4.3           QuickJSR_1.8.0      
-    ##  [88] rbibutils_2.3        colorspace_2.1-1     nlme_3.1-167        
-    ##  [91] cli_3.6.5            svUnit_1.0.6         viridisLite_0.4.2   
-    ##  [94] Brobdingnag_1.2-9    V8_4.4.2             gtable_0.3.6        
-    ##  [97] sass_0.4.9           digest_0.6.37        TH.data_1.1-2       
-    ## [100] farver_2.1.2         htmltools_0.5.8.1    lifecycle_1.0.4     
-    ## [103] MASS_7.3-64
+    ##  [64] RcppParallel_5.1.10  ggdist_3.3.2         pillar_1.11.0       
+    ##  [67] tensorA_0.36.2.1     checkmate_2.3.2      stats4_4.4.3        
+    ##  [70] insight_1.3.1        reformulas_0.4.1     distributional_0.5.0
+    ##  [73] generics_0.1.4       hms_1.1.3            rstantools_2.4.0    
+    ##  [76] scales_1.4.0         minqa_1.2.6          globals_0.18.0      
+    ##  [79] xtable_1.8-4         glue_1.8.0           emmeans_1.10.3      
+    ##  [82] tools_4.4.3          data.table_1.17.8    mvtnorm_1.3-3       
+    ##  [85] grid_4.4.3           QuickJSR_1.8.0       rbibutils_2.3       
+    ##  [88] colorspace_2.1-1     nlme_3.1-167         cli_3.6.5           
+    ##  [91] svUnit_1.0.6         viridisLite_0.4.2    Brobdingnag_1.2-9   
+    ##  [94] V8_4.4.2             gtable_0.3.6         sass_0.4.9          
+    ##  [97] digest_0.6.37        TH.data_1.1-2        farver_2.1.2        
+    ## [100] htmltools_0.5.8.1    lifecycle_1.0.4      MASS_7.3-64
 
 ## References
 
@@ -1760,12 +1729,6 @@ Roback, P., & Legler, J. (2021). *Beyond multiple linear regression: Applied gen
 <div id="ref-robins1986new" class="csl-entry">
 
 Robins, J. (1986). A new approach to causal inference in mortality studies with a sustained exposure period—application to control of the healthy worker survivor effect. *Mathematical Modelling*, *7*(9–12), 1393–1512. <https://doi.org/10.1016/0270-0255(86)90088-6>
-
-</div>
-
-<div id="ref-R-GGally" class="csl-entry">
-
-Schloerke, B., Crowley, J., Di Cook, Briatte, F., Marbach, M., Thoen, E., Elberg, A., & Larmarange, J. (2021). *GGally: Extension to <span class="nocase">’ggplot2’</span>*. <https://CRAN.R-project.org/package=GGally>
 
 </div>
 

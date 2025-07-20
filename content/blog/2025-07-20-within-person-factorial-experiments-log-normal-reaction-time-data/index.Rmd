@@ -3,7 +3,7 @@ title: Within-person factorial experiments, log(normal) reaction-time data
 subtitle: "Causal inference with the GLMM, Part 1"
 author: A. Solomon Kurz
 date: '2025-07-20'
-excerpt: "Blah, blah, blah"
+excerpt: "This is the first post in a new series on causal inference. We will learn how to analyze data from true experiments with techniques from the contemporary causal inference literature. Unlike with my earlier series focused on the generalized linear model (GLM), all the data in this series will have more complicated structures, which we'll capture with the generalized linear *mixed* model (GLMM). In this first post, we walk out the general framework using log(normal) reaction-time data collected from a within-person factorial experiment."
 tags:
   - ANCOVA
   - ANOVA
@@ -32,7 +32,7 @@ biblio-style: apalike
 csl: /Users/solomonkurz/Dropbox/blogdown/content/blog/apa.csl  
 link-citations: yes
 nocite: |  # This adds references not cited in the prose
- @R-patchwork, @R-GGally  
+ @R-patchwork  
 ---
 
 ## Welcome to the next beginning
@@ -78,7 +78,6 @@ library(tidybayes)
 library(broom.mixed)
 library(marginaleffects)
 library(patchwork)
-library(GGally)
 
 # Adjust the global plotting theme
 theme_set(theme_gray(base_size = 12) +
@@ -1025,7 +1024,7 @@ print(lmer_ancova_comparisons_boot)
 
 To summarize, we might compare the $b_1$ and $\tau_\text{ATE}$ estimates from the frequentist ANOVA and ANCOVA all in one coefficient plot.
 
-```{r}
+```{r, echo = FALSE, eval = FALSE}
 bind_rows(
   lmer_anova_comparisons_boot,
   lmer_ancova_comparisons_boot) |> 
