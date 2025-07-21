@@ -86,7 +86,7 @@ theme_set(theme_gray(base_size = 12) +
 
 ## We need data
 
-In this post, we’ll be borrowing data from the **bayes4psy** package ([Demšar et al., 2023](#ref-R-bayes4psy)), which is designed to make Bayesian analyses more accessible to psychology students. Here we load the `stroop_extended` data, which are reaction times from participants who took an online version[^2] of the Stroop task ([Stroop, 1935](#ref-stroop1935studies)). Given how old and established it is in my field, I’m not going to explain the Stroop task here. But for those who aren’t acquainted with the Stroop, see MacLeod ([1991](#ref-macleod1991half)) for a classic review. The Stroop even has a Wikipedia page ([contributors, 2025](#ref-wikipedia2025stroopeffect)). Sure, things are more online nowadays, but I don’t know that much has changed for the Stroop at a fundamental level since then.
+In this post, we’ll be borrowing data from the **bayes4psy** package ([Demšar et al., 2023](#ref-R-bayes4psy)), which is designed to make Bayesian analyses more accessible to psychology students. Here we load the `stroop_extended` data, which are reaction times from participants who took an online version[^2] of the Stroop task ([Stroop, 1935](#ref-stroop1935studies)). Given how old and established it is in my field, I’m not going to explain the Stroop task here. But for those who aren’t acquainted with the Stroop, see MacLeod ([1991](#ref-macleod1991half)) for a classic review. The Stroop even has a Wikipedia page ([Wikipedia contributors, 2025](#ref-wikipedia2025stroopeffect)). Sure, things are more online nowadays, but I don’t know that much has changed for the Stroop at a fundamental level since then.
 
 ``` r
 data(stroop_extended, package = "bayes4psy")
@@ -1594,12 +1594,6 @@ Collins, L. M. (2006). Analysis of longitudinal data: The integration of theoret
 
 </div>
 
-<div id="ref-wikipedia2025stroopeffect" class="csl-entry">
-
-contributors, W. (2025, July 20). *Stroop effect*. <https://en.wikipedia.org/wiki/Stroop_effect>
-
-</div>
-
 <div id="ref-cooper2019applied" class="csl-entry">
 
 Cooper, J. O., Heron, T. E., & Heward, W. L. (2019). *Applied behavior analysis* (Third Edition). Pearson Education. <https://www.pearson.com/>
@@ -1777,6 +1771,12 @@ Wickham, H. (2022). *<span class="nocase">tidyverse</span>: Easily install and l
 <div id="ref-wickhamWelcomeTidyverse2019" class="csl-entry">
 
 Wickham, H., Averick, M., Bryan, J., Chang, W., McGowan, L. D., François, R., Grolemund, G., Hayes, A., Henry, L., Hester, J., Kuhn, M., Pedersen, T. L., Miller, E., Bache, S. M., Müller, K., Ooms, J., Robinson, D., Seidel, D. P., Spinu, V., … Yutani, H. (2019). Welcome to the tidyverse. *Journal of Open Source Software*, *4*(43), 1686. <https://doi.org/10.21105/joss.01686>
+
+</div>
+
+<div id="ref-wikipedia2025stroopeffect" class="csl-entry">
+
+Wikipedia contributors. (2025, July 20). *Stroop effect*. <https://en.wikipedia.org/wiki/Stroop_effect>
 
 </div>
 
