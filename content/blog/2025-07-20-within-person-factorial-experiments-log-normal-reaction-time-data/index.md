@@ -86,7 +86,7 @@ theme_set(theme_gray(base_size = 12) +
 
 ## We need data
 
-In this post, we’ll be borrowing data from the **bayes4psy** package ([Demšar et al., 2023](#ref-R-bayes4psy)), which is designed to make Bayesian analyses more accessible to psychology students. Here we load the `stroop_extended` data, which are reaction times from participants who took an online version[^2] of the Stroop task ([Stroop, 1935](#ref-stroop1935studies)). Given how old and established it is in my field, I’m not going to explain the Stroop task here. But for those who aren’t acquainted with the Stroop, see MacLeod ([1991](#ref-macleod1991half)) for a classic review. Sure, things are more online nowadays, but I don’t know that much has changed for the Stroop at a fundamental level since then.
+In this post, we’ll be borrowing data from the **bayes4psy** package ([Demšar et al., 2023](#ref-R-bayes4psy)), which is designed to make Bayesian analyses more accessible to psychology students. Here we load the `stroop_extended` data, which are reaction times from participants who took an online version[^2] of the Stroop task ([Stroop, 1935](#ref-stroop1935studies)). Given how old and established it is in my field, I’m not going to explain the Stroop task here. But for those who aren’t acquainted with the Stroop, see MacLeod ([1991](#ref-macleod1991half)) for a classic review. The Stroop even has a Wikipedia page ([contributors, 2025](#ref-wikipedia2025stroopeffect)). Sure, things are more online nowadays, but I don’t know that much has changed for the Stroop at a fundamental level since then.
 
 ``` r
 data(stroop_extended, package = "bayes4psy")
@@ -1591,6 +1591,12 @@ Bürkner, P.-C. (2022). *<span class="nocase">brms</span>: Bayesian regression m
 <div id="ref-collins2006analysis" class="csl-entry">
 
 Collins, L. M. (2006). Analysis of longitudinal data: The integration of theoretical model, temporal design, and statistical model. *Annual Review of Psychology*, *57*(1), 505–528. <https://doi.org/10.1146/annurev.psych.57.102904.190146>
+
+</div>
+
+<div id="ref-wikipedia2025stroopeffect" class="csl-entry">
+
+contributors, W. (2025, July 20). *Stroop effect*. <https://en.wikipedia.org/wiki/Stroop_effect>
 
 </div>
 
