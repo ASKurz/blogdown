@@ -1281,7 +1281,7 @@ brm_anova_ate |>
 
 ### Bayesian ANCOVA and the ATE
 
-We can compute the posteriors for the various estimands from our Bayesian ANCOVA much the same way we did for the Bayesian ANOVA, above. The only catch is to make sure the `nd` predictor grid has the information for the covariate[s] in the ANCOVA. In this case, it already does. We could follow all the steps above to make another version of the two-panel figure, but I'll leave that up at an exercise for the interested reader. For many, the main goal is just to compute the posterior for $\tau_{ij}$, and perhaps compare it to the posterior for $b_1$. Here's $\tau_{ij}$.
+We can compute the posteriors for the various estimands from our Bayesian ANCOVA much the same way we did for the Bayesian ANOVA, above. The only catch is to make sure the `nd` predictor grid has the information for the covariate[s] in the ANCOVA. In this case, it already does. We could follow all the steps above to make another version of the two-panel figure, but I'll leave that up at an exercise for the interested reader. For many, the main goal is just to compute the posterior for $\tau_\text{ATE}$, and perhaps compare it to the posterior for $b_1$. Here's the posterior for $\tau_\text{ATE}$.
 
 ```{r}
 # Save
