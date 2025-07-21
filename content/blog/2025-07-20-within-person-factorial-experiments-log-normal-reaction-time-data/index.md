@@ -978,7 +978,7 @@ glimpse(nd)
 
 The remaining steps are much the same. We can compute point estimates for predictions and contrasts with functions like `predictions()`, `comparisons()`, `avg_predictions()`, and `avg_comparisons()`. But for measures of uncertainty, we bootstrap with `inferences()`.
 
-First, we compute the predictions `\(\mathbb E (y_j^0)_i\)` and `\(\mathbb E (y_j^1)_i\)`.
+First, we compute the estimates for `\(\mathbb E (y_j^0)_i\)` and `\(\mathbb E (y_j^1)_i\)`.
 
 ``` r
 lmer_ancova_predictions_i <- avg_predictions(
@@ -999,7 +999,7 @@ head(lmer_ancova_predictions_i_boot)
     ## 
     ## Type: response
 
-Next we compute and save `\(\tau_{j}\)` for the frequentist multilevel ANCOVA.
+Next we compute and save `\(\tau_{j}\)` estimates from the frequentist multilevel ANCOVA.
 
 ``` r
 lmer_ancova_comparisons_i <- avg_comparisons(
@@ -1085,7 +1085,7 @@ AIC(lmer_anova, lmer_ancova)
 
 The ANCOVA captured more information in the data, but not dramatically so.
 
-Now we compute the ATE.
+Now we compute the estimate for the ATE.
 
 ``` r
 lmer_ancova_comparisons <- avg_comparisons(
