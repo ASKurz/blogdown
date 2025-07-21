@@ -35,6 +35,10 @@ nocite: |  # This adds references not cited in the prose
  @R-patchwork  
 ---
 
+
+This is the first in a new series discussing causal inference with experimental data using multilevel models.
+
+
 ## Welcome to the next beginning
 
 In 2023 I released a 9-part series on causal inference for randomized experiments. We focused on real-world data from several published experiments, and practices fitting models with a variety of likelihood functions from the GLM. In this series, we expand to multilevel models within the generalized linear mixed model (GLMM). We'll do so both as frequentists and as Bayesians.
@@ -530,7 +534,7 @@ $$
 \tau_i = y_i^1 - y_i^0,
 $$
 
-where $y_i^0$ is the $i$th person's outcome in one condition^[Often the control or baseline condition.], and where $y_i^1$ is the $i$th person's outcome in other condition.^[Often the experimental or contrasting condition.] Within-person factorial experiments add a temporal element where the DV is measured across many trials, where the level of the independent variable is varied (often at random, as in these data). Thus in a technical sense, reaction-time data like these are longitudinal, though you might describe them as intensively longitudinal.^[Different research traditions use different terms for such things. I'm borrowing the term *intensive longitudinal* from the daily-diary research tradition in psychology, where people typically answer a few questions once or a few times a day for several days or weeks [see @collins2006analysis]. Comparatively, you might describe reaction-time data from computer tasks as *very* intensive longitudinal data.] Therefore we might need to expand our notation to capture the response across $j$ time points (trials), and define the $i$th person's causal effect at a given time point as
+where $y_i^0$ is the $i$th person's outcome in one condition,^[Often the control or baseline condition.] and where $y_i^1$ is the $i$th person's outcome in other condition.^[Often the experimental or contrasting condition.] Within-person factorial experiments add a temporal element where the DV is measured across many trials, where the level of the independent variable is varied (often at random, as in these data). Thus in a technical sense, reaction-time data like these are longitudinal, though you might describe them as intensively longitudinal.^[Different research traditions use different terms for such things. I'm borrowing the term *intensive longitudinal* from the daily-diary research tradition in psychology, where people typically answer a few questions once or a few times a day for several days or weeks [see @collins2006analysis]. Comparatively, you might describe reaction-time data from computer tasks as *very* intensive longitudinal data.] Therefore we might need to expand our notation to capture the response across $j$ time points (trials), and define the $i$th person's causal effect at a given time point as
 
 $$
 \tau_{ij} = y_{ij}^1 - y_{ij}^0.
@@ -566,14 +570,15 @@ For more theory on causal inference with multilevel models in other research des
 
 ### Frequentist ANOVA and the ATE
 
-If we took the generic $\tau_\text{ATE}$ as our focal estimand, we can compute the point estimate by hand following the same basic steps for with a single-level GLM. The first step is to make a predictor grid of all the model inputs. For that grid, we start with the observed levels of `subject`. Though not technically necessary at this point, it can help clarify the steps by retaining the `trial` indices. We then double the length of the data set such that the first version has one level of the IV for all cases (`cond == "congruent"`), and the other level of the IV for the duplicate cases (`incond == "congruent"`). We save the predictor grid as `nd`, my preferred shorthand for `newdata`.
+If we took the generic $\tau_\text{ATE}$ as our focal estimand, we can compute the point estimate by hand following the same basic steps for with a single-level GLM. The first step is to make a predictor grid of all the model inputs. For that grid, we start with the observed levels of `subject`. Though not technically necessary at this point, it can help clarify the steps by retaining the `trial` indices. We then double the length of the data set such that the first version has one level of the IV for all cases (`cond == "congruent"`), and the other level of the IV for the duplicate cases (`cond == "incongruent"`). We save the predictor grid as `nd`, my preferred shorthand for `newdata`.
 
 ```{r}
 nd <- stroop_subset |> 
   # Subset the necessary columns
   select(subject, trial) |> 
   # Expand the data set by the two levels of the IV
-  expand_grid(cond = levels(stroop_subset$cond) |> factor(levels = levels(stroop_subset$cond)))
+  expand_grid(cond = levels(stroop_subset$cond) |> 
+                factor(levels = levels(stroop_subset$cond)))
 
 # What?
 glimpse(nd)
@@ -586,7 +591,7 @@ predict(lmer_anova, newdata = nd, se = TRUE) |>
   str()
 ```
 
-In late 2023 **lme4** began offering an `se.fit = TRUE` method for `predict()`. If you execute `?predict.merMod` for the documentation, you will find this method is currently considered "experimental". There is no current direct method to request 95% CIs, but you can compute Wald intervals by hand. However, the `se.fit = TRUE` method won't actually serve us well here because we're interested in averaging across the `trial`-level estimates with `subject`s, and we'll be interested in computing within-`subject` contrasts from them as well.
+In late 2023 **lme4** began offering an `se.fit = TRUE` method for the `predict()` function. If you execute `?predict.merMod` for the documentation, you will find this method is currently considered "experimental". There is no current direct method to request 95% CIs, but you can compute Wald intervals by hand. Exciting as it is, the `se.fit = TRUE` method won't actually serve us well here because we're interested in averaging across the `trial`-level estimates with `subject`s, and we'll be interested in computing within-`subject` contrasts from them as well.
 
 Before we move on, an important thing to notice is that for a simple multilevel ANOVA like this, all counterfactual predictions will be identical across all levels of `trial` per `subject`, within each level of the IV. This might be easier to see if we `slice()` to show the last three trials for the first `subject`, and the first three trials for the second.
 
@@ -634,7 +639,7 @@ lmer_anova_predictions_i <- avg_predictions(
 head(lmer_anova_predictions_i)
 ```
 
-I've suppressed the warning message here, but you'll still get one. You should not trust those standard errors, even though the point estimates are fine. To express uncertainty with bootstrap 95% CIs, we use the `inferences()` function from **marginaleffects** (execute `?inferences` for the documentation). Here we use the `rsample` method, and compute the intervals based on bootstraped 1000 samples. This operation takes about a minute on my laptop, so make sure to save the results as an object when you do something like this on your own computer.^[Before you try this on your own computer, make sure you're using **marginaleffects** version 0.28.0.6 or higher. If you need it, you can install the current developmental version by executing `remotes::install_github("vincentarelbundock/marginaleffects", force = TRUE)`.]
+I've suppressed the warning message here, but you'll still get one. You should not trust those standard errors, even though the point estimates are fine. To express uncertainty with bootstrap 95% CIs, we use the `inferences()` function from **marginaleffects** (execute `?inferences` for the documentation). Here we use the `rsample` method, and compute the intervals based on 1000 bootstraped samples. This operation takes about a minute on my laptop, so make sure to save the results as an object when you do something like this on your own computer.^[Before you try this on your own computer, make sure you're using **marginaleffects** version 0.28.0.6 or higher. If you need it, you can install the current developmental version by executing `remotes::install_github("vincentarelbundock/marginaleffects", force = TRUE)`.]
 
 ```{r, echo = FALSE, eval = FALSE}
 # 1.045246 mins
